@@ -219,3 +219,33 @@ describe('extra config builders', () => {
     ).toThrow(/must start with the primary key/);
   });
 });
+
+describe('interleaveInParent compile-time check', () => {
+  it('rejects a child that lacks the parent primary-key column', async () => {
+    const { interleaveInParent, primaryKey } = await import('../../src/index.js');
+    const parent = spannerTable('parent', {
+      id: string('id', { length: 36 }).primaryKey(),
+    });
+
+    // Valid: the child declares the parent's PK column with a matching type.
+    spannerTable(
+      'child_ok',
+      {
+        id: string('id', { length: 36 }).notNull(),
+        child: string('child', { length: 36 }).notNull(),
+      },
+      (t) => [primaryKey({ columns: [t.id, t.child] }), interleaveInParent(parent)],
+    );
+
+    expect(() =>
+      spannerTable(
+        'child_bad',
+        {
+          other: string('other', { length: 36 }).primaryKey(),
+        },
+        // @ts-expect-error — the child does not declare the parent PK column `id`
+        (t) => [interleaveInParent(parent)],
+      ),
+    ).toThrow(/must start with the primary key/);
+  });
+});
