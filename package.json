@@ -1,0 +1,19 @@
+{
+  "name": "drizzle-spanner",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "emulator:up": "docker compose up -d",
+    "emulator:down": "docker compose down",
+    "emulator:bootstrap": "node scripts/emulator-bootstrap.ts",
+    "emulator:smoke": "node scripts/emulator-smoke.ts"
+  },
+  "dependencies": {
+    "@google-cloud/spanner": "^7.19.1"
+  },
+  "devDependencies": {
+    "@types/node": "^24.0.0",
+    "typescript": "^5.8.0"
+  }
+}
