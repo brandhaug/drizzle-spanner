@@ -1,0 +1,49 @@
+import type { ColumnBuilderBaseConfig } from 'drizzle-orm/column-builder';
+import type { ColumnBaseConfig } from 'drizzle-orm/column';
+import { entityKind } from 'drizzle-orm/entity';
+import type { SpannerTable } from '../table.js';
+import { SpannerColumn, SpannerColumnBuilder } from './common.js';
+
+/** The driver may return FLOAT cells as `Float` wrappers `{ value: n }`. */
+export function unwrapFloat(value: unknown): number {
+  if (typeof value === 'object' && value !== null && 'value' in value) {
+    return Number((value as { value: unknown }).value);
+  }
+  return Number(value);
+}
+
+export interface SpannerFloat64BuilderConfig extends ColumnBuilderBaseConfig<'number double'> {
+  data: number;
+  driverParam: number;
+}
+
+export class SpannerFloat64Builder extends SpannerColumnBuilder<SpannerFloat64BuilderConfig> {
+  static override readonly [entityKind]: string = 'SpannerFloat64Builder';
+
+  constructor(name: string) {
+    super(name, 'number double', 'SpannerFloat64');
+  }
+
+  /** @internal */
+  build(table: SpannerTable): SpannerFloat64 {
+    return new SpannerFloat64(table, this.config);
+  }
+}
+
+export class SpannerFloat64 extends SpannerColumn<ColumnBaseConfig<'number double'>> {
+  static override readonly [entityKind]: string = 'SpannerFloat64';
+
+  getSQLType(): string {
+    return 'FLOAT64';
+  }
+
+  override mapFromDriverValue(value: unknown): number | null {
+    if (value === null) return null;
+    return unwrapFloat(value);
+  }
+}
+
+/** `FLOAT64` — double precision, supports NaN and infinity. */
+export function float64(name: string): SpannerFloat64Builder {
+  return new SpannerFloat64Builder(name);
+}

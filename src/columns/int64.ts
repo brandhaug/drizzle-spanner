@@ -1,0 +1,106 @@
+import type { ColumnBuilderBaseConfig } from 'drizzle-orm/column-builder';
+import type { ColumnBaseConfig } from 'drizzle-orm/column';
+import { entityKind } from 'drizzle-orm/entity';
+import { SpannerPrecisionError } from '../errors.js';
+import type { SpannerTable } from '../table.js';
+import { SpannerColumn, SpannerColumnBuilder } from './common.js';
+
+export interface SpannerInt64Config<TMode extends 'number' | 'bigint' = 'number' | 'bigint'> {
+  mode: TMode;
+}
+
+export interface SpannerInt64NumberBuilderConfig extends ColumnBuilderBaseConfig<'number int53'> {
+  data: number;
+  driverParam: number | string;
+}
+
+export interface SpannerInt64BigIntBuilderConfig extends ColumnBuilderBaseConfig<'bigint int64'> {
+  data: bigint;
+  driverParam: string;
+}
+
+/** The driver returns INT64 cells as `Int` wrappers `{ value: '42' }`. */
+function unwrapInt(value: unknown): string {
+  if (typeof value === 'object' && value !== null && 'value' in value) {
+    return String((value as { value: unknown }).value);
+  }
+  return String(value);
+}
+
+export class SpannerInt64NumberBuilder extends SpannerColumnBuilder<SpannerInt64NumberBuilderConfig> {
+  static override readonly [entityKind]: string = 'SpannerInt64NumberBuilder';
+
+  constructor(name: string) {
+    super(name, 'number int53', 'SpannerInt64Number');
+  }
+
+  /** @internal */
+  build(table: SpannerTable): SpannerInt64Number {
+    return new SpannerInt64Number(table, this.config);
+  }
+}
+
+export class SpannerInt64Number extends SpannerColumn<ColumnBaseConfig<'number int53'>> {
+  static override readonly [entityKind]: string = 'SpannerInt64Number';
+
+  getSQLType(): string {
+    return 'INT64';
+  }
+
+  override mapFromDriverValue(value: unknown): number | null {
+    if (value === null) return null;
+    const raw = unwrapInt(value);
+    const parsed = Number(raw);
+    if (!Number.isSafeInteger(parsed)) {
+      throw new SpannerPrecisionError({
+        message: `INT64 value ${raw} in column "${this.name}" exceeds Number.MAX_SAFE_INTEGER; use int64('${this.name}', { mode: 'bigint' }) for the full range`,
+      });
+    }
+    return parsed;
+  }
+}
+
+export class SpannerInt64BigIntBuilder extends SpannerColumnBuilder<SpannerInt64BigIntBuilderConfig> {
+  static override readonly [entityKind]: string = 'SpannerInt64BigIntBuilder';
+
+  constructor(name: string) {
+    super(name, 'bigint int64', 'SpannerInt64BigInt');
+  }
+
+  /** @internal */
+  build(table: SpannerTable): SpannerInt64BigInt {
+    return new SpannerInt64BigInt(table, this.config);
+  }
+}
+
+export class SpannerInt64BigInt extends SpannerColumn<ColumnBaseConfig<'bigint int64'>> {
+  static override readonly [entityKind]: string = 'SpannerInt64BigInt';
+
+  getSQLType(): string {
+    return 'INT64';
+  }
+
+  override mapFromDriverValue(value: unknown): bigint | null {
+    if (value === null) return null;
+    return BigInt(unwrapInt(value));
+  }
+
+  override mapToDriverValue(value: unknown): string {
+    // The driver has no native bigint support; a decimal string with the
+    // int64 type hint carries the full range.
+    return (value as bigint).toString();
+  }
+}
+
+/** `INT64`. Maps to `number` and fails typed past 2^53−1; pass `{ mode: 'bigint' }` for the full range. */
+export function int64(name: string): SpannerInt64NumberBuilder;
+export function int64(name: string, config: SpannerInt64Config<'number'>): SpannerInt64NumberBuilder;
+export function int64(name: string, config: SpannerInt64Config<'bigint'>): SpannerInt64BigIntBuilder;
+export function int64(
+  name: string,
+  config?: SpannerInt64Config,
+): SpannerInt64NumberBuilder | SpannerInt64BigIntBuilder {
+  return config?.mode === 'bigint'
+    ? new SpannerInt64BigIntBuilder(name)
+    : new SpannerInt64NumberBuilder(name);
+}
