@@ -1,0 +1,155 @@
+import { entityKind } from 'drizzle-orm/entity';
+import type { Logger } from 'drizzle-orm/logger';
+import { NoopLogger } from 'drizzle-orm/logger';
+import type { PreparedQuery } from 'drizzle-orm/session';
+import type { Query, QueryWithTypings, SQL } from 'drizzle-orm/sql';
+import { fillPlaceholders } from 'drizzle-orm/sql';
+import type { SpannerDialect } from './dialect.js';
+import { wrapSpannerError } from './errors.js';
+import type { SelectedFieldsOrdered } from './internal.js';
+import { mapResultRow } from './internal.js';
+
+/** Minimal surface of `@google-cloud/spanner`'s request this adapter sends. */
+export interface SpannerSqlRequest {
+  sql: string;
+  params: Record<string, unknown>;
+  types: Record<string, unknown>;
+  json?: boolean;
+}
+
+/** A driver row in array mode: one `{ name, value }` cell per selected field. */
+export type SpannerDriverRow = { name: string; value: unknown }[] & {
+  toJSON?: () => Record<string, unknown>;
+};
+
+/**
+ * Where a statement executes. Reads run on `database.run`; DML must run inside
+ * `runTransactionAsync` (the Node client's `run` is read-only). Inside
+ * `db.transaction` both run on the one open driver transaction.
+ */
+export interface SpannerQueryRunner {
+  run(request: SpannerSqlRequest, isDml: boolean): Promise<SpannerDriverRow[]>;
+}
+
+export interface SpannerSessionOptions {
+  logger?: Logger;
+}
+
+export interface SpannerQueryMetadata {
+  type: 'select' | 'insert' | 'update' | 'delete';
+}
+
+/** Converts drizzle's positional params to Spanner named params plus type hints. */
+export function toNamedParams(
+  params: unknown[],
+  typings: string[] | undefined,
+): { named: Record<string, unknown>; types: Record<string, unknown> } {
+  const named: Record<string, unknown> = {};
+  const types: Record<string, unknown> = {};
+  for (const [i, value] of params.entries()) {
+    named[`p${i}`] = value;
+    const typing = typings?.[i];
+    if (typing && typing !== 'none') {
+      types[`p${i}`] = typing.startsWith('array:')
+        ? { type: 'array', child: typing.slice('array:'.length) }
+        : typing;
+    }
+  }
+  return { named, types };
+}
+
+const DML_PATTERN = /^\s*(insert|update|delete)/i;
+
+export class SpannerPreparedQuery<T = unknown> implements PreparedQuery {
+  static readonly [entityKind]: string = 'SpannerPreparedQuery';
+
+  constructor(
+    private readonly runner: SpannerQueryRunner,
+    private readonly queryWithTypings: QueryWithTypings,
+    private readonly logger: Logger,
+    private readonly fields: SelectedFieldsOrdered | undefined,
+    private readonly customResultMapper?: (rows: unknown[][]) => T,
+    private readonly queryMetadata?: SpannerQueryMetadata,
+  ) {}
+
+  getQuery(): Query {
+    return this.queryWithTypings;
+  }
+
+  mapResult(response: unknown): unknown {
+    return response;
+  }
+
+  async execute(placeholderValues: Record<string, unknown> = {}): Promise<T> {
+    const params = fillPlaceholders(this.queryWithTypings.params, placeholderValues);
+    this.logger.logQuery(this.queryWithTypings.sql, params);
+    const { named, types } = toNamedParams(
+      params,
+      this.queryWithTypings.typings as string[] | undefined,
+    );
+    const request: SpannerSqlRequest = { sql: this.queryWithTypings.sql, params: named, types };
+    const isDml = this.queryMetadata
+      ? this.queryMetadata.type !== 'select'
+      : DML_PATTERN.test(this.queryWithTypings.sql);
+
+    let rawRows: SpannerDriverRow[];
+    try {
+      rawRows = await this.runner.run(request, isDml);
+    } catch (error) {
+      throw wrapSpannerError(error, {
+        sql: this.queryWithTypings.sql,
+        paramNames: Object.keys(named),
+      });
+    }
+
+    if (!this.fields && !this.customResultMapper) {
+      return rawRows.map((row) => (row.toJSON ? row.toJSON() : row)) as T;
+    }
+    // Array row mode: cells arrive as { name, value } in select order.
+    const rows = rawRows.map((row) => row.map((cell) => cell.value));
+    if (this.customResultMapper) return this.customResultMapper(rows);
+    return rows.map((row) => mapResultRow(this.fields!, row, undefined)) as T;
+  }
+
+  all(placeholderValues: Record<string, unknown> = {}): Promise<T> {
+    return this.execute(placeholderValues);
+  }
+}
+
+export class SpannerSession {
+  static readonly [entityKind]: string = 'SpannerSession';
+
+  /** @internal */
+  readonly logger: Logger;
+
+  constructor(
+    /** @internal */
+    readonly runner: SpannerQueryRunner,
+    /** @internal */
+    readonly dialect: SpannerDialect,
+    /** @internal */
+    readonly options: SpannerSessionOptions = {},
+  ) {
+    this.logger = options.logger ?? new NoopLogger();
+  }
+
+  prepareQuery<T = unknown>(
+    query: QueryWithTypings,
+    fields: SelectedFieldsOrdered | undefined,
+    customResultMapper?: (rows: unknown[][]) => T,
+    queryMetadata?: SpannerQueryMetadata,
+  ): SpannerPreparedQuery<T> {
+    return new SpannerPreparedQuery(
+      this.runner,
+      query,
+      this.logger,
+      fields,
+      customResultMapper,
+      queryMetadata,
+    );
+  }
+
+  execute<T = unknown>(query: SQL): Promise<T> {
+    return this.prepareQuery<T>(this.dialect.sqlToQuery(query), undefined).execute();
+  }
+}
