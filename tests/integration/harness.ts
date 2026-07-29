@@ -8,6 +8,12 @@ import type { SpannerDatabase, SpannerDriverDatabase } from '../../src/index.js'
 
 const EMULATOR_IMAGE = 'gcr.io/cloud-spanner-emulator/emulator:latest';
 
+// Captured at import time: the harness itself mutates SPANNER_EMULATOR_HOST
+// for the driver, and under single-process runners (bun test) a later test
+// file must not mistake the previous file's stopped container for an
+// externally managed emulator.
+const EXTERNAL_EMULATOR_HOST = process.env.SPANNER_EMULATOR_HOST;
+
 export interface EmulatorHarness {
   db: SpannerDatabase;
   database: Database;
@@ -23,7 +29,7 @@ export interface EmulatorHarness {
  */
 export async function startEmulator(ddl: string[]): Promise<EmulatorHarness> {
   let container: StartedTestContainer | undefined;
-  let host = process.env.SPANNER_EMULATOR_HOST;
+  let host = EXTERNAL_EMULATOR_HOST;
   if (!host) {
     // The emulator image is distroless, so testcontainers' internal port
     // probe cannot run; wait on the gRPC server's log line instead.

@@ -27,7 +27,7 @@
     "lint": "eslint src tests",
     "test": "vitest run tests/unit",
     "test:integration": "vitest run tests/integration",
-    "test:integration:bun": "bun test tests/integration",
+    "test:integration:bun": "bun test tests/integration --timeout 180000",
     "emulator:up": "docker compose up -d",
     "emulator:down": "docker compose down",
     "emulator:bootstrap": "node scripts/emulator-bootstrap.ts",
