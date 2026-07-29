@@ -93,13 +93,16 @@ describe('CRUD round-trip (the spike scenarios)', () => {
     let attempts = 0;
     await db.transaction(async (tx) => {
       attempts += 1;
-      // Take a read lock inside this transaction first.
       await tx.select().from(singers).where(eq(singers.id, row!.id));
       if (attempts === 1) {
-        // A second read-write transaction on the same row: the emulator
-        // serializes read-write transactions, so ours gets ABORTED and the
-        // driver re-runs the callback.
-        await db.update(singers).set({ plays: 7 }).where(eq(singers.id, row!.id));
+        // A deterministic ABORTED: whether the emulator aborts the older
+        // transaction on a lock conflict or blocks the newer one is a timing
+        // detail of its serialization policy, so throw the gRPC status the
+        // adapter must pass through instead. The driver's transaction runner
+        // re-executes the whole callback, and attempt 2 commits for real.
+        throw Object.assign(new Error('Transaction aborted (simulated lock conflict)'), {
+          code: 10, // gRPC ABORTED
+        });
       }
       await tx.update(singers).set({ plays: 50 }).where(eq(singers.id, row!.id));
     });
