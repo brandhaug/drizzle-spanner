@@ -8,9 +8,16 @@ export interface SpannerDateConfig<TMode extends 'string' | 'date' = 'string' | 
   mode: TMode;
 }
 
-/** The driver decodes DATE to a `SpannerDate` (extends `Date`). */
+/**
+ * The driver decodes DATE to a `SpannerDate` (extends `Date`) pinned to
+ * *local* midnight, so read local date components — `toISOString()` would
+ * shift the calendar day in timezones east of UTC.
+ */
 function toIsoDateString(value: Date): string {
-  return value.toISOString().slice(0, 10);
+  const year = String(value.getFullYear()).padStart(4, '0');
+  const month = String(value.getMonth() + 1).padStart(2, '0');
+  const day = String(value.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
 }
 
 export interface SpannerDateStringBuilderConfig extends ColumnBuilderBaseConfig<'string date'> {
