@@ -244,7 +244,7 @@ describe('interleaveInParent compile-time check', () => {
           other: string('other', { length: 36 }).primaryKey(),
         },
         // @ts-expect-error — the child does not declare the parent PK column `id`
-        (t) => [interleaveInParent(parent)],
+        () => [interleaveInParent(parent)],
       ),
     ).toThrow(/must start with the primary key/);
   });
