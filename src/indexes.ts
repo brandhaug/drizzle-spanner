@@ -18,7 +18,7 @@ export interface IndexConfig {
   columns: (IndexedColumn | SQL)[];
   unique: boolean;
   nullFiltered: boolean;
-  storing: SpannerColumn<any>[];
+  storing: (SpannerColumn<any> | SpannerExtraConfigColumn)[];
 }
 
 export class IndexBuilderOn {
@@ -60,7 +60,12 @@ export class IndexBuilder {
   }
 
   /** `STORING (...)` — copies extra columns into the index to avoid base-table joins. */
-  storing(...columns: [SpannerColumn<any>, ...SpannerColumn<any>[]]): this {
+  storing(
+    ...columns: [
+      SpannerColumn<any> | SpannerExtraConfigColumn,
+      ...(SpannerColumn<any> | SpannerExtraConfigColumn)[],
+    ]
+  ): this {
     this.config.storing.push(...columns);
     return this;
   }

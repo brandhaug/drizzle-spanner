@@ -30,7 +30,12 @@ const permittedDrizzleSubpaths = [
 export default tseslint.config(
   ...tseslint.configs.recommended,
   {
-    files: ['src/**/*.ts', 'tests/**/*.ts'],
+    files: [
+      'src/**/*.ts',
+      'tests/**/*.ts',
+      'packages/*/src/**/*.ts',
+      'packages/*/tests/**/*.ts',
+    ],
     rules: {
       'no-restricted-imports': [
         'error',
