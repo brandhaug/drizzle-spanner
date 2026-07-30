@@ -85,10 +85,19 @@ export interface DiffOptions {
   acceptDrops?: boolean;
 }
 
+/**
+ * A rename resolved during a diff. Column names are table-qualified
+ * (`table.column`); table names are bare.
+ */
+export interface ResolvedRename {
+  from: string;
+  to: string;
+}
+
 export interface DiffResult {
   statements: string[];
   /** Rename journal entries resolved during this diff. */
-  renames: string[];
+  renames: ResolvedRename[];
 }
 
 interface EntityIndex {
@@ -281,7 +290,7 @@ export async function diffSnapshots(
   const prev = indexEntities(prevDdl);
   const cur = indexEntities(curDdl);
   const diagnostics: DiffDiagnostic[] = [];
-  const renamesJournal: string[] = [];
+  const renamesJournal: ResolvedRename[] = [];
   const buckets: StatementBuckets = {
     renames: [],
     dropIndexes: [],
@@ -333,7 +342,7 @@ export async function diffSnapshots(
         );
       }
       buckets.renames.push(renameTableSql(dropped, chosen));
-      renamesJournal.push(`${dropped}->${chosen}`);
+      renamesJournal.push({ from: dropped, to: chosen });
       renameTableInIndex(prev, dropped, chosen);
       createdTableNames = createdTableNames.filter((name) => name !== chosen);
     }
@@ -448,7 +457,10 @@ export async function diffSnapshots(
       });
       if (chosen !== null) {
         resolvedRenames.add(chosen);
-        renamesJournal.push(`${tableName}.${dropped.name}->${tableName}.${chosen}`);
+        renamesJournal.push({
+          from: `${tableName}.${dropped.name}`,
+          to: `${tableName}.${chosen}`,
+        });
         diagnostics.push({
           kind: 'column-rename',
           table: tableName,

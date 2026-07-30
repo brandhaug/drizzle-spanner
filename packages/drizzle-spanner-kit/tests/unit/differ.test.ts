@@ -234,7 +234,7 @@ describe('diffSnapshots: renames', () => {
         candidate.kind === 'table' && candidate.dropped === 'singers' ? 'artists' : null,
     });
     expect(statements).toEqual(['RENAME TABLE `singers` TO `artists`']);
-    expect(renames).toEqual(['singers->artists']);
+    expect(renames).toEqual([{ from: 'singers', to: 'artists' }]);
   });
 
   it('refuses a column rename with the manual path (Spanner has no RENAME COLUMN)', async () => {
