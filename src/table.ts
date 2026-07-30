@@ -159,7 +159,7 @@ export function spannerTable<
   table[ExtraConfigColumns] = builtExtraConfigColumns;
 
   if (extraConfig) {
-    table[ExtraConfigBuilder] = extraConfig as unknown as (
+    table[ExtraConfigBuilder] = extraConfig as (
       self: Record<string, SpannerExtraConfigColumn>,
     ) => SpannerTableExtraConfigValue[];
     for (const entry of extraConfig(

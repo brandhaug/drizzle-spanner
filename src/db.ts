@@ -307,7 +307,7 @@ export class SpannerDatabaseCore<TRelations extends AnyRelations = EmptyRelation
 
   /** `select count(*) from table [where ...]` returning a number. */
   async $count(table: AnySpannerTable | SQL, where?: SQL): Promise<number> {
-    const query = this.dialect.sqlToQuery(this.dialect.buildCountQuery(table as never, where));
+    const query = this.dialect.sqlToQuery(this.dialect.buildCountQuery(table, where));
     const prepared = this.session.prepareQuery<number>(query, undefined, (rows) =>
       Number(unwrapDriverWrapper(rows[0]?.[0])),
     );

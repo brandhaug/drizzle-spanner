@@ -125,7 +125,7 @@ function fakeSnapshotDatabase(rows: { name: string; value: unknown }[][] = []) {
     },
   };
   return {
-    database: database as unknown as SpannerDriverDatabase,
+    database: database as SpannerDriverDatabase,
     snapshotBounds,
     snapshotRequests,
     endCount: () => ended,
@@ -319,7 +319,7 @@ describe('single-use stale reads (withStaleness)', () => {
         ] as const;
       },
     };
-    return { database: database as unknown as SpannerDriverDatabase, runBounds };
+    return { database: database as SpannerDriverDatabase, runBounds };
   }
 
   it('compiles to a single-use bounded read on database.run', async () => {
@@ -468,7 +468,7 @@ describe('bufferedMutations transactions', () => {
       },
     };
     return {
-      database: database as unknown as SpannerDriverDatabase,
+      database: database as SpannerDriverDatabase,
       mutations,
       commitCount: () => commits,
       rollbackCount: () => rollbacks,

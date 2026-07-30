@@ -12,7 +12,7 @@ import type {
 import { mapRelationalRow } from 'drizzle-orm/relations';
 import type { Query, SQL, SQLWrapper } from 'drizzle-orm/sql';
 import type { KnownKeysOnly } from 'drizzle-orm/utils';
-import type { SpannerDialect } from '../dialect.js';
+import type { SpannerDialect, SpannerRelationalQueryConfigEntry } from '../dialect.js';
 import type { SpannerSession } from '../session.js';
 import type { SpannerTable } from '../table.js';
 
@@ -86,7 +86,7 @@ export class SpannerRelationalQueryBuilder<
       this.tableConfig,
       this.dialect,
       this.session,
-      config ?? true,
+      (config ?? true) as SpannerRelationalQueryConfigEntry,
       'many',
     );
   }
@@ -100,7 +100,7 @@ export class SpannerRelationalQueryBuilder<
       this.tableConfig,
       this.dialect,
       this.session,
-      config ?? true,
+      (config ?? true) as SpannerRelationalQueryConfigEntry,
       'first',
     );
   }
@@ -120,7 +120,7 @@ export class SpannerRelationalQuery<TResult>
     private readonly tableConfig: TableRelationalConfig,
     private readonly dialect: SpannerDialect,
     private readonly session: SpannerSession,
-    private readonly config: unknown,
+    private readonly config: SpannerRelationalQueryConfigEntry,
     private readonly mode: 'many' | 'first',
   ) {
     super();
@@ -131,7 +131,7 @@ export class SpannerRelationalQuery<TResult>
       schema: this.schema,
       table: this.table,
       tableConfig: this.tableConfig,
-      queryConfig: this.config as never,
+      queryConfig: this.config,
       mode: this.mode,
     });
   }
@@ -152,7 +152,7 @@ export class SpannerRelationalQuery<TResult>
       .prepareRelationalQuery<TResult>(this.dialect.sqlToQuery(query.sql), (rows) => {
         const mapped = rows.map((row) => {
           normalizeRelationalRow(row, query.selection);
-          return mapRelationalRow(row, query.selection) as never;
+          return mapRelationalRow(row, query.selection);
         });
         return (this.mode === 'first' ? mapped[0] : mapped) as TResult;
       })
