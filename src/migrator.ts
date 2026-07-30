@@ -1,4 +1,3 @@
-import { createHash } from 'node:crypto';
 import type { MigrationConfig } from 'drizzle-orm/migrator';
 import { readMigrationFiles } from 'drizzle-orm/migrator';
 import type { SpannerDatabase, SpannerDriverDatabase } from './db.js';
@@ -152,9 +151,4 @@ export async function migrate(
     applied.push(migration.name);
   }
   return { applied };
-}
-
-/** Recomputes the sha256 hash the bookkeeping table stores for a migration file. */
-function migrationHash(sql: string): string {
-  return createHash('sha256').update(sql).digest('hex');
 }
