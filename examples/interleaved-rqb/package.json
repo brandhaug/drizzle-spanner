@@ -1,0 +1,18 @@
+{
+  "name": "example-interleaved-rqb",
+  "private": true,
+  "type": "module",
+  "description": "drizzle-spanner example: interleaved tables, relational queries, buffered mutations and a stale read against the emulator",
+  "scripts": {
+    "start": "node src/bootstrap.ts && drizzle-spanner-kit push --yes --no-interactive && node src/main.ts"
+  },
+  "dependencies": {
+    "@google-cloud/spanner": "^8.10.0",
+    "drizzle-orm": "1.0.0-beta.22",
+    "drizzle-spanner": "file:../..",
+    "drizzle-spanner-kit": "file:../../packages/drizzle-spanner-kit"
+  },
+  "engines": {
+    "node": ">=22.18"
+  }
+}

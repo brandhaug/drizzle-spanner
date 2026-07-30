@@ -1,0 +1,18 @@
+{
+  "name": "example-basic-crud",
+  "private": true,
+  "type": "module",
+  "description": "drizzle-spanner example: schema, kit migrate, CRUD and a read-write transaction against the emulator",
+  "scripts": {
+    "start": "node src/bootstrap.ts && drizzle-spanner-kit migrate && node src/main.ts"
+  },
+  "dependencies": {
+    "@google-cloud/spanner": "^8.10.0",
+    "drizzle-orm": "1.0.0-beta.22",
+    "drizzle-spanner": "file:../..",
+    "drizzle-spanner-kit": "file:../../packages/drizzle-spanner-kit"
+  },
+  "engines": {
+    "node": ">=22.18"
+  }
+}

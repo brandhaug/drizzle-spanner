@@ -89,6 +89,11 @@ derives nothing from one to the other, so the canonical parent-child setup
 declares both — `interleaveInParent` in the table's extra config and the
 relation through `defineRelations`:
 
+Spanner matches the interleave prefix by column **name**: the child's
+primary key must start with the parent's key columns under the same names,
+so the parent key here is `singer_id`, not `id` — `spannerTable` enforces
+this at definition time.
+
 ```ts
 import { defineRelations } from 'drizzle-orm/relations';
 import {
@@ -98,6 +103,11 @@ import {
   spannerTable,
   string,
 } from 'drizzle-spanner';
+
+const singers = spannerTable('singers', {
+  singerId: string('singer_id', { length: 36 }).primaryKey().defaultGenerateUuid(),
+  name: string('name', { length: 'max' }).notNull(),
+});
 
 const albums = spannerTable(
   'albums',
@@ -120,7 +130,7 @@ const relations = defineRelations({ singers, albums }, (r) => ({
   albums: {
     singer: r.one.singers({
       from: r.albums.singerId,
-      to: r.singers.id,
+      to: r.singers.singerId,
     }),
   },
 }));
@@ -301,6 +311,14 @@ npm run test:integration
 ```
 
 See [docs/emulator.md](docs/emulator.md) for the emulator's limits.
+
+## Examples
+
+Two runnable examples live in [examples/](examples/), verified against the
+emulator in CI: [basic-crud](examples/basic-crud/) (schema, `migrate`, CRUD,
+a read-write transaction) and [interleaved-rqb](examples/interleaved-rqb/)
+(interleaved singers/albums, relational queries, buffered mutations, a stale
+read, schema applied via `push`).
 
 ## References
 
