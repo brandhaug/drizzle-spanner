@@ -31,7 +31,7 @@ function main(): void {
   const packageDirs = [root, join(root, 'packages/drizzle-spanner-kit')];
   let failed = false;
   for (const dir of packageDirs) {
-    const [report] = JSON.parse(
+    const [report = { files: [] }] = JSON.parse(
       execFileSync('npm', ['pack', '--dry-run', '--json'], {
         cwd: dir,
         encoding: 'utf8',

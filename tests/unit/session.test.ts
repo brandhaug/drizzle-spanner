@@ -8,6 +8,7 @@ import {
   SpannerAbortedError,
   SpannerConstraintError,
   SpannerInvalidArgumentError,
+  SpannerUnavailableError,
   spannerTable,
   string,
 } from '../../src/index.js';
@@ -290,5 +291,47 @@ describe('error taxonomy', () => {
       .catch((e) => e);
     expect(failure).toBeInstanceOf(SpannerInvalidArgumentError);
     expect(failure.message).toContain('parameter @p0 binds column "plays"');
+  });
+
+  it.each([
+    ['UNAVAILABLE', GrpcStatus.UNAVAILABLE],
+    ['DEADLINE_EXCEEDED', GrpcStatus.DEADLINE_EXCEEDED],
+  ])('wraps %s into SpannerUnavailableError', async (_name, code) => {
+    const db = drizzle(
+      failingDatabase(Object.assign(new Error('transport failure'), { code })),
+    );
+    const failure = await db
+      .select()
+      .from(singers)
+      .execute()
+      .catch((e) => e);
+    expect(failure).toBeInstanceOf(SpannerUnavailableError);
+    expect(failure.kind).toBe('unavailable');
+    expect(failure.code).toBe(code);
+  });
+
+  // Spec (error handling): errors carry the SQL with parameter names, never
+  // parameter values. Nothing reachable on any wrapped variant may leak the
+  // bound value.
+  it.each([
+    ['ABORTED', GrpcStatus.ABORTED],
+    ['ALREADY_EXISTS', GrpcStatus.ALREADY_EXISTS],
+    ['FAILED_PRECONDITION', GrpcStatus.FAILED_PRECONDITION],
+    ['INVALID_ARGUMENT', GrpcStatus.INVALID_ARGUMENT],
+    ['UNAVAILABLE', GrpcStatus.UNAVAILABLE],
+    ['DEADLINE_EXCEEDED', GrpcStatus.DEADLINE_EXCEEDED],
+  ])('never exposes parameter values on a wrapped %s failure', async (_name, code) => {
+    const secret = 'PARAM-VALUE-a2c5e7';
+    const db = drizzle(
+      failingDatabase(Object.assign(new Error('driver failure'), { code })),
+    );
+    const failure = await db
+      .insert(singers)
+      .values({ id: secret, name: secret })
+      .execute()
+      .catch((e) => e);
+    expect(failure.message).not.toContain(secret);
+    expect(failure.query.sql).not.toContain(secret);
+    expect(JSON.stringify({ ...failure, stack: undefined })).not.toContain(secret);
   });
 });

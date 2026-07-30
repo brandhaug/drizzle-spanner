@@ -13,8 +13,8 @@ import {
   SpannerSequence,
   SpannerTable,
   SpannerTimestamp,
-  getTableExtraConfig,
 } from 'drizzle-spanner';
+import { getTableExtraConfig } from 'drizzle-spanner/internal';
 import type { SpannerColumn, SpannerExtraConfigColumn } from 'drizzle-spanner';
 import type {
   ColumnEntity,

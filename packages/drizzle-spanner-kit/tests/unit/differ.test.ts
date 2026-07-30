@@ -12,8 +12,9 @@ import {
   string,
   timestamp,
 } from 'drizzle-spanner';
-import { DiffRefusedError, diffSnapshots, serializeSchema } from '../../src/index.js';
-import type { SpannerEntity } from '../../src/index.js';
+import { DiffRefusedError, diffSnapshots } from '../../src/differ.js';
+import { serializeSchema } from '../../src/serializer.js';
+import type { SpannerEntity } from '../../src/snapshot.js';
 
 function ddlOf(schemaExports: Record<string, unknown>): SpannerEntity[] {
   return serializeSchema(schemaExports);

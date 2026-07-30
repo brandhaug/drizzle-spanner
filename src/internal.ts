@@ -1,32 +1,22 @@
-import type { Column } from 'drizzle-orm/column';
-import type { SQL } from 'drizzle-orm/sql';
-import * as utils from 'drizzle-orm/utils';
-
 /**
- * drizzle-orm exports these helpers at runtime but strips them from the
- * published .d.ts as @internal. Re-export them with the types the runtime
- * actually implements (verified in the dialect-internals research and spike).
+ * Internal wiring surface, exported as `drizzle-spanner/internal`.
+ *
+ * These helpers exist so drizzle-spanner-kit (and tests) can reuse the
+ * adapter's conversion and introspection machinery. They are NOT public
+ * API: no semver stability is promised, and application code should not
+ * import from this subpath.
  */
-
-export interface SelectedFieldsOrderedItem {
-  path: string[];
-  field: Column<any> | SQL | SQL.Aliased;
-}
-
-export type SelectedFieldsOrdered = SelectedFieldsOrderedItem[];
-
-export type SelectedFields = Record<string, unknown>;
-
-interface InternalUtils {
-  orderSelectedFields(fields: SelectedFields, pathPrefix?: string[]): SelectedFieldsOrdered;
-  mapResultRow<TResult>(
-    columns: SelectedFieldsOrdered,
-    row: unknown[],
-    joinsNotNullableMap: Record<string, boolean> | undefined,
-  ): TResult;
-}
-
-const internal = utils as unknown as InternalUtils;
-
-export const orderSelectedFields = internal.orderSelectedFields;
-export const mapResultRow = internal.mapResultRow;
+export { unwrapDriverWrapper, unwrapFloat } from './columns/common.js';
+export { createDatabaseSession, createMockSession } from './db.js';
+export { wrapSpannerError } from './errors.js';
+export {
+  MUTATION_MODE_READ_MESSAGE,
+  MUTATION_MODE_RETURNING_MESSAGE,
+  toMutationRow,
+  whereToPrimaryKey,
+} from './mutations.js';
+export { mapRowToParams } from './query-builders/query-base.js';
+export { NO_CLIENT_MESSAGE, driverRowToObject, toNamedParams } from './session.js';
+export { toTimestampBounds } from './staleness.js';
+export { getPrimaryKeyColumns, getTableExtraConfig } from './table.js';
+export { arrayTypeHint, toDriverParamType } from './type-hints.js';

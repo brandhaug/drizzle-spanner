@@ -8,8 +8,8 @@ import type { SpannerDialect, SpannerQueryWithTypings } from './dialect.js';
 import { wrapSpannerError } from './errors.js';
 import type { SpannerMutationSink } from './mutations.js';
 import type { SpannerTimestampBounds } from './staleness.js';
-import type { SelectedFieldsOrdered } from './internal.js';
-import { mapResultRow } from './internal.js';
+import type { SelectedFieldsOrdered } from './orm-internal.js';
+import { mapResultRow } from './orm-internal.js';
 import { toDriverParamType } from './type-hints.js';
 
 export const NO_CLIENT_MESSAGE =
