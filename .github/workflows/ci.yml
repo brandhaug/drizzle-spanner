@@ -82,6 +82,34 @@ jobs:
       - run: npm test
       - run: npm run test:integration
 
+  examples:
+    name: Examples (${{ matrix.example }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        example: [basic-crud, interleaved-rqb]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: lts/*
+          cache: npm
+      - run: npm ci
+      - run: npm run build
+      - run: npm run build -w drizzle-spanner-kit
+      - name: Start Spanner emulator
+        run: |
+          docker run -d --name spanner-emulator -p 9010:9010 \
+            gcr.io/cloud-spanner-emulator/emulator:latest
+          until docker logs spanner-emulator 2>&1 | grep -qi 'gRPC server listening'; do sleep 1; done
+      - run: npm ci
+        working-directory: examples/${{ matrix.example }}
+      - run: npm start
+        working-directory: examples/${{ matrix.example }}
+        env:
+          SPANNER_EMULATOR_HOST: localhost:9010
+
   integration-bun:
     name: Integration (Bun)
     runs-on: ubuntu-latest

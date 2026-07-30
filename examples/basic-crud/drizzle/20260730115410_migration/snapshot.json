@@ -1,0 +1,68 @@
+{
+  "version": "8",
+  "dialect": "spanner",
+  "id": "7e77c377-b04b-4cd6-9287-0697b9dff564",
+  "prevIds": [],
+  "ddl": [
+    {
+      "entityType": "tables",
+      "name": "tasks",
+      "interleave": null
+    },
+    {
+      "entityType": "columns",
+      "table": "tasks",
+      "name": "id",
+      "type": "STRING(36)",
+      "notNull": true,
+      "default": "GENERATE_UUID()",
+      "generated": null,
+      "generatedIdentity": false,
+      "allowCommitTimestamp": false
+    },
+    {
+      "entityType": "columns",
+      "table": "tasks",
+      "name": "title",
+      "type": "STRING(MAX)",
+      "notNull": true,
+      "default": null,
+      "generated": null,
+      "generatedIdentity": false,
+      "allowCommitTimestamp": false
+    },
+    {
+      "entityType": "columns",
+      "table": "tasks",
+      "name": "done",
+      "type": "BOOL",
+      "notNull": true,
+      "default": "FALSE",
+      "generated": null,
+      "generatedIdentity": false,
+      "allowCommitTimestamp": false
+    },
+    {
+      "entityType": "columns",
+      "table": "tasks",
+      "name": "updated_at",
+      "type": "TIMESTAMP",
+      "notNull": false,
+      "default": null,
+      "generated": null,
+      "generatedIdentity": false,
+      "allowCommitTimestamp": true
+    },
+    {
+      "entityType": "pks",
+      "table": "tasks",
+      "columns": [
+        {
+          "name": "id",
+          "order": "asc"
+        }
+      ]
+    }
+  ],
+  "renames": []
+}
