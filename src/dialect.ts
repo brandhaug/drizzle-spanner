@@ -50,6 +50,8 @@ export interface SpannerInsertConfig {
   table: SpannerTable;
   values: Record<string, Param | SQL>[];
   returning?: SelectedFieldsOrdered;
+  /** `INSERT OR UPDATE` / `INSERT OR IGNORE` (ADR 0002) — Spanner's upsert forms. */
+  conflictAction?: 'update' | 'ignore';
 }
 
 export interface SpannerUpdateConfig {
@@ -165,7 +167,7 @@ export class SpannerDialect {
   }
 
   buildInsertQuery(config: SpannerInsertConfig): SQL {
-    const { table, values, returning } = config;
+    const { table, values, returning, conflictAction } = config;
     const columns = table[TableColumns];
     const colEntries = Object.entries(columns);
     const insertOrder = colEntries.map(([, column]) =>
@@ -189,7 +191,9 @@ export class SpannerDialect {
     const valuesSql = sql.join(valuesSqlList);
 
     const returningSql = this.buildReturning(returning);
-    return sql`insert into ${table} ${insertOrder} values ${valuesSql}${returningSql}`;
+    const insertKeyword =
+      conflictAction === undefined ? sql`insert` : sql.raw(`insert or ${conflictAction}`);
+    return sql`${insertKeyword} into ${table} ${insertOrder} values ${valuesSql}${returningSql}`;
   }
 
   buildUpdateSet(table: SpannerTable, set: Record<string, Param | SQL>): SQL {

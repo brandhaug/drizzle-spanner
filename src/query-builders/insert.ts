@@ -2,6 +2,7 @@ import { entityKind } from 'drizzle-orm/entity';
 import type { Param, SQL } from 'drizzle-orm/sql';
 import type { InferInsertModel, InferSelectModel } from 'drizzle-orm/table';
 import type { SpannerDialect, SpannerInsertConfig } from '../dialect.js';
+import { SpannerInvalidArgumentError } from '../errors.js';
 import type { SpannerMutationSink } from '../mutations.js';
 import { toMutationRow } from '../mutations.js';
 import type { SpannerSession } from '../session.js';
@@ -55,6 +56,31 @@ export class SpannerInsert<TTable extends AnySpannerTable, TResult> extends Span
     this.config = { table, values };
   }
 
+  private setConflictAction(action: 'update' | 'ignore'): this {
+    if (this.config.conflictAction && this.config.conflictAction !== action) {
+      throw new SpannerInvalidArgumentError({
+        message:
+          'orUpdate() and orIgnore() are mutually exclusive: one INSERT carries one conflict action',
+      });
+    }
+    this.config.conflictAction = action;
+    return this;
+  }
+
+  /**
+   * `INSERT OR UPDATE` — upsert: a conflicting row is replaced with the full
+   * column list of this statement (no partial `ON CONFLICT`-style updates;
+   * omitted columns reset to their defaults). ADR 0002.
+   */
+  orUpdate(): this {
+    return this.setConflictAction('update');
+  }
+
+  /** `INSERT OR IGNORE` — a conflicting row is left unchanged. ADR 0002. */
+  orIgnore(): this {
+    return this.setConflictAction('ignore');
+  }
+
   /** Compiles to `THEN RETURN` — Spanner's RETURNING. */
   returning(): SpannerInsert<TTable, InferSelectModel<TTable>[]>;
   returning<TSelection extends SpannerSelectedFields>(
@@ -71,10 +97,20 @@ export class SpannerInsert<TTable extends AnySpannerTable, TResult> extends Span
 
   protected override writeMutation(sink: SpannerMutationSink): void {
     this.assertNoReturningInMutation();
-    const { table, values } = this.config;
-    sink.insert(
-      table[TableName],
-      values.map((row) => toMutationRow(this.dialect, table, row)),
-    );
+    const { table, values, conflictAction } = this.config;
+    if (conflictAction === 'ignore') {
+      // Spanner mutations have insert/update/insertOrUpdate/replace/delete —
+      // no insert-or-ignore form (ADR 0002 consequences).
+      throw new SpannerInvalidArgumentError({
+        message:
+          'orIgnore() has no mutation form in a bufferedMutations transaction; use a read-write transaction for INSERT OR IGNORE',
+      });
+    }
+    const rows = values.map((row) => toMutationRow(this.dialect, table, row));
+    if (conflictAction === 'update') {
+      sink.upsert(table[TableName], rows);
+    } else {
+      sink.insert(table[TableName], rows);
+    }
   }
 }

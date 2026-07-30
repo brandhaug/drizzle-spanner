@@ -14,6 +14,7 @@ import { TableColumns, TableName } from './symbols.js';
 export interface SpannerMutationSink {
   insert(table: string, rows: Record<string, unknown>[]): void;
   update(table: string, rows: Record<string, unknown>[]): void;
+  upsert(table: string, rows: Record<string, unknown>[]): void;
   deleteRows(table: string, keys: unknown[][]): void;
 }
 
