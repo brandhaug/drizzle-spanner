@@ -39,6 +39,7 @@ export interface SpannerDriverTransaction {
   /** Mutation buffer used by the bufferedMutations transaction mode. */
   insert(table: string, rows: Record<string, unknown>[]): void;
   update(table: string, rows: Record<string, unknown>[]): void;
+  upsert(table: string, rows: Record<string, unknown>[]): void;
   deleteRows(table: string, keys: unknown[][]): void;
 }
 

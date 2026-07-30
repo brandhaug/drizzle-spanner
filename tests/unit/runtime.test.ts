@@ -51,6 +51,7 @@ function fakeRetryingDatabase(retryCap = 25) {
     },
     insert() {},
     update() {},
+    upsert() {},
     deleteRows() {},
   };
   const database = {
@@ -308,6 +309,7 @@ describe('single-use stale reads (withStaleness)', () => {
           },
           insert() {},
           update() {},
+          upsert() {},
           deleteRows() {},
         });
       },
@@ -408,7 +410,7 @@ describe('bufferedMutations transactions', () => {
   });
 
   interface RecordedMutation {
-    kind: 'insert' | 'update' | 'deleteRows';
+    kind: 'insert' | 'update' | 'upsert' | 'deleteRows';
     table: string;
     payload: unknown;
   }
@@ -437,6 +439,9 @@ describe('bufferedMutations transactions', () => {
       },
       update(table: string, rows: Record<string, unknown>[]) {
         mutations.push({ kind: 'update', table, payload: rows });
+      },
+      upsert(table: string, rows: Record<string, unknown>[]) {
+        mutations.push({ kind: 'upsert', table, payload: rows });
       },
       deleteRows(table: string, keys: unknown[][]) {
         mutations.push({ kind: 'deleteRows', table, payload: keys });
@@ -492,6 +497,38 @@ describe('bufferedMutations transactions', () => {
     ]);
     expect(fake.commitCount()).toBe(1);
     expect(fake.runCount()).toBe(0);
+  });
+
+  it('compiles insert().values().orUpdate() to an upsert mutation', async () => {
+    const fake = fakeMutationDatabase();
+    const db = drizzle(fake.database);
+    await db.transaction(
+      async (tx) => {
+        await tx.insert(singers).values({ id: 'a', name: 'Ada' }).orUpdate();
+      },
+      { mode: 'bufferedMutations' },
+    );
+    expect(fake.mutations).toEqual([
+      { kind: 'upsert', table: 'singers', payload: [{ id: 'a', name: 'Ada' }] },
+    ]);
+    expect(fake.commitCount()).toBe(1);
+  });
+
+  it('rejects orIgnore() in a bufferedMutations transaction with a typed error', async () => {
+    const fake = fakeMutationDatabase();
+    const db = drizzle(fake.database);
+    await expect(
+      db.transaction(
+        async (tx) => {
+          await tx.insert(singers).values({ id: 'a', name: 'Ada' }).orIgnore();
+        },
+        { mode: 'bufferedMutations' },
+      ),
+    ).rejects.toSatisfy(
+      (error: unknown) =>
+        error instanceof SpannerInvalidArgumentError && /orIgnore/.test(error.message),
+    );
+    expect(fake.mutations).toEqual([]);
   });
 
   it('maps values through mapToDriverValue and the commitTimestamp sentinel', async () => {

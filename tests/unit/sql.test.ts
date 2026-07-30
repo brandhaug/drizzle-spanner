@@ -131,6 +131,41 @@ describe('update SQL', () => {
   });
 });
 
+describe('upsert SQL', () => {
+  it('renders orUpdate() as INSERT OR UPDATE', () => {
+    const query = db.insert(singers).values({ id: 'a', name: 'Ada' }).orUpdate().toSQL();
+    expect(query.sql).toBe(
+      'insert or update into `singers` (`id`, `name`, `plays`, `updated_at`) values (@p0, @p1, default, default)',
+    );
+    expect(query.params).toEqual(['a', 'Ada']);
+  });
+
+  it('renders orIgnore() as INSERT OR IGNORE', () => {
+    const query = db.insert(singers).values({ id: 'a', name: 'Ada' }).orIgnore().toSQL();
+    expect(query.sql).toBe(
+      'insert or ignore into `singers` (`id`, `name`, `plays`, `updated_at`) values (@p0, @p1, default, default)',
+    );
+  });
+
+  it('composes orUpdate() with returning() as THEN RETURN', () => {
+    const query = db
+      .insert(singers)
+      .values({ id: 'a', name: 'Ada' })
+      .orUpdate()
+      .returning({ id: singers.id })
+      .toSQL();
+    expect(query.sql).toBe(
+      'insert or update into `singers` (`id`, `name`, `plays`, `updated_at`) values (@p0, @p1, default, default) then return `singers`.`id`',
+    );
+  });
+
+  it('rejects combining orUpdate() and orIgnore()', () => {
+    expect(() => db.insert(singers).values({ id: 'a', name: 'Ada' }).orUpdate().orIgnore()).toThrow(
+      /orUpdate|orIgnore/,
+    );
+  });
+});
+
 describe('delete SQL', () => {
   it('renders delete with where', () => {
     const query = db.delete(singers).where(eq(singers.id, 'abc')).toSQL();
