@@ -66,10 +66,6 @@ export interface SpannerDriverDatabase {
   ): Promise<readonly [SpannerDriverSnapshot, ...unknown[]]>;
 }
 
-function isAborted(error: unknown): boolean {
-  return (error as { code?: unknown })?.code === GrpcStatus.ABORTED;
-}
-
 /** Reads on `database.run`; each standalone DML statement in its own read-write transaction. */
 class DatabaseRunner {
   constructor(private readonly database: SpannerDriverDatabase) {}
