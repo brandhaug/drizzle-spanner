@@ -9,7 +9,7 @@ import {
   SpannerInvalidArgumentError,
   wrapSpannerError,
 } from './errors.js';
-import type { SpannerStaleness, SpannerTimestampBounds } from './staleness.js';
+import type { SpannerMultiUseStaleness, SpannerTimestampBounds } from './staleness.js';
 import { toTimestampBounds } from './staleness.js';
 import type { SpannerDriverRow, SpannerQueryRunner, SpannerSqlRequest } from './session.js';
 import { NO_CLIENT_MESSAGE, SpannerSession } from './session.js';
@@ -196,8 +196,12 @@ export interface SpannerTransactionOptions {
 /** Options for a read-only `db.transaction` over the snapshot API. */
 export interface SpannerReadOnlyTransactionOptions {
   readOnly: true;
-  /** Timestamp bound of the snapshot; omitted means a strong read. */
-  staleness?: SpannerStaleness;
+  /**
+   * Timestamp bound of the snapshot; omitted means a strong read. Single-use
+   * bounds (`maxStaleness`, `minReadTimestamp`) are excluded at the type
+   * level — Spanner rejects them on multi-use snapshots.
+   */
+  staleness?: SpannerMultiUseStaleness;
 }
 
 /**

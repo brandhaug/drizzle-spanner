@@ -8,7 +8,7 @@ const permittedDrizzleSubpaths = [
   'column',
   'column-builder',
   'sql',
-  'sql/**',
+  'sql/expressions',
   'session',
   'query-promise',
   'runnable-query',
@@ -24,7 +24,6 @@ const permittedDrizzleSubpaths = [
   'tracing',
   'migrator',
   'cache/core',
-  'cache/core/**',
 ];
 
 export default tseslint.config(

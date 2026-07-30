@@ -1,21 +1,8 @@
 import { randomUUID } from 'node:crypto';
-import { GenericContainer, Wait } from 'testcontainers';
-import type { StartedTestContainer } from 'testcontainers';
-import { Spanner } from '@google-cloud/spanner';
 import type { Database } from '@google-cloud/spanner';
 import { drizzle } from '../../src/index.js';
 import type { SpannerDatabase, SpannerDriverDatabase } from '../../src/index.js';
-
-const EMULATOR_IMAGE = 'gcr.io/cloud-spanner-emulator/emulator:latest';
-
-// Captured at import time: the harness itself mutates SPANNER_EMULATOR_HOST
-// for the driver, and under single-process runners (bun test) a later test
-// file must not mistake the previous file's stopped container for an
-// externally managed emulator. The OWNED marker covers modules that load
-// lazily after another harness (e.g. the kit's) already mutated the env.
-const EXTERNAL_EMULATOR_HOST = process.env.DRIZZLE_SPANNER_TEST_OWNED
-  ? undefined
-  : process.env.SPANNER_EMULATOR_HOST;
+import { startSpannerTestTarget } from './spanner-target.js';
 
 export interface EmulatorHarness {
   db: SpannerDatabase;
@@ -24,38 +11,15 @@ export interface EmulatorHarness {
 }
 
 /**
- * One emulator per test worker: each test file starts its own container
- * (emulator state is in-memory and read-write transactions serialize, so
- * isolation is free and mandatory). When SPANNER_EMULATOR_HOST is already set
- * (docker-compose dev loop, or the Bun run), that emulator is reused and the
- * file gets its own randomly named instance/database instead.
+ * One Spanner test target per test file (see `startSpannerTestTarget`); each
+ * file gets its own randomly named database.
  */
 export async function startEmulator(ddl: string[]): Promise<EmulatorHarness> {
-  let container: StartedTestContainer | undefined;
-  let host = EXTERNAL_EMULATOR_HOST;
-  if (!host) {
-    // The emulator image is distroless, so testcontainers' internal port
-    // probe cannot run; wait on the gRPC server's log line instead.
-    container = await new GenericContainer(EMULATOR_IMAGE)
-      .withExposedPorts(9010)
-      .withWaitStrategy(Wait.forLogMessage(/gRPC server listening/i))
-      .start();
-    host = `${container.getHost()}:${container.getMappedPort(9010)}`;
-    process.env.DRIZZLE_SPANNER_TEST_OWNED = '1';
-  }
-  process.env.SPANNER_EMULATOR_HOST = host;
+  const target = await startSpannerTestTarget('test-instance');
 
-  const suffix = randomUUID().slice(0, 8);
-  const spanner = new Spanner({ projectId: 'test-project' });
-  const instance = spanner.instance(`test-instance-${suffix}`);
-  const [, instanceOperation] = await instance.create({
-    config: 'emulator-config',
-    nodes: 1,
-    displayName: 'drizzle-spanner tests',
-  });
-  await instanceOperation.promise();
-
-  const [database, databaseOperation] = await instance.createDatabase(`test-db-${suffix}`);
+  const [database, databaseOperation] = await target.instance.createDatabase(
+    `test-db-${randomUUID().slice(0, 8)}`,
+  );
   await databaseOperation.promise();
 
   if (ddl.length > 0) {
@@ -67,9 +31,11 @@ export async function startEmulator(ddl: string[]): Promise<EmulatorHarness> {
     db: drizzle(database as unknown as SpannerDriverDatabase),
     database,
     async cleanup() {
-      await database.close();
-      spanner.close();
-      await container?.stop();
+      // A real instance outlives the run; drop the database instead of
+      // leaving it behind. Emulator state dies with the container.
+      if (target.emulatorHost) await database.close();
+      else await database.delete();
+      await target.stop();
     },
   };
 }

@@ -16,6 +16,7 @@ import {
   foreignKeyConstraintSql,
   renameTableSql,
 } from './ddl.js';
+import { bucketEntities } from './entities.js';
 import type {
   CheckEntity,
   ColumnEntity,
@@ -110,36 +111,22 @@ function indexEntities(ddl: SpannerEntity[]): EntityIndex {
     checks: new Map(),
     sequences: new Map(),
   };
-  for (const entity of ddl) {
-    switch (entity.entityType) {
-      case 'tables':
-        index.tables.set(entity.name, entity);
-        index.columns.set(entity.name, index.columns.get(entity.name) ?? new Map());
-        break;
-      case 'columns': {
-        const tableColumns = index.columns.get(entity.table) ?? new Map<string, ColumnEntity>();
-        tableColumns.set(entity.name, entity);
-        index.columns.set(entity.table, tableColumns);
-        break;
-      }
-      case 'pks':
-        index.pks.set(entity.table, entity);
-        break;
-      case 'indexes':
-        // Spanner index names are database-global.
-        index.indexes.set(entity.name, entity);
-        break;
-      case 'fks':
-        index.fks.set(`${entity.table}.${entity.name}`, entity);
-        break;
-      case 'checks':
-        index.checks.set(`${entity.table}.${entity.name}`, entity);
-        break;
-      case 'sequences':
-        index.sequences.set(entity.name, entity);
-        break;
-    }
+  const buckets = bucketEntities(ddl);
+  for (const table of buckets.tables) {
+    index.tables.set(table.name, table);
+    index.columns.set(table.name, index.columns.get(table.name) ?? new Map());
   }
+  for (const column of buckets.columns) {
+    const tableColumns = index.columns.get(column.table) ?? new Map<string, ColumnEntity>();
+    tableColumns.set(column.name, column);
+    index.columns.set(column.table, tableColumns);
+  }
+  for (const pk of buckets.pks) index.pks.set(pk.table, pk);
+  // Spanner index names are database-global.
+  for (const dbIndex of buckets.indexes) index.indexes.set(dbIndex.name, dbIndex);
+  for (const fk of buckets.fks) index.fks.set(`${fk.table}.${fk.name}`, fk);
+  for (const check of buckets.checks) index.checks.set(`${check.table}.${check.name}`, check);
+  for (const sequence of buckets.sequences) index.sequences.set(sequence.name, sequence);
   return index;
 }
 
