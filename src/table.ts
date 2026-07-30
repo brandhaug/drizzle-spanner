@@ -60,18 +60,31 @@ export type SpannerTableWithColumns<T extends TableConfig> = SpannerTable<T> &
 
 export type AnySpannerTable = SpannerTable<TableConfig>;
 
-function primaryKeyColumnNames(table: SpannerTable): string[] {
+/**
+ * Primary-key columns of a table in key order: a composite
+ * `primaryKey({ columns })` entry wins, else the `.primaryKey()` columns in
+ * declaration order. Key order matters — Spanner mutations address rows by it.
+ */
+export function getPrimaryKeyColumns(table: SpannerTable): SpannerColumn<any>[] {
+  const columns = table[TableColumns];
   const extraConfigBuilder = table[ExtraConfigBuilder];
   if (extraConfigBuilder) {
     for (const entry of extraConfigBuilder(table[ExtraConfigColumns])) {
       if (is(entry, PrimaryKeyBuilder)) {
-        return entry.columns.map((column) => column.name);
+        // Composite keys capture SpannerExtraConfigColumn facades; map back
+        // to the real columns by name.
+        return entry.columns.map(
+          (column) =>
+            Object.values(columns).find((candidate) => candidate.name === column.name)!,
+        );
       }
     }
   }
-  return Object.values(table[TableColumns])
-    .filter((column) => column.primary)
-    .map((column) => column.name);
+  return Object.values(columns).filter((column) => column.primary);
+}
+
+function primaryKeyColumnNames(table: SpannerTable): string[] {
+  return getPrimaryKeyColumns(table).map((column) => column.name);
 }
 
 /**

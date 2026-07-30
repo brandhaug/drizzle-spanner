@@ -2,11 +2,14 @@ import { entityKind } from 'drizzle-orm/entity';
 import type { SQL } from 'drizzle-orm/sql';
 import type { InferSelectModel } from 'drizzle-orm/table';
 import type { SpannerDeleteConfig, SpannerDialect } from '../dialect.js';
+import { SpannerInvalidArgumentError } from '../errors.js';
+import type { SpannerMutationSink } from '../mutations.js';
+import { whereToPrimaryKey } from '../mutations.js';
 import type { SelectedFieldsOrdered } from '../internal.js';
 import { orderSelectedFields } from '../internal.js';
 import type { SpannerSession } from '../session.js';
 import type { AnySpannerTable } from '../table.js';
-import { TableColumns } from '../symbols.js';
+import { TableColumns, TableName } from '../symbols.js';
 import { SpannerQueryBase } from './query-base.js';
 import type { SelectResultFields, SpannerSelectedFields } from './select.js';
 
@@ -48,5 +51,17 @@ export class SpannerDelete<TTable extends AnySpannerTable, TResult> extends Span
 
   protected selection(): SelectedFieldsOrdered | undefined {
     return this.config.returning;
+  }
+
+  protected override writeMutation(sink: SpannerMutationSink): void {
+    if (this.config.returning) {
+      throw new SpannerInvalidArgumentError({
+        message:
+          'returning() is not available inside a bufferedMutations transaction: mutations return nothing; use a read-write transaction',
+      });
+    }
+    const { table, where } = this.config;
+    const key = whereToPrimaryKey(table, where, 'delete');
+    sink.deleteRows(table[TableName], [key.values]);
   }
 }

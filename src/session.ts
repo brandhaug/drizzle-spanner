@@ -6,6 +6,7 @@ import type { Query, SQL } from 'drizzle-orm/sql';
 import { fillPlaceholders } from 'drizzle-orm/sql';
 import type { SpannerDialect, SpannerQueryWithTypings } from './dialect.js';
 import { wrapSpannerError } from './errors.js';
+import type { SpannerMutationSink } from './mutations.js';
 import type { SpannerTimestampBounds } from './staleness.js';
 import type { SelectedFieldsOrdered } from './internal.js';
 import { mapResultRow } from './internal.js';
@@ -138,6 +139,8 @@ export class SpannerSession {
     readonly dialect: SpannerDialect,
     /** @internal */
     readonly options: SpannerSessionOptions = {},
+    /** @internal Set only inside a bufferedMutations transaction. */
+    readonly mutationSink?: SpannerMutationSink,
   ) {
     this.logger = options.logger ?? new NoopLogger();
   }
