@@ -17,6 +17,14 @@ export interface SpannerMutationSink {
   deleteRows(table: string, keys: unknown[][]): void;
 }
 
+/** Reads have no mutation form; thrown by every read path in mutation mode. */
+export const MUTATION_MODE_READ_MESSAGE =
+  'Reads are not allowed inside a bufferedMutations transaction; use a read-write or read-only transaction for queries';
+
+/** Mutations return nothing; thrown when `.returning()` reaches mutation mode. */
+export const MUTATION_MODE_RETURNING_MESSAGE =
+  'returning() is not available inside a bufferedMutations transaction: mutations return nothing; use a read-write transaction';
+
 /** The write-site value of `commitTimestamp()` in a mutation. */
 const MUTATION_COMMIT_TIMESTAMP = 'spanner.commit_timestamp()';
 const COMMIT_TIMESTAMP_SQL = 'PENDING_COMMIT_TIMESTAMP()';

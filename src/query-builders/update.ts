@@ -5,12 +5,10 @@ import type { SpannerDialect, SpannerUpdateConfig } from '../dialect.js';
 import { SpannerInvalidArgumentError } from '../errors.js';
 import type { SpannerMutationSink } from '../mutations.js';
 import { toMutationRow, whereToPrimaryKey } from '../mutations.js';
-import type { SelectedFieldsOrdered } from '../internal.js';
-import { orderSelectedFields } from '../internal.js';
 import type { SpannerSession } from '../session.js';
 import type { AnySpannerTable } from '../table.js';
 import { TableColumns, TableName } from '../symbols.js';
-import { mapRowToParams, SpannerQueryBase } from './query-base.js';
+import { mapRowToParams, SpannerFilteredDmlBase } from './query-base.js';
 import type { SelectResultFields, SpannerSelectedFields } from './select.js';
 
 export type SpannerUpdateSet<TTable extends AnySpannerTable> = {
@@ -32,10 +30,10 @@ export class SpannerUpdateBuilder<TTable extends AnySpannerTable> {
   }
 }
 
-export class SpannerUpdate<TTable extends AnySpannerTable, TResult> extends SpannerQueryBase<TResult> {
+export class SpannerUpdate<TTable extends AnySpannerTable, TResult> extends SpannerFilteredDmlBase<TResult> {
   static override readonly [entityKind]: string = 'SpannerUpdate';
 
-  private readonly config: SpannerUpdateConfig;
+  protected readonly config: SpannerUpdateConfig;
 
   constructor(
     table: TTable,
@@ -47,21 +45,13 @@ export class SpannerUpdate<TTable extends AnySpannerTable, TResult> extends Span
     this.config = { table, set };
   }
 
-  where(where: SQL | undefined): this {
-    this.config.where = where;
-    return this;
-  }
-
   /** Compiles to `THEN RETURN` — Spanner's RETURNING. */
   returning(): SpannerUpdate<TTable, InferSelectModel<TTable>[]>;
   returning<TSelection extends SpannerSelectedFields>(
     fields: TSelection,
   ): SpannerUpdate<TTable, SelectResultFields<TSelection>[]>;
-  returning(
-    fields: SpannerSelectedFields = this.config.table[TableColumns],
-  ): SpannerUpdate<TTable, unknown> {
-    this.config.returning = orderSelectedFields(fields);
-    return this as SpannerUpdate<TTable, unknown>;
+  returning(fields?: SpannerSelectedFields): SpannerUpdate<TTable, unknown> {
+    return this.setReturning(fields) as SpannerUpdate<TTable, unknown>;
   }
 
   /** @internal */
@@ -69,17 +59,8 @@ export class SpannerUpdate<TTable extends AnySpannerTable, TResult> extends Span
     return this.dialect.buildUpdateQuery(this.config);
   }
 
-  protected selection(): SelectedFieldsOrdered | undefined {
-    return this.config.returning;
-  }
-
   protected override writeMutation(sink: SpannerMutationSink): void {
-    if (this.config.returning) {
-      throw new SpannerInvalidArgumentError({
-        message:
-          'returning() is not available inside a bufferedMutations transaction: mutations return nothing; use a read-write transaction',
-      });
-    }
+    this.assertNoReturningInMutation();
     const { table, set, where } = this.config;
     const key = whereToPrimaryKey(table, where, 'update');
     // An update mutation row is the full key plus the changed columns.

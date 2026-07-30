@@ -3,15 +3,7 @@ import type { ColumnBaseConfig } from 'drizzle-orm/column';
 import { entityKind } from 'drizzle-orm/entity';
 import type { SpannerTable } from '../table.js';
 import type { SpannerTypeHint } from '../type-hints.js';
-import { SpannerColumn, SpannerColumnBuilder } from './common.js';
-
-/** The driver may return FLOAT cells as `Float` wrappers `{ value: n }`. */
-export function unwrapFloat(value: unknown): number {
-  if (typeof value === 'object' && value !== null && 'value' in value) {
-    return Number((value as { value: unknown }).value);
-  }
-  return Number(value);
-}
+import { SpannerColumn, SpannerColumnBuilder, unwrapFloat } from './common.js';
 
 export interface SpannerFloat64BuilderConfig extends ColumnBuilderBaseConfig<'number double'> {
   data: number;

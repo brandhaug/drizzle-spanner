@@ -8,6 +8,7 @@ import { SpannerInvalidArgumentError } from './errors.js';
 export type SpannerStaleness =
   | { strong: true }
   | { exactStaleness: number | string }
+  | { maxStaleness: number | string }
   | { readTimestamp: Date | string }
   | { minReadTimestamp: Date | string };
 
@@ -22,6 +23,8 @@ export interface SpannerTimestampBounds {
   strong?: boolean;
   /** Milliseconds — the driver's numeric convenience form. */
   exactStaleness?: number;
+  /** Milliseconds; Spanner accepts this bound on single-use reads only. */
+  maxStaleness?: number;
   readTimestamp?: SpannerProtoTimestamp;
   minReadTimestamp?: SpannerProtoTimestamp;
 }
@@ -61,6 +64,9 @@ export function toTimestampBounds(staleness: SpannerStaleness): SpannerTimestamp
   if ('strong' in staleness) return { strong: true };
   if ('exactStaleness' in staleness) {
     return { exactStaleness: durationToMs(staleness.exactStaleness, 'exactStaleness') };
+  }
+  if ('maxStaleness' in staleness) {
+    return { maxStaleness: durationToMs(staleness.maxStaleness, 'maxStaleness') };
   }
   if ('readTimestamp' in staleness) {
     return { readTimestamp: toProtoTimestamp(staleness.readTimestamp, 'readTimestamp') };

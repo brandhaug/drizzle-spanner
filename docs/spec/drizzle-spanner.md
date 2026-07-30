@@ -23,7 +23,10 @@ owns every dialect class and extends only exported drizzle-orm base modules.
 
 - **Packages:** `drizzle-spanner` (ORM adapter) and `drizzle-spanner-kit`
   (migration CLI), in one repository.
-- **Peer dependency:** `"drizzle-orm": ">=1.0.0-beta.22 <1.0.0"`, with a
+- **Peer dependencies:** `"drizzle-orm": ">=1.0.0-beta.22 <1.0.0"`, and
+  `@google-cloud/spanner` as an **optional** peer — the runtime takes the
+  driver's `Database` structurally and never hard-imports the package, so
+  `drizzle.mock()` and SQL-generation use need no driver install — with a
   documented list of tested beta versions and a CI matrix that runs against
   each new beta. A breaking beta must fail in CI, not in a user application.
 - **Permitted imports:** only the base subpaths verified in
@@ -123,17 +126,23 @@ through.
   `db.transaction(cb, { readOnly: true, staleness: { exactStaleness: '15s' } })`
   gives multi-statement consistent snapshots;
   `db.select().from(t).withStaleness({ ... })` compiles to a single-use
-  bounded read. The types forbid `withStaleness` inside a read-write
-  transaction.
+  bounded read. Staleness bounds: `strong`, `exactStaleness`, `maxStaleness`
+  (single-use only, per Spanner), `readTimestamp`, and `minReadTimestamp`.
+  The types forbid `withStaleness` inside a read-write transaction.
 - **Mutations:** `db.transaction(cb, { mode: 'bufferedMutations' })`. Inside
   this mode the insert, update, and delete builders compile to Spanner
   mutations buffered until commit; reads and `.returning()` throw typed
   errors. Model: `ruby-spanner-activerecord`'s `isolation:
-  :buffered_mutations`. There is no `db.mutate` namespace in v1. Open item for
-  implementation: evaluate `INSERT OR UPDATE` DML availability for an upsert
-  story.
+  :buffered_mutations`. There is no `db.mutate` namespace in v1. The open
+  item on `INSERT OR UPDATE` availability is resolved: it is available,
+  including with `THEN RETURN` (see `docs/adr/0002-upsert-via-insert-or-update.md`);
+  the upsert API ships after milestone 2.
 - **Returning:** `.returning()` compiles to `THEN RETURN` (verified in the
   spike).
+- **Standard drizzle idioms:** `db.$count(table, where?)` (a `COUNT(*)`
+  convenience), `db.execute(sql)` (raw-SQL escape hatch), and
+  `drizzle.mock()` (a client-less database for SQL generation and tests)
+  ship with the runtime, matching first-party dialects.
 
 ```ts
 const db = drizzle(spannerDatabase, { relations });
@@ -213,8 +222,10 @@ matchable by kind and later usable as an Effect failure channel:
 - `SpannerDdlError` — failed or partially applied `updateSchema` operations.
 - `SpannerUnavailableError` — transport and deadline failures.
 
-Each variant carries the gRPC status code, the raw error, and the SQL (with
-parameter names, never values).
+Each variant carries the gRPC status code, the raw error, and — when a
+statement produced the failure — the SQL (with parameter names, never
+values). Transaction-level failures (begin, commit, retry exhaustion) have no
+single statement, so they carry the code and the raw error only.
 
 ## Test strategy
 
@@ -258,7 +269,9 @@ re-litigated:
    stale reads, buffered-mutations mode, commit-timestamp sentinel, RQB via
    `ARRAY(SELECT AS STRUCT)` (with `extras` last).
 3. **drizzle-spanner-kit:** snapshot serializer, differ with refuse-and-explain
-   diagnostics, `generate`/`migrate`, then `pull`, then `push`.
+   diagnostics, `generate`/`migrate`, then `pull`, then `push`. The runtime
+   `migrate()` function and the `drizzle-spanner/migrator` subpath ship here
+   too: they consume the migration-folder format the kit's `generate` defines.
 4. **Hardening and release:** beta CI matrix, Bun matrix, README, examples,
    npm publish.
 
