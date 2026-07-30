@@ -58,6 +58,34 @@ export function bucketEntities(entities: SpannerEntity[]): EntityBuckets {
   return buckets;
 }
 
+/** Topologically orders tables parents-first by interleaving and FK targets. */
+export function orderTablesParentsFirst(
+  tables: TableEntity[],
+  fksByTable: Map<string, ForeignKeyEntity[]>,
+): TableEntity[] {
+  const remaining = new Map(tables.map((table) => [table.name, table]));
+  const ordered: TableEntity[] = [];
+  const visiting = new Set<string>();
+
+  const visit = (table: TableEntity): void => {
+    if (!remaining.has(table.name) || visiting.has(table.name)) return;
+    visiting.add(table.name);
+    const dependencies: string[] = [];
+    if (table.interleave) dependencies.push(table.interleave.parent);
+    for (const fk of fksByTable.get(table.name) ?? []) dependencies.push(fk.foreignTable);
+    for (const dependency of dependencies) {
+      const parent = remaining.get(dependency);
+      if (parent && parent !== table) visit(parent);
+    }
+    visiting.delete(table.name);
+    remaining.delete(table.name);
+    ordered.push(table);
+  };
+
+  for (const table of tables) visit(table);
+  return ordered;
+}
+
 /** Groups table-scoped entities into per-table lists, preserving order. */
 export function groupByTable<T extends { table: string }>(items: T[]): Map<string, T[]> {
   const groups = new Map<string, T[]>();

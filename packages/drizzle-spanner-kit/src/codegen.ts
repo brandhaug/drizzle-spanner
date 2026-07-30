@@ -7,7 +7,7 @@ import type {
   SpannerEntity,
   TableEntity,
 } from './snapshot.js';
-import { bucketEntities, groupByTable } from './entities.js';
+import { bucketEntities, groupByTable, orderTablesParentsFirst } from './entities.js';
 
 /** `full_name` -> `fullName`; leading digits get a `t` prefix. */
 function camelCase(name: string): string {
@@ -159,22 +159,7 @@ export function renderSchemaModule(entities: SpannerEntity[]): string {
 
   // Parents (interleave and FK targets) must be declared before their
   // dependents reference them.
-  const ordered: TableEntity[] = [];
-  const remaining = new Map(tables.map((table) => [table.name, table]));
-  const visit = (table: TableEntity): void => {
-    if (!remaining.has(table.name)) return;
-    remaining.delete(table.name);
-    const dependencies = [
-      ...(table.interleave ? [table.interleave.parent] : []),
-      ...(fksByTable.get(table.name) ?? []).map((fk) => fk.foreignTable),
-    ];
-    for (const dependency of dependencies) {
-      const parent = remaining.get(dependency);
-      if (parent) visit(parent);
-    }
-    ordered.push(table);
-  };
-  for (const table of tables) visit(table);
+  const ordered = orderTablesParentsFirst(tables, fksByTable);
 
   const imports = new Set<string>(['spannerTable']);
   let needsSql = false;
