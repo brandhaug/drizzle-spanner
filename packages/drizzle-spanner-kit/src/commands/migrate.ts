@@ -9,7 +9,7 @@ import { connectDatabase } from '../connect.js';
 /**
  * `migrate`: applies pending migration folders from the out dir through the
  * runtime migrator — one batched `updateSchema` operation per migration,
- * recorded in `__drizzle_migrations`, idempotent by hash.
+ * recorded in `drizzle_migrations`, idempotent by hash.
  */
 export async function migrate(
   config: Pick<ResolvedSpannerKitConfig, 'out' | 'database'>,

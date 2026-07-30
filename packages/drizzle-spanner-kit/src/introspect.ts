@@ -7,7 +7,7 @@ import type {
   SpannerEntity,
 } from './snapshot.js';
 
-const BOOKKEEPING_TABLE = '__drizzle_migrations';
+const BOOKKEEPING_TABLE = 'drizzle_migrations';
 
 type Row = Record<string, unknown>;
 

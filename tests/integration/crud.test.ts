@@ -125,3 +125,56 @@ describe('CRUD round-trip (the spike scenarios)', () => {
     expect(await db.$count(singers)).toBe(before);
   });
 });
+
+describe('upsert round-trip (ADR 0002)', () => {
+  it('orUpdate() replaces the conflicting row and composes with returning()', async () => {
+    const { db } = harness;
+    await db.insert(singers).values({ id: 'upsert-1', name: 'Ada', plays: 1 });
+
+    const returned = await db
+      .insert(singers)
+      .values({ id: 'upsert-1', name: 'Ada Lovelace', plays: 2 })
+      .orUpdate()
+      .returning({ id: singers.id, name: singers.name });
+    expect(returned).toEqual([{ id: 'upsert-1', name: 'Ada Lovelace' }]);
+
+    const rows = await db.select().from(singers).where(eq(singers.id, 'upsert-1'));
+    expect(rows).toHaveLength(1);
+    expect(rows[0]!.plays).toBe(2);
+
+    // A missing key inserts instead of updating.
+    await db.insert(singers).values({ id: 'upsert-2', name: 'Grace' }).orUpdate();
+    expect(await db.$count(singers, eq(singers.id, 'upsert-2'))).toBe(1);
+    await db.delete(singers).where(eq(singers.id, 'upsert-1'));
+    await db.delete(singers).where(eq(singers.id, 'upsert-2'));
+  });
+
+  it('orIgnore() keeps the existing row', async () => {
+    const { db } = harness;
+    await db.insert(singers).values({ id: 'ignore-1', name: 'Ada' });
+    await db.insert(singers).values({ id: 'ignore-1', name: 'Replaced?' }).orIgnore();
+    const rows = await db.select().from(singers).where(eq(singers.id, 'ignore-1'));
+    expect(rows[0]!.name).toBe('Ada');
+    await db.delete(singers).where(eq(singers.id, 'ignore-1'));
+  });
+
+  it('orUpdate() compiles to an upsert mutation in bufferedMutations mode', async () => {
+    const { db } = harness;
+    await db.transaction(
+      async (tx) => {
+        await tx.insert(singers).values({ id: 'mut-upsert', name: 'Ada' }).orUpdate();
+      },
+      { mode: 'bufferedMutations' },
+    );
+    await db.transaction(
+      async (tx) => {
+        await tx.insert(singers).values({ id: 'mut-upsert', name: 'Ada L.' }).orUpdate();
+      },
+      { mode: 'bufferedMutations' },
+    );
+    const rows = await db.select().from(singers).where(eq(singers.id, 'mut-upsert'));
+    expect(rows).toHaveLength(1);
+    expect(rows[0]!.name).toBe('Ada L.');
+    await db.delete(singers).where(eq(singers.id, 'mut-upsert'));
+  });
+});

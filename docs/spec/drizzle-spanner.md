@@ -184,7 +184,10 @@ as reference.
   and always prints the full DDL plan and asks for confirmation first.
 - **Applying:** `migrate` applies each migration through `updateSchema` as one
   batched long-running DDL operation and records completion in a
-  `__drizzle_migrations` table with a `STRING(36)` UUID primary key and a
+  `drizzle_migrations` table (Spanner table names cannot start with an
+  underscore, so drizzle-kit's `__drizzle_migrations` name is not usable;
+  resolved with the maintainer on 2026-07-30) with a `STRING(36)` UUID
+  primary key and a
   sha256 hash column — never an auto-increment pattern.
 - **Introspection:** `pull` reads `INFORMATION_SCHEMA` (tables, columns,
   interleaving via `PARENT_TABLE_NAME`, indexes, sequences, foreign keys,
