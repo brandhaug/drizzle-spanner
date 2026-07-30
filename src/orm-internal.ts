@@ -8,14 +8,14 @@ import * as utils from 'drizzle-orm/utils';
  * actually implements (verified in the dialect-internals research and spike).
  */
 
-export interface SelectedFieldsOrderedItem {
+interface SelectedFieldsOrderedItem {
   path: string[];
   field: Column<any> | SQL | SQL.Aliased;
 }
 
 export type SelectedFieldsOrdered = SelectedFieldsOrderedItem[];
 
-export type SelectedFields = Record<string, unknown>;
+type SelectedFields = Record<string, unknown>;
 
 interface InternalUtils {
   orderSelectedFields(fields: SelectedFields, pathPrefix?: string[]): SelectedFieldsOrdered;

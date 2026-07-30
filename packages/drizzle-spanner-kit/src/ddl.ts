@@ -9,7 +9,7 @@ import type {
   TableEntity,
 } from './snapshot.js';
 
-export function escapeIdentifier(name: string): string {
+function escapeIdentifier(name: string): string {
   return `\`${name}\``;
 }
 
@@ -24,7 +24,7 @@ function onDeleteSql(onDelete: 'cascade' | 'noAction'): string {
 }
 
 /** One `name TYPE ...` column line of CREATE TABLE / ADD COLUMN / ALTER COLUMN. */
-export function columnDefinitionSql(column: ColumnEntity): string {
+function columnDefinitionSql(column: ColumnEntity): string {
   let definition = `${escapeIdentifier(column.name)} ${column.type}`;
   if (column.notNull) definition += ' NOT NULL';
   if (column.generatedIdentity) {
