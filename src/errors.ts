@@ -70,6 +70,14 @@ export class SpannerPrecisionError extends SpannerError {
 export class SpannerDdlError extends SpannerError {
   static override readonly [entityKind]: string = 'SpannerDdlError';
   override readonly kind = 'ddl';
+
+  /** Index of the statement that failed within the batched DDL operation. */
+  readonly statementIndex: number | undefined;
+
+  constructor(options: SpannerErrorOptions & { statementIndex?: number }) {
+    super(options);
+    this.statementIndex = options.statementIndex;
+  }
 }
 
 /** Transport and deadline failures. */

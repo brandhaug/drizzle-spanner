@@ -19,6 +19,7 @@
     "types": ["node"],
     "paths": {
       "drizzle-spanner": ["./src/index.ts"],
+      "drizzle-spanner/migrator": ["./src/migrator.ts"],
       "drizzle-spanner-kit": ["./packages/drizzle-spanner-kit/src/index.ts"]
     }
   },
