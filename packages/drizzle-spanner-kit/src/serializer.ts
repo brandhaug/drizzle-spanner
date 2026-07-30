@@ -23,6 +23,7 @@ import type {
   KeyPart,
   PrimaryKeyEntity,
   SpannerEntity,
+  TableEntity,
 } from './snapshot.js';
 
 const dialect = new SpannerDialect();
@@ -144,7 +145,7 @@ function serializeTable(table: SpannerTable): SpannerEntity[] {
   const extraConfig = getTableExtraConfig(table);
 
   const entities: SpannerEntity[] = [];
-  let interleaveConfig: { parent: string; onDelete: 'cascade' | 'noAction' } | null = null;
+  let interleaveConfig: TableEntity['interleave'] = null;
 
   const indexes: SpannerEntity[] = [];
   const fks: SpannerEntity[] = [];

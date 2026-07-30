@@ -1,6 +1,7 @@
 import type {
   CheckEntity,
   ColumnEntity,
+  ForeignKeyAction,
   ForeignKeyEntity,
   IndexEntity,
   KeyPart,
@@ -19,7 +20,7 @@ function keyPartsSql(parts: KeyPart[]): string {
     .join(', ');
 }
 
-function onDeleteSql(onDelete: 'cascade' | 'noAction'): string {
+function onDeleteSql(onDelete: ForeignKeyAction): string {
   return onDelete === 'cascade' ? 'CASCADE' : 'NO ACTION';
 }
 

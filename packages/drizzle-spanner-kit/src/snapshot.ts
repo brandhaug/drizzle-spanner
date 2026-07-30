@@ -1,4 +1,8 @@
 import { randomUUID } from 'node:crypto';
+import type { ForeignKeyAction } from 'drizzle-spanner';
+
+/** The runtime's `ON DELETE` action union, re-exported as the kit's single source. */
+export type { ForeignKeyAction };
 
 /** One `{ name, order }` key part of a primary key or index. */
 export interface KeyPart {
@@ -10,7 +14,7 @@ export interface TableEntity {
   entityType: 'tables';
   name: string;
   /** `INTERLEAVE IN PARENT parent ON DELETE ...`, or null for a root table. */
-  interleave: { parent: string; onDelete: 'cascade' | 'noAction' } | null;
+  interleave: { parent: string; onDelete: ForeignKeyAction } | null;
 }
 
 export interface ColumnEntity {
@@ -53,7 +57,7 @@ export interface ForeignKeyEntity {
   columns: string[];
   foreignTable: string;
   foreignColumns: string[];
-  onDelete: 'cascade' | 'noAction';
+  onDelete: ForeignKeyAction;
 }
 
 export interface CheckEntity {
