@@ -48,6 +48,7 @@ function fakeDatabase(rows: { name: string; value: unknown }[][] = []) {
     },
     insert() {},
     update() {},
+    upsert() {},
     deleteRows() {},
   };
   const database: SpannerDriverDatabase = {
@@ -176,6 +177,7 @@ describe('db.transaction', () => {
               },
               insert() {},
               update() {},
+              upsert() {},
               deleteRows() {},
             });
           } catch (error) {
