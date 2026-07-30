@@ -1,0 +1,44 @@
+name: Bug report
+description: Something in drizzle-spanner or drizzle-spanner-kit misbehaves
+labels: ['bug', 'needs-triage']
+body:
+  - type: input
+    id: versions
+    attributes:
+      label: Versions
+      description: drizzle-spanner / drizzle-spanner-kit, drizzle-orm, runtime
+      placeholder: drizzle-spanner 0.1.0, drizzle-orm 1.0.0-beta.22, Node 24
+    validations:
+      required: true
+  - type: dropdown
+    id: target
+    attributes:
+      label: Database target
+      options:
+        - Spanner emulator
+        - Real Spanner
+        - drizzle.mock() / SQL generation only
+    validations:
+      required: true
+  - type: textarea
+    id: repro
+    attributes:
+      label: Minimal reproduction
+      description: >-
+        Schema + query (or kit command + config) that shows the problem.
+        The generated SQL (from a logger or drizzle.mock()) helps a lot.
+      render: ts
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected vs actual
+    validations:
+      required: true
+  - type: textarea
+    id: error
+    attributes:
+      label: Error output
+      description: Full error, including the SpannerError variant name if any.
+      render: text
