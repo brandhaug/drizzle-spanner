@@ -8,8 +8,6 @@ import { driverRowToObject } from './session.js';
 
 export interface SpannerMigrationConfig {
   migrationsFolder: string;
-  /** Bookkeeping table name; defaults to `drizzle_migrations`. */
-  migrationsTable?: string;
 }
 
 export interface SpannerMigrationResult {
@@ -109,7 +107,9 @@ export async function migrate(
   if (typeof client.updateSchema !== 'function') {
     throw new Error('migrate: the attached client has no updateSchema (pass the driver Database)');
   }
-  const migrationsTable = config.migrationsTable ?? 'drizzle_migrations';
+  // Fixed by the spec: Spanner table names cannot start with an underscore,
+  // so drizzle-kit's `__drizzle_migrations` name is not usable.
+  const migrationsTable = 'drizzle_migrations';
   const migrations = readMigrationFiles({
     migrationsFolder: config.migrationsFolder,
   } satisfies MigrationConfig);

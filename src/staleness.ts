@@ -1,15 +1,23 @@
 import { SpannerInvalidArgumentError } from './errors.js';
 
 /**
- * Timestamp bound for read-only transactions and single-use stale reads.
+ * Timestamp bound accepted by a multi-use snapshot (read-only transactions).
  * Exactly one bound applies. Durations take milliseconds or a `'15s'` /
  * `'500ms'` string; timestamps take a `Date` or an ISO-8601 string.
  */
-export type SpannerStaleness =
+export type SpannerMultiUseStaleness =
   | { strong: true }
   | { exactStaleness: number | string }
+  | { readTimestamp: Date | string };
+
+/**
+ * Timestamp bound for single-use stale reads (`withStaleness`). Spanner
+ * accepts `maxStaleness` and `minReadTimestamp` on single-use reads only,
+ * so read-only transactions take the narrower `SpannerMultiUseStaleness`.
+ */
+export type SpannerStaleness =
+  | SpannerMultiUseStaleness
   | { maxStaleness: number | string }
-  | { readTimestamp: Date | string }
   | { minReadTimestamp: Date | string };
 
 /** protobuf `Timestamp` — the only timestamp form the driver passes through unmangled. */

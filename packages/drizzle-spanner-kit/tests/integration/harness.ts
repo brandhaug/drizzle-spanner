@@ -1,78 +1,50 @@
 import { randomUUID } from 'node:crypto';
-import { GenericContainer, Wait } from 'testcontainers';
-import type { StartedTestContainer } from 'testcontainers';
-import { Spanner } from '@google-cloud/spanner';
-import type { Database, Instance } from '@google-cloud/spanner';
+import type { Database } from '@google-cloud/spanner';
 import type { SpannerKitDatabaseConfig } from '../../src/index.js';
-
-const EMULATOR_IMAGE = 'gcr.io/cloud-spanner-emulator/emulator:latest';
-
-// Captured at import time, same as the runtime harness: a stopped container
-// from an earlier test file must not masquerade as an external emulator.
-// The OWNED marker covers single-process runners (bun test) that import this
-// module lazily, after another harness already mutated the env.
-const EXTERNAL_EMULATOR_HOST = process.env.DRIZZLE_SPANNER_TEST_OWNED
-  ? undefined
-  : process.env.SPANNER_EMULATOR_HOST;
+import { startSpannerTestTarget } from '../../../../tests/integration/spanner-target.js';
 
 export interface KitEmulatorHarness {
-  host: string;
+  host: string | undefined;
   project: string;
   instanceName: string;
-  /** Creates a database on the emulator and returns the kit config for it. */
+  /** Creates a database on the target and returns the kit config for it. */
   createDatabase(name: string): Promise<{ config: SpannerKitDatabaseConfig; database: Database }>;
   cleanup(): Promise<void>;
 }
 
-/** One emulator per test file, exposing connection coordinates for the kit. */
+/** One Spanner test target per test file, exposing connection coordinates for the kit. */
 export async function startKitEmulator(): Promise<KitEmulatorHarness> {
-  let container: StartedTestContainer | undefined;
-  let host = EXTERNAL_EMULATOR_HOST;
-  if (!host) {
-    container = await new GenericContainer(EMULATOR_IMAGE)
-      .withExposedPorts(9010)
-      .withWaitStrategy(Wait.forLogMessage(/gRPC server listening/i))
-      .start();
-    host = `${container.getHost()}:${container.getMappedPort(9010)}`;
-    process.env.DRIZZLE_SPANNER_TEST_OWNED = '1';
-  }
-  process.env.SPANNER_EMULATOR_HOST = host;
-
-  const project = 'test-project';
+  const target = await startSpannerTestTarget('kit-instance');
   const suffix = randomUUID().slice(0, 8);
-  const instanceName = `kit-instance-${suffix}`;
-  const spanner = new Spanner({ projectId: project });
-  const instance: Instance = spanner.instance(instanceName);
-  const [, operation] = await instance.create({
-    config: 'emulator-config',
-    nodes: 1,
-    displayName: 'drizzle-spanner-kit tests',
-  });
-  await operation.promise();
 
   const databases: Database[] = [];
   return {
-    host,
-    project,
-    instanceName,
+    host: target.emulatorHost,
+    project: target.project,
+    instanceName: target.instanceName,
     async createDatabase(name: string) {
-      const [database, databaseOperation] = await instance.createDatabase(`${name}-${suffix}`);
+      const [database, databaseOperation] = await target.instance.createDatabase(
+        `${name}-${suffix}`,
+      );
       await databaseOperation.promise();
       databases.push(database);
       return {
         config: {
-          project,
-          instance: instanceName,
+          project: target.project,
+          instance: target.instanceName,
           database: `${name}-${suffix}`,
-          emulatorHost: host,
+          emulatorHost: target.emulatorHost,
         },
         database,
       };
     },
     async cleanup() {
-      for (const database of databases) await database.close();
-      spanner.close();
-      await container?.stop();
+      for (const database of databases) {
+        // A real instance outlives the run; drop created databases there.
+        if (target.emulatorHost) await database.close();
+        else await database.delete();
+      }
+      await target.stop();
     },
   };
 }

@@ -9,14 +9,13 @@ import {
   IndexedColumn,
   InterleaveBuilder,
   PrimaryKeyBuilder,
-  SpannerColumn,
   SpannerDialect,
   SpannerSequence,
   SpannerTable,
   SpannerTimestamp,
   getTableExtraConfig,
 } from 'drizzle-spanner';
-import type { SpannerExtraConfigColumn } from 'drizzle-spanner';
+import type { SpannerColumn, SpannerExtraConfigColumn } from 'drizzle-spanner';
 import type {
   ColumnEntity,
   ForeignKeyEntity,
