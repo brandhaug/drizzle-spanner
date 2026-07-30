@@ -37,6 +37,11 @@
     "@google-cloud/spanner": ">=7.0.0",
     "drizzle-orm": ">=1.0.0-beta.22 <1.0.0"
   },
+  "peerDependenciesMeta": {
+    "@google-cloud/spanner": {
+      "optional": true
+    }
+  },
   "devDependencies": {
     "@google-cloud/spanner": "^8.10.0",
     "@types/node": "^24.0.0",

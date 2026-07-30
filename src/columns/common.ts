@@ -24,6 +24,11 @@ export function unwrapDriverWrapper(value: unknown): unknown {
     : value;
 }
 
+/** The driver may return FLOAT32/FLOAT64 cells as `Float` wrappers `{ value: n }`. */
+export function unwrapFloat(value: unknown): number {
+  return Number(unwrapDriverWrapper(value));
+}
+
 /**
  * Local replacements for drizzle-orm's `BuildColumn`/`BuildColumns` helpers.
  * The upstream `Dialect` type union is closed, so those helpers cannot map

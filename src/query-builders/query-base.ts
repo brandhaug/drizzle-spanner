@@ -4,12 +4,16 @@ import type { Query, SQLWrapper } from 'drizzle-orm/sql';
 import { Param, SQL } from 'drizzle-orm/sql';
 import type { SpannerDialect } from '../dialect.js';
 import type { SelectedFieldsOrdered } from '../internal.js';
+import { orderSelectedFields } from '../internal.js';
 import { SpannerInvalidArgumentError } from '../errors.js';
 import type { SpannerMutationSink } from '../mutations.js';
+import { MUTATION_MODE_READ_MESSAGE, MUTATION_MODE_RETURNING_MESSAGE } from '../mutations.js';
 import type { SpannerPreparedQuery, SpannerQueryMetadata, SpannerSession } from '../session.js';
 import { NO_CLIENT_MESSAGE } from '../session.js';
 import type { SpannerTimestampBounds } from '../staleness.js';
-import type { SpannerColumns } from '../table.js';
+import type { SpannerColumns, SpannerTable } from '../table.js';
+import { TableColumns } from '../symbols.js';
+import type { SpannerSelectedFields } from './select.js';
 
 /** Wraps plain values in `Param` bound to their table column; SQL passes through. */
 export function mapRowToParams(
@@ -77,10 +81,7 @@ export abstract class SpannerQueryBase<TResult>
    * the default covers reads, which have no mutation form.
    */
   protected writeMutation(_sink: SpannerMutationSink): void {
-    throw new SpannerInvalidArgumentError({
-      message:
-        'Reads are not allowed inside a bufferedMutations transaction; use a read-write or read-only transaction for queries',
-    });
+    throw new SpannerInvalidArgumentError({ message: MUTATION_MODE_READ_MESSAGE });
   }
 
   override execute(): Promise<TResult> {
@@ -90,5 +91,51 @@ export abstract class SpannerQueryBase<TResult>
       return Promise.resolve(undefined as TResult);
     }
     return this._prepare().execute();
+  }
+}
+
+/** Config shape the three DML builders share; each adds its own value fields. */
+export interface SpannerDmlConfig {
+  table: SpannerTable;
+  returning?: SelectedFieldsOrdered;
+}
+
+/**
+ * Shared DML shape: `returning()` selection handling and the mutation-mode
+ * `.returning()` guard live here; the builders keep only their typed
+ * `returning()` overloads and their mutation compilation.
+ */
+export abstract class SpannerDmlBase<TResult> extends SpannerQueryBase<TResult> {
+  static override readonly [entityKind]: string = 'SpannerDmlBase';
+
+  protected abstract readonly config: SpannerDmlConfig;
+
+  /** Shared body of the builders' `returning()` overloads. */
+  protected setReturning(fields: SpannerSelectedFields = this.config.table[TableColumns]): this {
+    this.config.returning = orderSelectedFields(fields);
+    return this;
+  }
+
+  protected selection(): SelectedFieldsOrdered | undefined {
+    return this.config.returning;
+  }
+
+  /** Runtime backstop for `.returning()` inside a bufferedMutations transaction. */
+  protected assertNoReturningInMutation(): void {
+    if (this.config.returning) {
+      throw new SpannerInvalidArgumentError({ message: MUTATION_MODE_RETURNING_MESSAGE });
+    }
+  }
+}
+
+/** DML that takes a WHERE clause: update and delete. */
+export abstract class SpannerFilteredDmlBase<TResult> extends SpannerDmlBase<TResult> {
+  static override readonly [entityKind]: string = 'SpannerFilteredDmlBase';
+
+  protected abstract override readonly config: SpannerDmlConfig & { where?: SQL };
+
+  where(where: SQL | undefined): this {
+    this.config.where = where;
+    return this;
   }
 }

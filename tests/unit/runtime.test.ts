@@ -161,19 +161,21 @@ describe('transaction options', () => {
     expect(calls).toBe(3);
   });
 
-  it('throws SpannerAbortedError once maxRetries is exhausted', async () => {
+  it('throws a coded SpannerAbortedError once maxRetries is exhausted', async () => {
     const fake = fakeRetryingDatabase();
     const db = drizzle(fake.database);
     let calls = 0;
-    await expect(
-      db.transaction(
-        async () => {
-          calls += 1;
-          throw abortedError();
-        },
-        { maxRetries: 2 },
-      ),
-    ).rejects.toBeInstanceOf(SpannerAbortedError);
+    const failing = db.transaction(
+      async () => {
+        calls += 1;
+        throw abortedError();
+      },
+      { maxRetries: 2 },
+    );
+    await expect(failing).rejects.toBeInstanceOf(SpannerAbortedError);
+    // The surfaced error carries the gRPC code (spec: error handling); the
+    // code is attached only after the driver's retry runner exits.
+    await expect(failing).rejects.toMatchObject({ code: GrpcStatus.ABORTED });
     // maxRetries = 2 means one initial attempt plus two retries.
     expect(calls).toBe(3);
   });
@@ -334,6 +336,14 @@ describe('single-use stale reads (withStaleness)', () => {
     const rows = await db.select().from(singers).withStaleness({ exactStaleness: '15s' });
     expect(rows).toEqual([{ id: 'x', name: 'Ada' }]);
     expect(fake.runBounds).toEqual([{ exactStaleness: 15_000 }]);
+  });
+
+  it('encodes a maxStaleness bound (single-use only in Spanner)', async () => {
+    const fake = fakeBoundedReadDatabase();
+    const db = drizzle(fake.database);
+    await db.select().from(singers).withStaleness({ maxStaleness: '10s' });
+    await db.select().from(singers).withStaleness({ maxStaleness: 250 });
+    expect(fake.runBounds).toEqual([{ maxStaleness: 10_000 }, { maxStaleness: 250 }]);
   });
 
   it('leaves ordinary reads unbounded', async () => {

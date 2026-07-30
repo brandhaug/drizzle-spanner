@@ -11,8 +11,10 @@ import {
 } from './errors.js';
 import type { SpannerStaleness, SpannerTimestampBounds } from './staleness.js';
 import { toTimestampBounds } from './staleness.js';
-import type { SpannerDriverRow, SpannerSqlRequest } from './session.js';
+import type { SpannerDriverRow, SpannerQueryRunner, SpannerSqlRequest } from './session.js';
 import { NO_CLIENT_MESSAGE, SpannerSession } from './session.js';
+import type { SpannerMutationSink } from './mutations.js';
+import { MUTATION_MODE_READ_MESSAGE } from './mutations.js';
 import { unwrapDriverWrapper } from './columns/common.js';
 import { SpannerDelete } from './query-builders/delete.js';
 import { SpannerInsertBuilder } from './query-builders/insert.js';
@@ -147,7 +149,7 @@ class MutationModeRunner {
     throw new SpannerInvalidArgumentError({
       message: isDml
         ? 'Statements do not execute inside a bufferedMutations transaction; the insert/update/delete builders compile to mutations, and raw SQL needs a read-write transaction'
-        : 'Reads are not allowed inside a bufferedMutations transaction; use a read-write or read-only transaction for queries',
+        : MUTATION_MODE_READ_MESSAGE,
     });
   }
 }
@@ -159,9 +161,18 @@ class MockRunner {
 }
 
 /**
+ * Internal signal that `maxRetries` ran out. It deliberately carries no gRPC
+ * code while inside the driver's retry runner — a coded ABORTED would be
+ * retried — and is converted to a coded `SpannerAbortedError` once the
+ * runner exits.
+ */
+class MaxRetriesExhaustedError extends Error {}
+
+/**
  * `DrizzleConfig` keys carried on the database: `relations` feeds the
- * relational query builder (`db.query`); `cache` is reserved for the cache
- * integration so user config stays stable across milestones.
+ * relational query builder (`db.query`); `cache` passes through per the spec
+ * (Runtime API: `DrizzleConfig` keys pass through) so user config stays
+ * stable when the cache integration lands.
  */
 export interface SpannerDatabaseOptions {
   relations?: AnyRelations;
@@ -235,8 +246,14 @@ export type SpannerReadWriteTransaction<TRelations extends AnyRelations = EmptyR
   ): SpannerTransactionSelectBuilder<TSelection>;
 };
 
-export class SpannerDatabase<TRelations extends AnyRelations = EmptyRelations> {
-  static readonly [entityKind]: string = 'SpannerDatabase';
+/**
+ * Query surface shared by the database and the transaction objects. Holding
+ * `transaction()` on `SpannerDatabase` only (and `rollback()` on
+ * `SpannerTransaction` only) keeps each subclass from refusing what it
+ * inherits.
+ */
+export class SpannerDatabaseCore<TRelations extends AnyRelations = EmptyRelations> {
+  static readonly [entityKind]: string = 'SpannerDatabaseCore';
 
   /** Relational queries over the `relations` config: `db.query.<table>.findMany(...)`. */
   readonly query: SpannerRelationalQueries<TRelations>;
@@ -296,6 +313,21 @@ export class SpannerDatabase<TRelations extends AnyRelations = EmptyRelations> {
   execute<T = Record<string, unknown>[]>(query: SQL): Promise<T> {
     return this.session.execute<T>(query);
   }
+}
+
+export class SpannerDatabase<
+  TRelations extends AnyRelations = EmptyRelations,
+> extends SpannerDatabaseCore<TRelations> {
+  static override readonly [entityKind]: string = 'SpannerDatabase';
+
+  /** One transaction-scoped session and its query surface. */
+  private createTransactionScope(
+    runner: SpannerQueryRunner,
+    mutationSink?: SpannerMutationSink,
+  ): SpannerTransaction<TRelations> {
+    const session = new SpannerSession(runner, this.dialect, this.session.options, mutationSink);
+    return new SpannerTransaction<TRelations>(this.dialect, session, this.$client, this.options);
+  }
 
   /**
    * Read-write transaction over `runTransactionAsync`. The callback
@@ -342,31 +374,14 @@ export class SpannerDatabase<TRelations extends AnyRelations = EmptyRelations> {
     try {
       const runFn = async (driverTransaction: SpannerDriverTransaction): Promise<T> => {
         attempts += 1;
-        // The SpannerAbortedError carries no gRPC code here on purpose: the
-        // driver's runner would treat a coded ABORTED as retryable.
         if (maxRetries !== undefined && attempts > maxRetries + 1) {
-          throw new SpannerAbortedError({
-            message: `Read-write transaction aborted and maxRetries (${maxRetries}) was exhausted`,
-          });
+          throw new MaxRetriesExhaustedError(
+            `Read-write transaction aborted and maxRetries (${maxRetries}) was exhausted`,
+          );
         }
-        const transactionSession = bufferedMutations
-          ? new SpannerSession(
-              new MutationModeRunner(),
-              this.dialect,
-              this.session.options,
-              driverTransaction,
-            )
-          : new SpannerSession(
-              new TransactionRunner(driverTransaction),
-              this.dialect,
-              this.session.options,
-            );
-        const tx = new SpannerTransaction<TRelations>(
-          this.dialect,
-          transactionSession,
-          this.$client,
-          this.options,
-        );
+        const tx = bufferedMutations
+          ? this.createTransactionScope(new MutationModeRunner(), driverTransaction)
+          : this.createTransactionScope(new TransactionRunner(driverTransaction));
         try {
           const result = await runCallback(tx);
           await driverTransaction.commit();
@@ -388,6 +403,11 @@ export class SpannerDatabase<TRelations extends AnyRelations = EmptyRelations> {
         ? await client.runTransactionAsync(runFn)
         : await client.runTransactionAsync({ timeout }, runFn);
     } catch (error) {
+      // Outside the driver's runner a gRPC code is safe to attach (spec:
+      // each variant carries the status code).
+      if (error instanceof MaxRetriesExhaustedError) {
+        throw new SpannerAbortedError({ message: error.message, code: GrpcStatus.ABORTED });
+      }
       // The driver's DeadlineError means ABORTED retries ran out of time.
       if ((error as { name?: string })?.name === 'DeadlineError') {
         throw new SpannerAbortedError({
@@ -418,17 +438,7 @@ export class SpannerDatabase<TRelations extends AnyRelations = EmptyRelations> {
       throw wrapSpannerError(error);
     }
     try {
-      const snapshotSession = new SpannerSession(
-        new SnapshotRunner(snapshot),
-        this.dialect,
-        this.session.options,
-      );
-      const tx = new SpannerTransaction<TRelations>(
-        this.dialect,
-        snapshotSession,
-        this.$client,
-        this.options,
-      );
+      const tx = this.createTransactionScope(new SnapshotRunner(snapshot));
       return await callback(tx);
     } catch (error) {
       throw wrapSpannerError(error);
@@ -440,16 +450,14 @@ export class SpannerDatabase<TRelations extends AnyRelations = EmptyRelations> {
 
 export class SpannerTransaction<
   TRelations extends AnyRelations = EmptyRelations,
-> extends SpannerDatabase<TRelations> {
+> extends SpannerDatabaseCore<TRelations> {
   static override readonly [entityKind]: string = 'SpannerTransaction';
 
-  override transaction<T>(
-    _callback: (tx: never) => Promise<T>,
-    _options?:
-      | SpannerTransactionOptions
-      | SpannerReadOnlyTransactionOptions
-      | SpannerMutationTransactionOptions,
-  ): Promise<T> {
+  /**
+   * Absent from the transaction types; this runtime backstop catches callers
+   * who reach it through a database-typed reference.
+   */
+  transaction(): never {
     throw new Error('Spanner does not support nested transactions (no savepoints)');
   }
 

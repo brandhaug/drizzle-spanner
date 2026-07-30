@@ -3,8 +3,7 @@ import type { ColumnBaseConfig } from 'drizzle-orm/column';
 import { entityKind } from 'drizzle-orm/entity';
 import type { SpannerTable } from '../table.js';
 import type { SpannerTypeHint } from '../type-hints.js';
-import { SpannerColumn, SpannerColumnBuilder } from './common.js';
-import { unwrapFloat } from './float64.js';
+import { SpannerColumn, SpannerColumnBuilder, unwrapFloat } from './common.js';
 
 export interface SpannerFloat32BuilderConfig extends ColumnBuilderBaseConfig<'number float'> {
   data: number;
