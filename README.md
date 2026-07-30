@@ -37,6 +37,17 @@ This table is generated from
 [`.github/tested-versions.json`](.github/tested-versions.json) by
 `node scripts/sync-tested-versions.ts`; CI fails when they drift.
 
+### Runtime support
+
+| Runtime          | Status                                                                    |
+| ---------------- | ------------------------------------------------------------------------- |
+| Node             | First-class. `engines` requires >= 20; CI tests the current LTS set.      |
+| Bun              | Supported; the integration suite runs under Bun in CI (gRPC over `node:http2`). |
+| Edge runtimes    | **Unsupported.** `@google-cloud/spanner` requires gRPC, which edge runtimes do not provide. |
+
+`drizzle-spanner-kit` needs Node >= 22.18 (it loads TypeScript config files
+through the runtime's native TS support) or Bun.
+
 ## Quickstart
 
 Define a schema, hand `drizzle()` the driver's `Database`, and query. Spanner
@@ -187,6 +198,21 @@ await db.transaction(
 );
 ```
 
+### Counting, raw SQL, and a client-less database
+
+The standard drizzle idioms ship with the runtime: `db.$count` is a
+`COUNT(*)` convenience, `db.execute(sql)` is the raw-SQL escape hatch, and
+`drizzle.mock()` builds a database with no driver at all — SQL generation
+and tests need no `@google-cloud/spanner` install:
+
+```ts
+const total = await db.$count(singers, eq(singers.name, 'Ada'));
+const rows = await db.execute(sql`SELECT 1 AS one`);
+
+const mockDb = drizzle.mock();
+const { sql: text, params } = mockDb.select().from(singers).toSQL();
+```
+
 ## Upsert
 
 Spanner has no `ON CONFLICT`. `.orUpdate()` and `.orIgnore()` compile to
@@ -247,10 +273,23 @@ await migrate(db, { migrationsFolder: './drizzle' });
 Applied migrations are recorded in a `drizzle_migrations` bookkeeping table
 (UUID primary key and a sha256 hash per migration), so re-running is a no-op.
 
+Two more commands round out the workflow: `pull` introspects an existing
+database (`INFORMATION_SCHEMA` — tables, columns, interleaving, indexes,
+sequences, foreign keys, check constraints) into schema files and a baseline
+snapshot, and `push` diffs the schema against the live database directly —
+useful against the emulator during development:
+
+```bash
+npx drizzle-spanner-kit pull
+npx drizzle-spanner-kit push
+```
+
 When a schema diff requires DDL Spanner cannot express (a primary-key or
 interleave change), `generate` refuses with a diagnostic that explains the
 manual path — it never emits a silent `DROP` + `CREATE`. `push` shares the
 differ, prints the full DDL plan, and asks for confirmation before applying.
+The full diagnostics catalogue is in the
+[kit README](packages/drizzle-spanner-kit/README.md).
 
 ## Local development
 

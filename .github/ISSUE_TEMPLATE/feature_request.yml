@@ -1,0 +1,27 @@
+name: Feature request
+description: Propose an addition or change
+labels: ['enhancement', 'needs-triage']
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem
+      description: What can you not do (or not do cleanly) today?
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposed shape
+      description: API sketch, config key, CLI flag — whatever fits.
+  - type: checkboxes
+    id: post-v1
+    attributes:
+      label: Post-v1 register
+      description: >-
+        The spec's Post-v1 section lists items consciously out of scope
+        (Effect entrypoint, batch DML, db.mutate, Drizzle Studio,
+        PostgreSQL-dialect Spanner). Check it before filing.
+      options:
+        - label: This is not already on the Post-v1 list in docs/spec/drizzle-spanner.md
+          required: true
