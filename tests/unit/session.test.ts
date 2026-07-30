@@ -243,4 +243,22 @@ describe('error taxonomy', () => {
     expect(failure).toBeInstanceOf(SpannerInvalidArgumentError);
     expect(failure.message).toContain('type hint');
   });
+
+  it('INVALID_ARGUMENT hint names the column the failing parameter binds', async () => {
+    const db = drizzle(
+      failingDatabase(
+        Object.assign(new Error('Invalid value for parameter p0'), {
+          code: GrpcStatus.INVALID_ARGUMENT,
+        }),
+      ),
+    );
+    const failure = await db
+      .select()
+      .from(singers)
+      .where(eq(singers.plays, 1))
+      .execute()
+      .catch((e) => e);
+    expect(failure).toBeInstanceOf(SpannerInvalidArgumentError);
+    expect(failure.message).toContain('parameter @p0 binds column "plays"');
+  });
 });

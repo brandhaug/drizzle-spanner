@@ -2,12 +2,16 @@ import { entityKind } from 'drizzle-orm/entity';
 import type { Logger } from 'drizzle-orm/logger';
 import { NoopLogger } from 'drizzle-orm/logger';
 import type { PreparedQuery } from 'drizzle-orm/session';
-import type { Query, QueryWithTypings, SQL } from 'drizzle-orm/sql';
+import type { Query, SQL } from 'drizzle-orm/sql';
 import { fillPlaceholders } from 'drizzle-orm/sql';
-import type { SpannerDialect } from './dialect.js';
+import type { SpannerDialect, SpannerQueryWithTypings } from './dialect.js';
 import { wrapSpannerError } from './errors.js';
 import type { SelectedFieldsOrdered } from './internal.js';
 import { mapResultRow } from './internal.js';
+import { toDriverParamType } from './type-hints.js';
+
+export const NO_CLIENT_MESSAGE =
+  'Cannot execute a query on a mock database: no client is attached';
 
 /** Minimal surface of `@google-cloud/spanner`'s request this adapter sends. */
 export interface SpannerSqlRequest {
@@ -49,10 +53,9 @@ export function toNamedParams(
   for (const [i, value] of params.entries()) {
     named[`p${i}`] = value;
     const typing = typings?.[i];
-    if (typing && typing !== 'none') {
-      types[`p${i}`] = typing.startsWith('array:')
-        ? { type: 'array', child: typing.slice('array:'.length) }
-        : typing;
+    const driverType = typing === undefined ? undefined : toDriverParamType(typing);
+    if (driverType !== undefined) {
+      types[`p${i}`] = driverType;
     }
   }
   return { named, types };
@@ -65,7 +68,7 @@ export class SpannerPreparedQuery<T = unknown> implements PreparedQuery {
 
   constructor(
     private readonly runner: SpannerQueryRunner,
-    private readonly queryWithTypings: QueryWithTypings,
+    private readonly queryWithTypings: SpannerQueryWithTypings,
     private readonly logger: Logger,
     private readonly fields: SelectedFieldsOrdered | undefined,
     private readonly customResultMapper?: (rows: unknown[][]) => T,
@@ -99,6 +102,7 @@ export class SpannerPreparedQuery<T = unknown> implements PreparedQuery {
       throw wrapSpannerError(error, {
         sql: this.queryWithTypings.sql,
         paramNames: Object.keys(named),
+        paramColumns: this.queryWithTypings.paramColumns,
       });
     }
 
@@ -109,10 +113,6 @@ export class SpannerPreparedQuery<T = unknown> implements PreparedQuery {
     const rows = rawRows.map((row) => row.map((cell) => cell.value));
     if (this.customResultMapper) return this.customResultMapper(rows);
     return rows.map((row) => mapResultRow(this.fields!, row, undefined)) as T;
-  }
-
-  all(placeholderValues: Record<string, unknown> = {}): Promise<T> {
-    return this.execute(placeholderValues);
   }
 }
 
@@ -134,7 +134,7 @@ export class SpannerSession {
   }
 
   prepareQuery<T = unknown>(
-    query: QueryWithTypings,
+    query: SpannerQueryWithTypings,
     fields: SelectedFieldsOrdered | undefined,
     customResultMapper?: (rows: unknown[][]) => T,
     queryMetadata?: SpannerQueryMetadata,

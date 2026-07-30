@@ -12,17 +12,7 @@ import { Column } from 'drizzle-orm/column';
 import { Param, SQL, sql } from 'drizzle-orm/sql';
 import type { SelectedFieldsOrdered } from './internal.js';
 import { orderSelectedFields } from './internal.js';
-import { SpannerArray, SpannerColumn } from './columns/common.js';
-import { SpannerBool } from './columns/bool.js';
-import { SpannerBytes } from './columns/bytes.js';
-import { SpannerDateDate, SpannerDateString } from './columns/date.js';
-import { SpannerFloat32 } from './columns/float32.js';
-import { SpannerFloat64 } from './columns/float64.js';
-import { SpannerInt64BigInt, SpannerInt64Number } from './columns/int64.js';
-import { SpannerJson } from './columns/json.js';
-import { SpannerNumericNumber, SpannerNumericString } from './columns/numeric.js';
-import { SpannerString } from './columns/string.js';
-import { SpannerTimestamp } from './columns/timestamp.js';
+import { SpannerColumn } from './columns/common.js';
 import type { SpannerTable } from './table.js';
 import { TableColumns } from './symbols.js';
 
@@ -60,24 +50,11 @@ export interface SpannerDeleteConfig {
 }
 
 /**
- * Spanner type hint for a schema column, carried through drizzle's `typings`
- * channel. The upstream `QueryTypingsValue` union is closed at the type level
- * but unvalidated at runtime (spike finding); the session decodes these into
- * driver `types` entries. Arrays encode as `array:<element>`.
+ * `QueryWithTypings` plus the column name behind each positional parameter,
+ * so error hints can name the column a failing parameter binds.
  */
-function spannerTyping(column: SpannerColumn<any>): string {
-  if (is(column, SpannerInt64Number) || is(column, SpannerInt64BigInt)) return 'int64';
-  if (is(column, SpannerFloat64)) return 'float64';
-  if (is(column, SpannerFloat32)) return 'float32';
-  if (is(column, SpannerNumericString) || is(column, SpannerNumericNumber)) return 'numeric';
-  if (is(column, SpannerString)) return 'string';
-  if (is(column, SpannerBytes)) return 'bytes';
-  if (is(column, SpannerBool)) return 'bool';
-  if (is(column, SpannerDateString) || is(column, SpannerDateDate)) return 'date';
-  if (is(column, SpannerTimestamp)) return 'timestamp';
-  if (is(column, SpannerJson)) return 'json';
-  if (is(column, SpannerArray)) return `array:${spannerTyping(column.baseColumn)}`;
-  return 'none';
+export interface SpannerQueryWithTypings extends QueryWithTypings {
+  paramColumns?: (string | undefined)[];
 }
 
 export class SpannerDialect {
@@ -102,22 +79,35 @@ export class SpannerDialect {
     return `'${str.replace(/'/g, "\\'")}'`;
   }
 
+  /**
+   * The type hint each column emits rides through drizzle's `typings` channel;
+   * the upstream `QueryTypingsValue` union is closed at the type level but
+   * unvalidated at runtime (spike finding). The session decodes the hints into
+   * driver `types` entries.
+   */
   prepareTyping = (encoder: DriverValueEncoder<unknown, unknown>): QueryTypingsValue => {
     if (is(encoder, SpannerColumn)) {
-      return spannerTyping(encoder) as QueryTypingsValue;
+      return encoder.typeHint() as QueryTypingsValue;
     }
     return 'none';
   };
 
-  sqlToQuery(sqlInput: SQL, invokeSource?: 'indexes' | undefined): QueryWithTypings {
-    return sqlInput.toQuery({
+  sqlToQuery(sqlInput: SQL, invokeSource?: 'indexes' | undefined): SpannerQueryWithTypings {
+    // prepareTyping fires once per parameter in order, so this doubles as the
+    // param-index → column-name record used by error hints.
+    const paramColumns: (string | undefined)[] = [];
+    const query = sqlInput.toQuery({
       casing: this.casing,
       escapeName: this.escapeName,
       escapeParam: this.escapeParam,
       escapeString: this.escapeString,
-      prepareTyping: this.prepareTyping,
+      prepareTyping: (encoder) => {
+        paramColumns.push(is(encoder, SpannerColumn) ? encoder.name : undefined);
+        return this.prepareTyping(encoder);
+      },
       invokeSource,
     });
+    return { ...query, paramColumns };
   }
 
   private buildSelection(fields: SelectedFieldsOrdered): SQL {
@@ -133,6 +123,15 @@ export class SpannerDialect {
       return chunk;
     });
     return sql.join(chunks);
+  }
+
+  private buildReturning(returning: SelectedFieldsOrdered | undefined): SQL | undefined {
+    return returning ? sql` then return ${this.buildSelection(returning)}` : undefined;
+  }
+
+  /** Spanner rejects UPDATE/DELETE without WHERE; `where true` affects all rows (ADR 0001). */
+  private buildWhereOrTrue(where: SQL | undefined): SQL {
+    return where ? sql` where ${where}` : sql` where true`;
   }
 
   buildSelectQuery(config: SpannerSelectConfig): SQL {
@@ -173,9 +172,7 @@ export class SpannerDialect {
     }
     const valuesSql = sql.join(valuesSqlList);
 
-    const returningSql = returning
-      ? sql` then return ${this.buildSelection(returning)}`
-      : undefined;
+    const returningSql = this.buildReturning(returning);
     return sql`insert into ${table} ${insertOrder} values ${valuesSql}${returningSql}`;
   }
 
@@ -198,21 +195,12 @@ export class SpannerDialect {
   buildUpdateQuery(config: SpannerUpdateConfig): SQL {
     const { table, set, where, returning } = config;
     const setSql = this.buildUpdateSet(table, set);
-    const returningSql = returning
-      ? sql` then return ${this.buildSelection(returning)}`
-      : undefined;
-    // Spanner rejects UPDATE without WHERE; `where true` affects all rows.
-    const whereSql = where ? sql` where ${where}` : sql` where true`;
-    return sql`update ${table} set ${setSql}${whereSql}${returningSql}`;
+    return sql`update ${table} set ${setSql}${this.buildWhereOrTrue(where)}${this.buildReturning(returning)}`;
   }
 
   buildDeleteQuery(config: SpannerDeleteConfig): SQL {
     const { table, where, returning } = config;
-    const returningSql = returning
-      ? sql` then return ${this.buildSelection(returning)}`
-      : undefined;
-    const whereSql = where ? sql` where ${where}` : sql` where true`;
-    return sql`delete from ${table}${whereSql}${returningSql}`;
+    return sql`delete from ${table}${this.buildWhereOrTrue(where)}${this.buildReturning(returning)}`;
   }
 
   buildCountQuery(table: SpannerTable | SQL, where?: SQL): SQL {

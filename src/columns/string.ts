@@ -3,6 +3,7 @@ import type { ColumnBaseConfig } from 'drizzle-orm/column';
 import { entityKind } from 'drizzle-orm/entity';
 import { sql } from 'drizzle-orm/sql';
 import type { SpannerTable } from '../table.js';
+import type { SpannerTypeHint } from '../type-hints.js';
 import { SpannerColumn, SpannerColumnBuilder } from './common.js';
 
 export type SpannerStringLength = number | 'max';
@@ -47,6 +48,10 @@ export class SpannerString extends SpannerColumn<
   getSQLType(): string {
     const { length } = this.config;
     return `STRING(${length === 'max' ? 'MAX' : length})`;
+  }
+
+  typeHint(): SpannerTypeHint {
+    return 'string';
   }
 }
 

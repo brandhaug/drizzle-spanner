@@ -2,6 +2,7 @@ import type { ColumnBuilderBaseConfig } from 'drizzle-orm/column-builder';
 import type { ColumnBaseConfig } from 'drizzle-orm/column';
 import { entityKind } from 'drizzle-orm/entity';
 import type { SpannerTable } from '../table.js';
+import type { SpannerTypeHint } from '../type-hints.js';
 import { SpannerColumn, SpannerColumnBuilder } from './common.js';
 
 export interface SpannerJsonBuilderConfig extends ColumnBuilderBaseConfig<'object json'> {
@@ -27,6 +28,10 @@ export class SpannerJson extends SpannerColumn<ColumnBaseConfig<'object json'>> 
 
   getSQLType(): string {
     return 'JSON';
+  }
+
+  typeHint(): SpannerTypeHint {
+    return 'json';
   }
 
   override mapFromDriverValue(value: unknown): unknown {

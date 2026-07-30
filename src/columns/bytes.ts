@@ -2,6 +2,7 @@ import type { ColumnBuilderBaseConfig } from 'drizzle-orm/column-builder';
 import type { ColumnBaseConfig } from 'drizzle-orm/column';
 import { entityKind } from 'drizzle-orm/entity';
 import type { SpannerTable } from '../table.js';
+import type { SpannerTypeHint } from '../type-hints.js';
 import type { SpannerStringLength } from './string.js';
 import { SpannerColumn, SpannerColumnBuilder } from './common.js';
 
@@ -40,6 +41,10 @@ export class SpannerBytes extends SpannerColumn<
   getSQLType(): string {
     const { length } = this.config;
     return `BYTES(${length === 'max' ? 'MAX' : length})`;
+  }
+
+  typeHint(): SpannerTypeHint {
+    return 'bytes';
   }
 
   override mapFromDriverValue(value: unknown): Uint8Array | null {

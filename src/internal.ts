@@ -1,6 +1,5 @@
 import type { Column } from 'drizzle-orm/column';
 import type { SQL } from 'drizzle-orm/sql';
-import type { Table } from 'drizzle-orm/table';
 import * as utils from 'drizzle-orm/utils';
 
 /**
@@ -25,11 +24,9 @@ interface InternalUtils {
     row: unknown[],
     joinsNotNullableMap: Record<string, boolean> | undefined,
   ): TResult;
-  mapUpdateSet(table: Table, values: Record<string, unknown>): Record<string, unknown>;
 }
 
 const internal = utils as unknown as InternalUtils;
 
 export const orderSelectedFields = internal.orderSelectedFields;
 export const mapResultRow = internal.mapResultRow;
-export const mapUpdateSet = internal.mapUpdateSet;

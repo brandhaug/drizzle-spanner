@@ -1,30 +1,26 @@
 import { entityKind } from 'drizzle-orm/entity';
-import { QueryPromise } from 'drizzle-orm/query-promise';
-import type { Query, SQL, SQLWrapper } from 'drizzle-orm/sql';
+import type { SQL } from 'drizzle-orm/sql';
 import type { InferSelectModel } from 'drizzle-orm/table';
 import type { SpannerDeleteConfig, SpannerDialect } from '../dialect.js';
+import type { SelectedFieldsOrdered } from '../internal.js';
 import { orderSelectedFields } from '../internal.js';
-import type { SpannerPreparedQuery, SpannerSession } from '../session.js';
+import type { SpannerSession } from '../session.js';
 import type { AnySpannerTable } from '../table.js';
 import { TableColumns } from '../symbols.js';
+import { SpannerQueryBase } from './query-base.js';
 import type { SelectResultFields, SpannerSelectedFields } from './select.js';
 
-export class SpannerDelete<TTable extends AnySpannerTable, TResult>
-  extends QueryPromise<TResult>
-  implements SQLWrapper
-{
+export class SpannerDelete<TTable extends AnySpannerTable, TResult> extends SpannerQueryBase<TResult> {
   static override readonly [entityKind]: string = 'SpannerDelete';
-
-  declare readonly _: { readonly dialect: 'spanner'; readonly result: TResult };
 
   private readonly config: SpannerDeleteConfig;
 
   constructor(
     table: TTable,
-    private readonly session: SpannerSession | undefined,
-    private readonly dialect: SpannerDialect,
+    session: SpannerSession | undefined,
+    dialect: SpannerDialect,
   ) {
-    super();
+    super(session, dialect, 'delete');
     this.config = { table };
   }
 
@@ -50,25 +46,7 @@ export class SpannerDelete<TTable extends AnySpannerTable, TResult>
     return this.dialect.buildDeleteQuery(this.config);
   }
 
-  toSQL(): Query {
-    const { sql, params } = this.dialect.sqlToQuery(this.getSQL());
-    return { sql, params };
-  }
-
-  /** @internal */
-  _prepare(): SpannerPreparedQuery<TResult> {
-    if (!this.session) {
-      throw new Error('Cannot execute a query on a mock database: no client is attached');
-    }
-    return this.session.prepareQuery<TResult>(
-      this.dialect.sqlToQuery(this.getSQL()),
-      this.config.returning,
-      this.config.returning ? undefined : () => undefined as TResult,
-      { type: 'delete' },
-    );
-  }
-
-  override execute(): Promise<TResult> {
-    return this._prepare().execute();
+  protected selection(): SelectedFieldsOrdered | undefined {
+    return this.config.returning;
   }
 }

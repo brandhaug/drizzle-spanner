@@ -1,13 +1,13 @@
-import { entityKind, is } from 'drizzle-orm/entity';
-import { QueryPromise } from 'drizzle-orm/query-promise';
-import type { Query, SQLWrapper } from 'drizzle-orm/sql';
-import { Param, SQL } from 'drizzle-orm/sql';
+import { entityKind } from 'drizzle-orm/entity';
+import type { Param, SQL } from 'drizzle-orm/sql';
 import type { InferInsertModel, InferSelectModel } from 'drizzle-orm/table';
 import type { SpannerDialect, SpannerInsertConfig } from '../dialect.js';
+import type { SelectedFieldsOrdered } from '../internal.js';
 import { orderSelectedFields } from '../internal.js';
-import type { SpannerPreparedQuery, SpannerSession } from '../session.js';
+import type { SpannerSession } from '../session.js';
 import type { AnySpannerTable } from '../table.js';
 import { TableColumns } from '../symbols.js';
+import { mapRowToParams, SpannerQueryBase } from './query-base.js';
 import type { SelectResultFields, SpannerSelectedFields } from './select.js';
 
 export type SpannerInsertValue<TTable extends AnySpannerTable> = {
@@ -33,35 +33,25 @@ export class SpannerInsertBuilder<TTable extends AnySpannerTable> {
       throw new Error('values() must be called with at least one value');
     }
     const columns = this.table[TableColumns];
-    const mappedRows = rows.map((row) => {
-      const mapped: Record<string, Param | SQL> = {};
-      for (const [key, value] of Object.entries(row as Record<string, unknown>)) {
-        if (value === undefined) continue;
-        mapped[key] = is(value, SQL) ? value : new Param(value, columns[key]);
-      }
-      return mapped;
-    });
+    const mappedRows = rows.map((row) =>
+      mapRowToParams(columns, row as Record<string, unknown>),
+    );
     return new SpannerInsert(this.table, mappedRows, this.session, this.dialect);
   }
 }
 
-export class SpannerInsert<TTable extends AnySpannerTable, TResult>
-  extends QueryPromise<TResult>
-  implements SQLWrapper
-{
+export class SpannerInsert<TTable extends AnySpannerTable, TResult> extends SpannerQueryBase<TResult> {
   static override readonly [entityKind]: string = 'SpannerInsert';
-
-  declare readonly _: { readonly dialect: 'spanner'; readonly result: TResult };
 
   private readonly config: SpannerInsertConfig;
 
   constructor(
     table: TTable,
     values: Record<string, Param | SQL>[],
-    private readonly session: SpannerSession | undefined,
-    private readonly dialect: SpannerDialect,
+    session: SpannerSession | undefined,
+    dialect: SpannerDialect,
   ) {
-    super();
+    super(session, dialect, 'insert');
     this.config = { table, values };
   }
 
@@ -82,25 +72,7 @@ export class SpannerInsert<TTable extends AnySpannerTable, TResult>
     return this.dialect.buildInsertQuery(this.config);
   }
 
-  toSQL(): Query {
-    const { sql, params } = this.dialect.sqlToQuery(this.getSQL());
-    return { sql, params };
-  }
-
-  /** @internal */
-  _prepare(): SpannerPreparedQuery<TResult> {
-    if (!this.session) {
-      throw new Error('Cannot execute a query on a mock database: no client is attached');
-    }
-    return this.session.prepareQuery<TResult>(
-      this.dialect.sqlToQuery(this.getSQL()),
-      this.config.returning,
-      this.config.returning ? undefined : () => undefined as TResult,
-      { type: 'insert' },
-    );
-  }
-
-  override execute(): Promise<TResult> {
-    return this._prepare().execute();
+  protected selection(): SelectedFieldsOrdered | undefined {
+    return this.config.returning;
   }
 }

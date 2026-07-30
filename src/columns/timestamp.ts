@@ -2,6 +2,7 @@ import type { ColumnBuilderBaseConfig } from 'drizzle-orm/column-builder';
 import type { ColumnBaseConfig } from 'drizzle-orm/column';
 import { entityKind } from 'drizzle-orm/entity';
 import type { SpannerTable } from '../table.js';
+import type { SpannerTypeHint } from '../type-hints.js';
 import { SpannerColumn, SpannerColumnBuilder } from './common.js';
 
 export interface SpannerTimestampConfig {
@@ -49,6 +50,10 @@ export class SpannerTimestamp extends SpannerColumn<
 
   getSQLType(): string {
     return 'TIMESTAMP';
+  }
+
+  typeHint(): SpannerTypeHint {
+    return 'timestamp';
   }
 
   override mapFromDriverValue(value: unknown): Date | null {

@@ -2,6 +2,7 @@ import type { ColumnBuilderBaseConfig } from 'drizzle-orm/column-builder';
 import type { ColumnBaseConfig } from 'drizzle-orm/column';
 import { entityKind } from 'drizzle-orm/entity';
 import type { SpannerTable } from '../table.js';
+import type { SpannerTypeHint } from '../type-hints.js';
 import { SpannerColumn, SpannerColumnBuilder } from './common.js';
 
 export interface SpannerDateConfig<TMode extends 'string' | 'date' = 'string' | 'date'> {
@@ -45,6 +46,10 @@ export class SpannerDateString extends SpannerColumn<ColumnBaseConfig<'string da
     return 'DATE';
   }
 
+  typeHint(): SpannerTypeHint {
+    return 'date';
+  }
+
   override mapFromDriverValue(value: unknown): string | null {
     if (value === null) return null;
     if (value instanceof Date) return toIsoDateString(value);
@@ -79,6 +84,10 @@ export class SpannerDateDate extends SpannerColumn<ColumnBaseConfig<'object date
 
   getSQLType(): string {
     return 'DATE';
+  }
+
+  typeHint(): SpannerTypeHint {
+    return 'date';
   }
 
   override mapFromDriverValue(value: unknown): Date | null {

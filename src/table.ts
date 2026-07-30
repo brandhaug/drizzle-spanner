@@ -113,21 +113,14 @@ export function spannerTable<
 }> {
   const rawTable = new SpannerTable(name, undefined, name);
 
-  const builtColumns = Object.fromEntries(
-    Object.entries(columns).map(([columnName, columnBuilderBase]) => {
-      const columnBuilder = columnBuilderBase as SpannerColumnBuilder;
-      columnBuilder.setName(columnName);
-      return [columnName, columnBuilder.build(rawTable)];
-    }),
-  );
-
-  const builtExtraConfigColumns = Object.fromEntries(
-    Object.entries(columns).map(([columnName, columnBuilderBase]) => {
-      const columnBuilder = columnBuilderBase as SpannerColumnBuilder;
-      columnBuilder.setName(columnName);
-      return [columnName, columnBuilder.buildExtraConfigColumn(rawTable)];
-    }),
-  );
+  const builtColumns: SpannerColumns = {};
+  const builtExtraConfigColumns: Record<string, SpannerExtraConfigColumn> = {};
+  for (const [columnName, columnBuilderBase] of Object.entries(columns)) {
+    const columnBuilder = columnBuilderBase as SpannerColumnBuilder;
+    columnBuilder.setName(columnName);
+    builtColumns[columnName] = columnBuilder.build(rawTable);
+    builtExtraConfigColumns[columnName] = columnBuilder.buildExtraConfigColumn(rawTable);
+  }
 
   const table = Object.assign(rawTable, builtColumns);
   table[TableColumns] = builtColumns;
