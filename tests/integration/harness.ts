@@ -28,7 +28,7 @@ export async function startEmulator(ddl: string[]): Promise<EmulatorHarness> {
   }
 
   return {
-    db: drizzle(database as unknown as SpannerDriverDatabase),
+    db: drizzle(database as SpannerDriverDatabase),
     database,
     async cleanup() {
       // A real instance outlives the run; drop the database instead of

@@ -4,7 +4,7 @@ import type { SpannerSnapshot } from './snapshot.js';
 import { parseSnapshot } from './snapshot.js';
 
 /** `<out>/<YYYYMMDDHHMMSS>_<name>/` with migration.sql + snapshot.json. */
-export interface MigrationFolder {
+interface MigrationFolder {
   folder: string;
   /** Folder basename, `20260730100000_init`. */
   id: string;
@@ -13,10 +13,10 @@ export interface MigrationFolder {
 }
 
 const FOLDER_PATTERN = /^(\d{14})_(.+)$/;
-export const STATEMENT_BREAKPOINT = '--> statement-breakpoint';
+const STATEMENT_BREAKPOINT = '--> statement-breakpoint';
 
 /** Migration folders under `out`, sorted by timestamp (folder name). */
-export async function listMigrationFolders(out: string): Promise<MigrationFolder[]> {
+async function listMigrationFolders(out: string): Promise<MigrationFolder[]> {
   let entries;
   try {
     entries = await readdir(out, { withFileTypes: true });
@@ -36,19 +36,7 @@ export async function listMigrationFolders(out: string): Promise<MigrationFolder
     .sort((a, b) => a.id.localeCompare(b.id));
 }
 
-export async function readMigrationSql(migration: MigrationFolder): Promise<string> {
-  return readFile(join(migration.folder, 'migration.sql'), 'utf8');
-}
-
-/** Splits migration.sql into statements on the breakpoint marker. */
-export function splitSqlStatements(sql: string): string[] {
-  return sql
-    .split(STATEMENT_BREAKPOINT)
-    .map((statement) => statement.trim().replace(/;$/, ''))
-    .filter((statement) => statement.length > 0);
-}
-
-export async function readSnapshot(migration: MigrationFolder): Promise<SpannerSnapshot> {
+async function readSnapshot(migration: MigrationFolder): Promise<SpannerSnapshot> {
   const path = join(migration.folder, 'snapshot.json');
   return parseSnapshot(await readFile(path, 'utf8'), path);
 }
@@ -68,7 +56,7 @@ export function formatTimestamp(date: Date): string {
   );
 }
 
-export function renderMigrationSql(statements: string[]): string {
+function renderMigrationSql(statements: string[]): string {
   return statements.map((statement) => `${statement};\n`).join(`${STATEMENT_BREAKPOINT}\n`);
 }
 

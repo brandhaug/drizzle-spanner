@@ -3,6 +3,8 @@ import { getTableName } from 'drizzle-orm/table';
 import { getTableColumns } from 'drizzle-orm/utils';
 import { int64, spannerTable, string } from '../../src/index.js';
 import { SpannerPrecisionError } from '../../src/index.js';
+import { IndexedColumn } from '../../src/indexes.js';
+import type { IndexBuilder } from '../../src/indexes.js';
 
 describe('spannerTable', () => {
   it('builds a table with named columns', () => {
@@ -164,7 +166,7 @@ describe('extra config builders', () => {
       b: string('b', { length: 'max' }),
       c: string('c', { length: 'max' }),
     });
-    const builders: any[] = [];
+    const builders: IndexBuilder[] = [];
     spannerTable(
       't2',
       {
@@ -178,10 +180,12 @@ describe('extra config builders', () => {
         return [b];
       },
     );
-    const config = builders[0].config;
+    const config = builders[0]!.config;
     expect(config.name).toBe('idx_b');
     expect(config.nullFiltered).toBe(true);
-    expect(config.columns[0].order).toBe('desc');
+    const keyPart = config.columns[0]!;
+    expect(keyPart).toBeInstanceOf(IndexedColumn);
+    expect((keyPart as IndexedColumn).order).toBe('desc');
     expect(config.storing).toHaveLength(1);
   });
 
@@ -214,7 +218,7 @@ describe('extra config builders', () => {
         },
         (t2) => [
           primaryKey({ columns: [t2.other, t2.id] }),
-          interleaveInParent(singers) as any,
+          interleaveInParent(singers),
         ],
       ),
     ).toThrow(/must start with the primary key/);

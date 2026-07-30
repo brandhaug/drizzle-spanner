@@ -1,6 +1,7 @@
 import type {
   CheckEntity,
   ColumnEntity,
+  ForeignKeyAction,
   ForeignKeyEntity,
   IndexEntity,
   KeyPart,
@@ -9,7 +10,7 @@ import type {
   TableEntity,
 } from './snapshot.js';
 
-export function escapeIdentifier(name: string): string {
+function escapeIdentifier(name: string): string {
   return `\`${name}\``;
 }
 
@@ -19,12 +20,12 @@ function keyPartsSql(parts: KeyPart[]): string {
     .join(', ');
 }
 
-function onDeleteSql(onDelete: 'cascade' | 'noAction'): string {
+function onDeleteSql(onDelete: ForeignKeyAction): string {
   return onDelete === 'cascade' ? 'CASCADE' : 'NO ACTION';
 }
 
 /** One `name TYPE ...` column line of CREATE TABLE / ADD COLUMN / ALTER COLUMN. */
-export function columnDefinitionSql(column: ColumnEntity): string {
+function columnDefinitionSql(column: ColumnEntity): string {
   let definition = `${escapeIdentifier(column.name)} ${column.type}`;
   if (column.notNull) definition += ' NOT NULL';
   if (column.generatedIdentity) {

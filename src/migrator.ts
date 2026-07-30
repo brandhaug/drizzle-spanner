@@ -1,4 +1,5 @@
 import type { MigrationConfig } from 'drizzle-orm/migrator';
+import type { AnyRelations } from 'drizzle-orm/relations';
 import { readMigrationFiles } from 'drizzle-orm/migrator';
 import type { SpannerDatabase, SpannerDriverDatabase } from './db.js';
 import { SpannerDdlError } from './errors.js';
@@ -48,10 +49,19 @@ function failedStatementIndex(error: unknown): number | undefined {
   return undefined;
 }
 
-async function runDdl(
-  client: SpannerDriverDatabaseWithDdl,
+/** The minimal client surface `applyDdlStatements` needs. */
+export type SpannerDdlClient = Pick<SpannerDriverDatabaseWithDdl, 'updateSchema'>;
+
+/**
+ * Applies one batched `updateSchema` DDL operation. On failure it throws
+ * `SpannerDdlError` with the failed-statement index (from the operation's
+ * commit-timestamps metadata) appended to the caller-supplied message
+ * context.
+ */
+export async function applyDdlStatements(
+  client: SpannerDdlClient,
   statements: string[],
-  migrationName: string,
+  messageContext: string,
 ): Promise<void> {
   try {
     const [operation] = await client.updateSchema(statements);
@@ -63,12 +73,20 @@ async function runDdl(
         ? `; failed statement (index ${statementIndex}): ${statements[statementIndex]}`
         : '';
     throw new SpannerDdlError({
-      message: `Migration ${migrationName} failed to apply${failed}`,
+      message: `${messageContext}${failed}`,
       code: (error as { code?: number }).code,
       cause: error,
       statementIndex,
     });
   }
+}
+
+async function runDdl(
+  client: SpannerDriverDatabaseWithDdl,
+  statements: string[],
+  migrationName: string,
+): Promise<void> {
+  await applyDdlStatements(client, statements, `Migration ${migrationName} failed to apply`);
 }
 
 async function readColumn(
@@ -96,7 +114,7 @@ async function runDml(client: SpannerDriverDatabaseWithDdl, sql: string): Promis
  * applied migrations are skipped by hash, so re-running is a no-op.
  */
 export async function migrate(
-  db: SpannerDatabase<any>,
+  db: SpannerDatabase<AnyRelations>,
   config: SpannerMigrationConfig,
 ): Promise<SpannerMigrationResult> {
   const client = db.$client as SpannerDriverDatabaseWithDdl | undefined;

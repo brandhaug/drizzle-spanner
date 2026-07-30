@@ -1,8 +1,9 @@
 import { entityKind } from 'drizzle-orm/entity';
+import type { ForeignKeyAction } from './foreign-keys.js';
 import type { SpannerTable, SpannerTableWithColumns, TableConfig } from './table.js';
 
 export interface InterleaveConfig {
-  onDelete?: 'cascade' | 'noAction';
+  onDelete?: ForeignKeyAction;
 }
 
 /**
@@ -45,7 +46,7 @@ export class Interleave {
   constructor(
     readonly table: SpannerTable,
     readonly parent: SpannerTable,
-    readonly onDelete: 'cascade' | 'noAction',
+    readonly onDelete: ForeignKeyAction,
   ) {}
 }
 
