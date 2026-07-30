@@ -16,6 +16,11 @@
       "import": "./dist/index.js",
       "default": "./dist/index.js"
     },
+    "./migrator": {
+      "types": "./dist/migrator.d.ts",
+      "import": "./dist/migrator.js",
+      "default": "./dist/migrator.js"
+    },
     "./package.json": "./package.json"
   },
   "files": [
