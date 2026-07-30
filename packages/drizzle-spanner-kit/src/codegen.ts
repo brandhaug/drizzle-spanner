@@ -7,6 +7,7 @@ import type {
   SpannerEntity,
   TableEntity,
 } from './snapshot.js';
+import { bucketEntities, groupByTable } from './entities.js';
 
 /** `full_name` -> `fullName`; leading digits get a `t` prefix. */
 function camelCase(name: string): string {
@@ -146,34 +147,13 @@ function renderExtraConfig(
  * API — the output of `pull`.
  */
 export function renderSchemaModule(entities: SpannerEntity[]): string {
-  const tables = entities.filter((entity) => entity.entityType === 'tables');
-  const sequences = entities.filter((entity) => entity.entityType === 'sequences');
-  const columnsByTable = new Map<string, ColumnEntity[]>();
-  const pks = new Map<string, PrimaryKeyEntity>();
-  const indexesByTable = new Map<string, IndexEntity[]>();
-  const fksByTable = new Map<string, ForeignKeyEntity[]>();
-  const checksByTable = new Map<string, CheckEntity[]>();
-  for (const entity of entities) {
-    switch (entity.entityType) {
-      case 'columns':
-        columnsByTable.set(entity.table, [...(columnsByTable.get(entity.table) ?? []), entity]);
-        break;
-      case 'pks':
-        pks.set(entity.table, entity);
-        break;
-      case 'indexes':
-        indexesByTable.set(entity.table, [...(indexesByTable.get(entity.table) ?? []), entity]);
-        break;
-      case 'fks':
-        fksByTable.set(entity.table, [...(fksByTable.get(entity.table) ?? []), entity]);
-        break;
-      case 'checks':
-        checksByTable.set(entity.table, [...(checksByTable.get(entity.table) ?? []), entity]);
-        break;
-      default:
-        break;
-    }
-  }
+  const buckets = bucketEntities(entities);
+  const { tables, sequences } = buckets;
+  const columnsByTable = groupByTable(buckets.columns);
+  const pks = new Map(buckets.pks.map((pk) => [pk.table, pk]));
+  const indexesByTable = groupByTable(buckets.indexes);
+  const fksByTable = groupByTable(buckets.fks);
+  const checksByTable = groupByTable(buckets.checks);
 
   const tableVariables = new Map(tables.map((table) => [table.name, camelCase(table.name)]));
 

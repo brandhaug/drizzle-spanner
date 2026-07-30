@@ -113,6 +113,21 @@ export abstract class SpannerColumn<
 }
 
 /**
+ * Shared decoding for FLOAT32/FLOAT64: both arrive from the driver either as
+ * plain numbers or as `Float` wrappers `{ value: n }`.
+ */
+export abstract class SpannerFloatColumn<
+  T extends ColumnBaseConfig<'number float' | 'number double'>,
+> extends SpannerColumn<T> {
+  static override readonly [entityKind]: string = 'SpannerFloatColumn';
+
+  override mapFromDriverValue(value: unknown): number | null {
+    if (value === null) return null;
+    return unwrapFloat(value);
+  }
+}
+
+/**
  * Column facade handed to the extra-config callback of `spannerTable` so
  * `index().on(...)` and `primaryKey()` can capture key parts with sort order.
  */

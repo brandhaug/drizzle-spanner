@@ -236,10 +236,6 @@ describe('read-only transactions', () => {
       readOnly: true,
       staleness: { readTimestamp: readAt },
     });
-    await db.transaction(async () => undefined, {
-      readOnly: true,
-      staleness: { minReadTimestamp: '2026-07-30T10:00:00Z' },
-    });
 
     expect(fake.snapshotBounds).toEqual([
       { strong: true },
@@ -248,7 +244,6 @@ describe('read-only transactions', () => {
       { exactStaleness: 500 },
       // Timestamps encode to protobuf form; a plain Date would be misread.
       { readTimestamp: { seconds: 1_785_405_600, nanos: 250_000_000 } },
-      { minReadTimestamp: { seconds: 1_785_405_600, nanos: 0 } },
     ]);
   });
 
@@ -340,12 +335,20 @@ describe('single-use stale reads (withStaleness)', () => {
     expect(fake.runBounds).toEqual([{ exactStaleness: 15_000 }]);
   });
 
-  it('encodes a maxStaleness bound (single-use only in Spanner)', async () => {
+  it('encodes the single-use-only bounds (maxStaleness, minReadTimestamp)', async () => {
     const fake = fakeBoundedReadDatabase();
     const db = drizzle(fake.database);
     await db.select().from(singers).withStaleness({ maxStaleness: '10s' });
     await db.select().from(singers).withStaleness({ maxStaleness: 250 });
-    expect(fake.runBounds).toEqual([{ maxStaleness: 10_000 }, { maxStaleness: 250 }]);
+    await db
+      .select()
+      .from(singers)
+      .withStaleness({ minReadTimestamp: '2026-07-30T10:00:00Z' });
+    expect(fake.runBounds).toEqual([
+      { maxStaleness: 10_000 },
+      { maxStaleness: 250 },
+      { minReadTimestamp: { seconds: 1_785_405_600, nanos: 0 } },
+    ]);
   });
 
   it('leaves ordinary reads unbounded', async () => {

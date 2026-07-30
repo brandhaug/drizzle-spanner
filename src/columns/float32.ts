@@ -3,7 +3,7 @@ import type { ColumnBaseConfig } from 'drizzle-orm/column';
 import { entityKind } from 'drizzle-orm/entity';
 import type { SpannerTable } from '../table.js';
 import type { SpannerTypeHint } from '../type-hints.js';
-import { SpannerColumn, SpannerColumnBuilder, unwrapFloat } from './common.js';
+import { SpannerColumnBuilder, SpannerFloatColumn } from './common.js';
 
 export interface SpannerFloat32BuilderConfig extends ColumnBuilderBaseConfig<'number float'> {
   data: number;
@@ -23,7 +23,7 @@ export class SpannerFloat32Builder extends SpannerColumnBuilder<SpannerFloat32Bu
   }
 }
 
-export class SpannerFloat32 extends SpannerColumn<ColumnBaseConfig<'number float'>> {
+export class SpannerFloat32 extends SpannerFloatColumn<ColumnBaseConfig<'number float'>> {
   static override readonly [entityKind]: string = 'SpannerFloat32';
 
   getSQLType(): string {
@@ -32,11 +32,6 @@ export class SpannerFloat32 extends SpannerColumn<ColumnBaseConfig<'number float
 
   typeHint(): SpannerTypeHint {
     return 'float32';
-  }
-
-  override mapFromDriverValue(value: unknown): number | null {
-    if (value === null) return null;
-    return unwrapFloat(value);
   }
 }
 

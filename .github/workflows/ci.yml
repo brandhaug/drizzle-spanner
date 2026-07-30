@@ -1,0 +1,65 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  check:
+    name: Lint, typecheck, unit tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: lts/*
+          cache: npm
+      - run: npm ci
+      - run: npm run lint
+      - run: npm run typecheck
+      - run: npm test
+
+  # Beta matrix: a breaking drizzle-orm beta must fail here, not in a user
+  # application. The README's tested-versions list is this matrix.
+  integration-node:
+    name: Integration (Node, drizzle-orm ${{ matrix.drizzle-orm }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        drizzle-orm: ['1.0.0-beta.22']
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: lts/*
+          cache: npm
+      - run: npm ci
+      - run: npm install --no-save drizzle-orm@${{ matrix.drizzle-orm }}
+      - run: npm test
+      - run: npm run test:integration
+
+  integration-bun:
+    name: Integration (Bun)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: lts/*
+          cache: npm
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+      - run: npm ci
+      # Bun cannot manage the testcontainers lifecycle per file in one
+      # process, so start one shared emulator for the whole run.
+      - name: Start Spanner emulator
+        run: |
+          docker run -d --name spanner-emulator -p 9010:9010 \
+            gcr.io/cloud-spanner-emulator/emulator:latest
+          until docker logs spanner-emulator 2>&1 | grep -qi 'gRPC server listening'; do sleep 1; done
+      - run: npm run test:integration:bun
+        env:
+          SPANNER_EMULATOR_HOST: localhost:9010
