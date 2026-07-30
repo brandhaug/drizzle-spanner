@@ -21,13 +21,16 @@
   "files": [
     "dist"
   ],
+  "workspaces": [
+    "packages/*"
+  ],
   "scripts": {
     "build": "tsc -p tsconfig.build.json",
     "typecheck": "tsc --noEmit",
-    "lint": "eslint src tests",
-    "test": "vitest run tests/unit",
-    "test:integration": "vitest run tests/integration --fileParallelism=false",
-    "test:integration:bun": "bun test tests/integration --timeout 180000",
+    "lint": "eslint src tests packages",
+    "test": "vitest run tests/unit packages/drizzle-spanner-kit/tests/unit",
+    "test:integration": "vitest run tests/integration packages/drizzle-spanner-kit/tests/integration --fileParallelism=false",
+    "test:integration:bun": "bun test tests/integration packages/drizzle-spanner-kit/tests/integration --timeout 180000",
     "emulator:up": "docker compose up -d",
     "emulator:down": "docker compose down",
     "emulator:bootstrap": "node scripts/emulator-bootstrap.ts",
