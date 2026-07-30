@@ -274,3 +274,54 @@ describe('interleaveInParent compile-time check', () => {
     ).toThrow(/must start with the primary key/);
   });
 });
+
+describe('foreignKey', () => {
+  it('captures columns, foreign columns and onDelete', async () => {
+    const { foreignKey, spannerTable: table, string: str } = await import('../../src/index.js');
+    const singers = table('singers', {
+      id: str('id', { length: 36 }).primaryKey(),
+    });
+    const albums = table(
+      'albums',
+      {
+        id: str('id', { length: 36 }).primaryKey(),
+        singerId: str('singer_id', { length: 36 }).notNull(),
+      },
+      (t) => [
+        foreignKey({
+          name: 'fk_albums_singer',
+          columns: [t.singerId],
+          foreignColumns: [singers.id],
+        }).onDelete('cascade'),
+      ],
+    );
+    const { ForeignKeyBuilder, getTableExtraConfig } = await import('../../src/index.js');
+    const entries = getTableExtraConfig(albums);
+    const fk = entries.find((entry) => entry instanceof ForeignKeyBuilder) as InstanceType<
+      typeof ForeignKeyBuilder
+    >;
+    expect(fk).toBeDefined();
+    expect(fk.config.name).toBe('fk_albums_singer');
+    expect(fk.config.columns.map((c) => c.name)).toEqual(['singer_id']);
+    expect(fk.config.foreignColumns.map((c) => c.name)).toEqual(['id']);
+    expect(fk.config.foreignTable).toBe(singers);
+    expect(fk.config.onDelete).toBe('cascade');
+  });
+
+  it('defaults onDelete to noAction', async () => {
+    const { foreignKey, spannerTable: table, string: str } = await import('../../src/index.js');
+    const parent = table('p', { id: str('id', { length: 36 }).primaryKey() });
+    const fk = foreignKey({ columns: [], foreignColumns: [parent.id] });
+    expect(fk.config.onDelete).toBe('noAction');
+  });
+});
+
+describe('check', () => {
+  it('captures name and expression', async () => {
+    const { check } = await import('../../src/index.js');
+    const { sql } = await import('drizzle-orm/sql');
+    const builder = check('positive_plays', sql`plays >= 0`);
+    expect(builder.name).toBe('positive_plays');
+    expect(builder.value).toBeDefined();
+  });
+});
