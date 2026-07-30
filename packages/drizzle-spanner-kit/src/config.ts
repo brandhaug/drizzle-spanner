@@ -81,7 +81,7 @@ export async function loadConfig(configPath: string): Promise<ResolvedSpannerKit
 
 /** The database section, or a command-scoped error naming what is missing. */
 export function requireDatabase(
-  config: ResolvedSpannerKitConfig,
+  config: Pick<ResolvedSpannerKitConfig, 'database'>,
   command: string,
 ): SpannerKitDatabaseConfig {
   if (!config.database) {
