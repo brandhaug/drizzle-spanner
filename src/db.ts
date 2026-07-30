@@ -376,13 +376,14 @@ export class SpannerDatabase<TRelations extends AnyRelations = EmptyRelations> {
           await driverTransaction.commit();
           return result;
         } catch (error) {
-          // ABORTED must propagate untouched so the driver's transaction
-          // runner retries the whole callback.
-          if (isAborted(error)) throw error;
+          // The rollback is best-effort in every branch: on ABORTED it
+          // releases locks a still-open server transaction may hold (a real
+          // abort makes it a no-op), then the error propagates untouched so
+          // the driver's transaction runner retries the whole callback.
           try {
             await driverTransaction.rollback();
           } catch {
-            // The rollback is best-effort; the original error matters more.
+            // The original error matters more.
           }
           throw error;
         }

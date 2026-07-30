@@ -63,14 +63,16 @@ describe('relational queries: golden SQL', () => {
     );
   });
 
-  it('compiles a to-one relation to a scalar STRUCT subquery with limit 1', () => {
+  it('compiles a to-one relation to an ARRAY(SELECT AS STRUCT ... LIMIT 1) subquery', () => {
+    // Spanner cannot return a bare STRUCT column, so to-one also rides ARRAY
+    // and the decoder unwraps the single element.
     const query = db.query.albums.findMany({
       columns: { title: true },
       with: { singer: true },
     });
     expect(query.toSQL().sql).toBe(
       'select `d0`.`title` as `title`, ' +
-        '(select as struct `d1`.`id` as `id`, `d1`.`name` as `name` ' +
+        'array(select as struct `d1`.`id` as `id`, `d1`.`name` as `name` ' +
         'from `singers` as `d1` where `d0`.`singer_id` = `d1`.`id` limit @p0) as `singer` ' +
         'from `albums` as `d0`',
     );
@@ -166,9 +168,10 @@ describe('relational queries: decoding', () => {
         const driverRows = rows.map((row) => {
           const cells = Object.entries(row).map(([name, value]) => ({ name, value }));
           return Object.assign(cells, {
+            // Returned as-is (not cloned) so wrapper instances keep their class.
             toJSON: (options?: { wrapNumbers?: boolean }) => {
               void options;
-              return structuredClone(row);
+              return row;
             },
           });
         });
@@ -225,12 +228,38 @@ describe('relational queries: decoding', () => {
     await expect(dbOne.query.singers.findFirst()).resolves.toEqual({ id: 's1', name: 'Ada' });
   });
 
-  it('decodes a null to-one relation to null', async () => {
+  it('decodes a to-one relation from its one-element array, and empty to null', async () => {
     const fake = fakeRqbDatabase([
-      { singerId: 's1', albumId: 'a1', title: 'First', plays: null, releasedAt: null, singer: null },
+      {
+        singerId: 's1',
+        albumId: 'a1',
+        title: 'First',
+        plays: null,
+        releasedAt: null,
+        singer: [{ id: 's1', name: 'Ada' }],
+      },
+      // An empty ARRAY(... LIMIT 1): the relation row does not exist.
+      { singerId: 's2', albumId: 'a2', title: 'Second', plays: null, releasedAt: null, singer: [] },
     ]);
     const dbWithClient = drizzle(fake.database, { relations });
     const result = await dbWithClient.query.albums.findMany({ with: { singer: true } });
-    expect(result[0]!.singer).toBeNull();
+    expect(result[0]!.singer).toEqual({ id: 's1', name: 'Ada' });
+    expect(result[1]!.singer).toBeNull();
+  });
+
+  it('unwraps driver number wrappers on extras', async () => {
+    // Stands in for the driver's Int wrapper: matched by constructor name.
+    class Int {
+      constructor(readonly value: string) {}
+      valueOf(): number {
+        return Number(this.value);
+      }
+    }
+    const fake = fakeRqbDatabase([{ id: 's1', name: 'Ada', albumCount: new Int('3') }]);
+    const dbWithClient = drizzle(fake.database, { relations });
+    const result = await dbWithClient.query.singers.findMany({
+      extras: { albumCount: (table, { sql: sqlOp }) => sqlOp<number>`(select count(*))` },
+    });
+    expect(result[0]!.albumCount).toBe(3);
   });
 });
