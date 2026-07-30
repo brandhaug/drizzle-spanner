@@ -1,5 +1,7 @@
 export * from './commands/generate.js';
+export * from './commands/migrate.js';
 export * from './config.js';
+export * from './connect.js';
 export * from './ddl.js';
 export * from './loader.js';
 export * from './migrations.js';
