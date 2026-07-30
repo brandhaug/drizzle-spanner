@@ -94,7 +94,7 @@ function serializePrimaryKey(
       };
     }
   }
-  const columns = Object.values(getTableColumns(table) as Record<string, SpannerColumn<any>>)
+  const columns = Object.values(getTableColumns(table))
     .filter((column) => column.primary)
     .map((column): KeyPart => ({ name: column.name, order: 'asc' }));
   if (columns.length === 0) {
@@ -170,7 +170,7 @@ function serializeTable(table: SpannerTable): SpannerEntity[] {
   }
 
   entities.push({ entityType: 'tables', name: tableName, interleave: interleaveConfig });
-  for (const column of Object.values(getTableColumns(table) as Record<string, SpannerColumn<any>>)) {
+  for (const column of Object.values(getTableColumns(table))) {
     entities.push(serializeColumn(tableName, column));
   }
   entities.push(serializePrimaryKey(tableName, table, extraConfig));

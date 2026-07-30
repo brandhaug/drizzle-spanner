@@ -162,7 +162,7 @@ describe('relational queries: golden SQL', () => {
 describe('relational queries: decoding', () => {
   function fakeRqbDatabase(rows: Record<string, unknown>[]) {
     const requests: unknown[] = [];
-    const database = {
+    const database: SpannerDriverDatabase = {
       async run(request: unknown) {
         requests.push(request);
         const driverRows = rows.map((row) => {
@@ -184,7 +184,7 @@ describe('relational queries: decoding', () => {
         throw new Error('RQB reads take no snapshot');
       },
     };
-    return { database: database as unknown as SpannerDriverDatabase, requests };
+    return { database, requests };
   }
 
   it('decodes nested ARRAY<STRUCT> rows through the column decoders', async () => {

@@ -12,7 +12,6 @@ import type { ColumnBaseConfig } from 'drizzle-orm/column';
 import { Column } from 'drizzle-orm/column';
 import { entityKind } from 'drizzle-orm/entity';
 import type { SQL } from 'drizzle-orm/sql';
-import type { Table } from 'drizzle-orm/table';
 import type { SpannerTable } from '../table.js';
 import type { SpannerTypeHint } from '../type-hints.js';
 import { arrayTypeHint } from '../type-hints.js';
@@ -79,7 +78,7 @@ export abstract class SpannerColumnBuilder<
     notNull: false;
     hasDefault: false;
   }> {
-    return new SpannerArrayBuilder(this.config.name, this as unknown as SpannerColumnBuilder) as any;
+    return new SpannerArrayBuilder(this.config.name, this as unknown as SpannerColumnBuilder);
   }
 
   /** @internal */
@@ -104,7 +103,7 @@ export abstract class SpannerColumn<
   readonly table: SpannerTable;
 
   constructor(table: SpannerTable, config: ColumnBuilderRuntimeConfig<T['data']> & TRuntimeConfig) {
-    super(table as unknown as Table, config);
+    super(table, config);
     this.table = table;
   }
 
@@ -137,7 +136,7 @@ export class SpannerExtraConfigColumn extends Column {
   indexConfig: { order: 'asc' | 'desc' } = { order: 'asc' };
 
   constructor(table: SpannerTable, config: ColumnBuilderRuntimeConfig<unknown>) {
-    super(table as unknown as Table, config);
+    super(table, config);
   }
 
   getSQLType(): string {
@@ -194,7 +193,7 @@ export class SpannerArray extends SpannerColumn<ColumnBaseConfig<'array'>> {
     config: ColumnBuilderRuntimeConfig<unknown[]>,
     baseColumn: SpannerColumn<any>,
   ) {
-    super(table, config as any);
+    super(table, config);
     this.baseColumn = baseColumn;
   }
 

@@ -248,7 +248,7 @@ export class SpannerDialect {
     const columnIdentifiers: SQL[] = [];
     const pushColumn = (key: string, column: SpannerColumn<any>): void => {
       columnIdentifiers.push(this.buildRqbColumn(table, column, key));
-      selection.push({ key, field: column as never });
+      selection.push({ key, field: column });
     };
     if (columnsConfig) {
       const entries = Object.entries(columnsConfig).filter(([, value]) => value !== undefined);
@@ -282,15 +282,15 @@ export class SpannerDialect {
     const currentPath = config.errorPath ?? '';
     const currentDepth = config.depth ?? 0;
     const table = currentDepth
-      ? (config.table as SpannerTable)
-      : (aliasedTable(config.table as never, `d${currentDepth}`) as unknown as SpannerTable);
+      ? config.table
+      : aliasedTable(config.table, `d${currentDepth}`);
 
     const limit = isSingle ? 1 : params?.limit;
     const offset = params?.offset;
     const filter = params?.where
       ? relationsFilterToSQL(
-          table as never,
-          params.where as never,
+          table,
+          params.where,
           tableConfig.relations,
           schema,
           this.casing,
@@ -298,12 +298,13 @@ export class SpannerDialect {
       : undefined;
     const where = filter && relationWhere ? and(filter, relationWhere) : (filter ?? relationWhere);
     const order = params?.orderBy
-      ? relationsOrderToSQL(table as never, params.orderBy as never)
+      ? relationsOrderToSQL(table, params.orderBy)
       : undefined;
 
     const columns = this.buildRqbColumns(table, selection, queryConfig);
     const extras = params?.extras
-      ? relationExtrasToSQL(table as never, params.extras as never)
+      ? // `as never`: drizzle types `extras` with the unexported DBQueryConfigExtras type.
+        relationExtrasToSQL(table, params.extras as never)
       : undefined;
     if (extras) selection.push(...extras.selection);
 
@@ -314,22 +315,13 @@ export class SpannerDialect {
     for (const [key, join] of withEntries) {
       const relation = tableConfig.relations[key]!;
       const isSingleRelation = is(relation, One);
-      const targetTable = aliasedTable(
-        relation.targetTable as never,
-        `d${currentDepth + 1}`,
-      ) as unknown as SpannerTable;
+      const targetTable = aliasedTable(relation.targetTable, `d${currentDepth + 1}`) as SpannerTable;
       const throughTable = relation.throughTable
-        ? (aliasedTable(relation.throughTable as never, `tr${currentDepth}`) as unknown as SpannerTable)
+        ? (aliasedTable(relation.throughTable, `tr${currentDepth}`) as SpannerTable)
         : undefined;
-      const built = relationToSQL(
-        this.casing,
-        relation,
-        table as never,
-        targetTable as never,
-        throughTable as never,
-      );
+      const built = relationToSQL(this.casing, relation, table, targetTable, throughTable);
       const innerThroughJoin = throughTable
-        ? sql` inner join ${getTableAsAliasSQL(throughTable as never)} on ${built.joinCondition}`
+        ? sql` inner join ${getTableAsAliasSQL(throughTable)} on ${built.joinCondition}`
         : undefined;
       const innerQuery = this.buildRelationalQuery({
         schema,
@@ -343,7 +335,7 @@ export class SpannerDialect {
         throughJoin: innerThroughJoin,
       });
       selection.push({
-        field: targetTable as never,
+        field: targetTable,
         key,
         selection: innerQuery.selection,
         isArray: !isSingleRelation,
@@ -365,7 +357,7 @@ export class SpannerDialect {
 
     const selectKeyword = currentDepth ? sql`select as struct ` : sql`select `;
     return {
-      sql: sql`${selectKeyword}${sql.join(selectionArr, sql`, `)} from ${getTableAsAliasSQL(table as never)}${throughJoin}${sql` where ${where}`.if(where)}${sql` order by ${order}`.if(order)}${sql` limit ${limit}`.if(limit !== undefined)}${sql` offset ${offset}`.if(offset !== undefined)}`,
+      sql: sql`${selectKeyword}${sql.join(selectionArr, sql`, `)} from ${getTableAsAliasSQL(table)}${throughJoin}${sql` where ${where}`.if(where)}${sql` order by ${order}`.if(order)}${sql` limit ${limit}`.if(limit !== undefined)}${sql` offset ${offset}`.if(offset !== undefined)}`,
       selection,
     };
   }
@@ -385,7 +377,7 @@ interface SpannerRelationalQueryParams {
   with?: Record<string, unknown>;
 }
 
-type SpannerRelationalQueryConfigEntry = SpannerRelationalQueryParams | true | undefined;
+export type SpannerRelationalQueryConfigEntry = SpannerRelationalQueryParams | true | undefined;
 
 export interface SpannerRelationalQueryInput {
   schema: AnyRelations;

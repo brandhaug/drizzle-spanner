@@ -1,4 +1,5 @@
 import type { MigrationConfig } from 'drizzle-orm/migrator';
+import type { AnyRelations } from 'drizzle-orm/relations';
 import { readMigrationFiles } from 'drizzle-orm/migrator';
 import type { SpannerDatabase, SpannerDriverDatabase } from './db.js';
 import { SpannerDdlError } from './errors.js';
@@ -96,7 +97,7 @@ async function runDml(client: SpannerDriverDatabaseWithDdl, sql: string): Promis
  * applied migrations are skipped by hash, so re-running is a no-op.
  */
 export async function migrate(
-  db: SpannerDatabase<any>,
+  db: SpannerDatabase<AnyRelations>,
   config: SpannerMigrationConfig,
 ): Promise<SpannerMigrationResult> {
   const client = db.$client as SpannerDriverDatabaseWithDdl | undefined;
