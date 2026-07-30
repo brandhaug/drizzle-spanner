@@ -23,7 +23,7 @@ stable.
 node scripts/release-check.ts v<version>
 ```
 
-4. Land those changes on `main` through a PR, then tag:
+4. Land those changes on `master` through a PR, then tag:
 
 ```bash
 git tag v<version>
