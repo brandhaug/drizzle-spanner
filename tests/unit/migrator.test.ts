@@ -40,7 +40,7 @@ function fakeDdlDatabase(options: FakeOptions = {}) {
       if (request.sql.includes('INFORMATION_SCHEMA.TABLES')) {
         return [
           options.bookkeepingExists
-            ? [[{ name: 'TABLE_NAME', value: '__drizzle_migrations' }] as SpannerDriverRow]
+            ? [[{ name: 'TABLE_NAME', value: 'drizzle_migrations' }] as SpannerDriverRow]
             : [],
         ];
       }
@@ -110,7 +110,7 @@ describe('migrate (runtime)', () => {
     const db = drizzle(fake.database as never);
     const result = await migrate(db, { migrationsFolder: out });
 
-    expect(fake.ddlBatches[0]?.[0]).toContain('CREATE TABLE `__drizzle_migrations`');
+    expect(fake.ddlBatches[0]?.[0]).toContain('CREATE TABLE `drizzle_migrations`');
     expect(fake.ddlBatches[1]).toEqual([
       'CREATE TABLE `a` (\n  `id` STRING(36) NOT NULL\n) PRIMARY KEY (`id`)',
     ]);
@@ -119,7 +119,7 @@ describe('migrate (runtime)', () => {
       'CREATE INDEX `idx_a_v` ON `a` (`v`)',
     ]);
     expect(fake.dmlStatements).toHaveLength(2);
-    expect(fake.dmlStatements[0]).toContain('INSERT INTO `__drizzle_migrations`');
+    expect(fake.dmlStatements[0]).toContain('INSERT INTO `drizzle_migrations`');
     expect(fake.dmlStatements[0]).toContain(hashOf(MIGRATION_1));
     expect(result.applied).toEqual(['20260730100000_init', '20260730110000_evolve']);
   });
