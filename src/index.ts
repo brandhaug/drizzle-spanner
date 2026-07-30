@@ -25,5 +25,6 @@ export * from './query-builders/select.js';
 export * from './query-builders/update.js';
 export * from './sequence.js';
 export * from './session.js';
+export * from './staleness.js';
 export * from './table.js';
 export * from './type-hints.js';

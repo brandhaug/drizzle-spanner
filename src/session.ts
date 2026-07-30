@@ -6,6 +6,7 @@ import type { Query, SQL } from 'drizzle-orm/sql';
 import { fillPlaceholders } from 'drizzle-orm/sql';
 import type { SpannerDialect, SpannerQueryWithTypings } from './dialect.js';
 import { wrapSpannerError } from './errors.js';
+import type { SpannerTimestampBounds } from './staleness.js';
 import type { SelectedFieldsOrdered } from './internal.js';
 import { mapResultRow } from './internal.js';
 import { toDriverParamType } from './type-hints.js';
@@ -29,10 +30,16 @@ export type SpannerDriverRow = { name: string; value: unknown }[] & {
 /**
  * Where a statement executes. Reads run on `database.run`; DML must run inside
  * `runTransactionAsync` (the Node client's `run` is read-only). Inside
- * `db.transaction` both run on the one open driver transaction.
+ * `db.transaction` both run on the one open driver transaction. A staleness
+ * bound turns a read into a single-use bounded read — only the plain database
+ * runner accepts one; transaction runners throw typed errors.
  */
 export interface SpannerQueryRunner {
-  run(request: SpannerSqlRequest, isDml: boolean): Promise<SpannerDriverRow[]>;
+  run(
+    request: SpannerSqlRequest,
+    isDml: boolean,
+    staleness?: SpannerTimestampBounds,
+  ): Promise<SpannerDriverRow[]>;
 }
 
 export interface SpannerSessionOptions {
@@ -41,6 +48,8 @@ export interface SpannerSessionOptions {
 
 export interface SpannerQueryMetadata {
   type: 'select' | 'insert' | 'update' | 'delete';
+  /** Encoded timestamp bound of a `withStaleness` single-use read. */
+  staleness?: SpannerTimestampBounds;
 }
 
 /** Converts drizzle's positional params to Spanner named params plus type hints. */
@@ -97,7 +106,7 @@ export class SpannerPreparedQuery<T = unknown> implements PreparedQuery {
 
     let rawRows: SpannerDriverRow[];
     try {
-      rawRows = await this.runner.run(request, isDml);
+      rawRows = await this.runner.run(request, isDml, this.queryMetadata?.staleness);
     } catch (error) {
       throw wrapSpannerError(error, {
         sql: this.queryWithTypings.sql,
