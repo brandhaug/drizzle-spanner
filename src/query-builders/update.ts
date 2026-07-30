@@ -2,11 +2,14 @@ import { entityKind } from 'drizzle-orm/entity';
 import type { Param, SQL } from 'drizzle-orm/sql';
 import type { InferInsertModel, InferSelectModel } from 'drizzle-orm/table';
 import type { SpannerDialect, SpannerUpdateConfig } from '../dialect.js';
+import { SpannerInvalidArgumentError } from '../errors.js';
+import type { SpannerMutationSink } from '../mutations.js';
+import { toMutationRow, whereToPrimaryKey } from '../mutations.js';
 import type { SelectedFieldsOrdered } from '../internal.js';
 import { orderSelectedFields } from '../internal.js';
 import type { SpannerSession } from '../session.js';
 import type { AnySpannerTable } from '../table.js';
-import { TableColumns } from '../symbols.js';
+import { TableColumns, TableName } from '../symbols.js';
 import { mapRowToParams, SpannerQueryBase } from './query-base.js';
 import type { SelectResultFields, SpannerSelectedFields } from './select.js';
 
@@ -68,5 +71,28 @@ export class SpannerUpdate<TTable extends AnySpannerTable, TResult> extends Span
 
   protected selection(): SelectedFieldsOrdered | undefined {
     return this.config.returning;
+  }
+
+  protected override writeMutation(sink: SpannerMutationSink): void {
+    if (this.config.returning) {
+      throw new SpannerInvalidArgumentError({
+        message:
+          'returning() is not available inside a bufferedMutations transaction: mutations return nothing; use a read-write transaction',
+      });
+    }
+    const { table, set, where } = this.config;
+    const key = whereToPrimaryKey(table, where, 'update');
+    // An update mutation row is the full key plus the changed columns.
+    const row = toMutationRow(this.dialect, table, set);
+    for (const [i, column] of key.columns.entries()) {
+      const cased = this.dialect.casing.getColumnCasing(column);
+      if (cased in row) {
+        throw new SpannerInvalidArgumentError({
+          message: `Cannot set primary-key column "${column.name}" in a bufferedMutations update: mutations address rows by key`,
+        });
+      }
+      row[cased] = key.values[i];
+    }
+    sink.update(table[TableName], [row]);
   }
 }

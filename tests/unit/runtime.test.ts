@@ -1,13 +1,19 @@
 import { describe, expect, it } from 'vitest';
 import { sql } from 'drizzle-orm/sql';
+import { and, eq, gt } from 'drizzle-orm/sql/expressions';
 import {
+  commitTimestamp,
   drizzle,
   GrpcStatus,
+  int64,
+  primaryKey,
   SpannerAbortedError,
   SpannerInvalidArgumentError,
   spannerTable,
   string,
+  timestamp,
 } from '../../src/index.js';
+import type { SpannerDatabase } from '../../src/index.js';
 import type {
   SpannerDriverDatabase,
   SpannerDriverRow,
@@ -43,6 +49,9 @@ function fakeRetryingDatabase(retryCap = 25) {
     async rollback() {
       return undefined;
     },
+    insert() {},
+    update() {},
+    deleteRows() {},
   };
   const database = {
     async run() {
@@ -295,6 +304,9 @@ describe('single-use stale reads (withStaleness)', () => {
           async rollback() {
             return undefined;
           },
+          insert() {},
+          update() {},
+          deleteRows() {},
         });
       },
       async getSnapshot() {
@@ -365,5 +377,282 @@ describe('single-use stale reads (withStaleness)', () => {
         { readOnly: true },
       ),
     ).rejects.toBeInstanceOf(SpannerInvalidArgumentError);
+  });
+});
+
+describe('bufferedMutations transactions', () => {
+  const albums = spannerTable(
+    'albums',
+    {
+      singerId: string('singer_id', { length: 36 }).notNull(),
+      albumId: string('album_id', { length: 36 }).notNull(),
+      title: string('title', { length: 1024 }),
+    },
+    (t) => [primaryKey({ columns: [t.singerId, t.albumId] })],
+  );
+
+  const events = spannerTable('events', {
+    id: string('id', { length: 36 }).primaryKey(),
+    count: int64('count', { mode: 'bigint' }),
+    updatedAt: timestamp('updated_at', { allowCommitTimestamp: true }),
+  });
+
+  interface RecordedMutation {
+    kind: 'insert' | 'update' | 'deleteRows';
+    table: string;
+    payload: unknown;
+  }
+
+  function fakeMutationDatabase() {
+    const mutations: RecordedMutation[] = [];
+    let commits = 0;
+    let rollbacks = 0;
+    let runs = 0;
+    const transaction: SpannerDriverTransaction = {
+      async run(request: SpannerSqlRequest) {
+        void request;
+        runs += 1;
+        return [[]];
+      },
+      async commit() {
+        commits += 1;
+        return undefined;
+      },
+      async rollback() {
+        rollbacks += 1;
+        return undefined;
+      },
+      insert(table: string, rows: Record<string, unknown>[]) {
+        mutations.push({ kind: 'insert', table, payload: rows });
+      },
+      update(table: string, rows: Record<string, unknown>[]) {
+        mutations.push({ kind: 'update', table, payload: rows });
+      },
+      deleteRows(table: string, keys: unknown[][]) {
+        mutations.push({ kind: 'deleteRows', table, payload: keys });
+      },
+    };
+    const database = {
+      async run() {
+        return [[]] as [SpannerDriverRow[]];
+      },
+      async runTransactionAsync<T>(
+        optionsOrRunFn:
+          | { timeout?: number }
+          | ((tx: SpannerDriverTransaction) => Promise<T>),
+        maybeRunFn?: (tx: SpannerDriverTransaction) => Promise<T>,
+      ): Promise<T> {
+        const runFn = typeof optionsOrRunFn === 'function' ? optionsOrRunFn : maybeRunFn!;
+        return runFn(transaction);
+      },
+      async getSnapshot(): Promise<never> {
+        throw new Error('mutation fakes take no snapshots');
+      },
+    };
+    return {
+      database: database as unknown as SpannerDriverDatabase,
+      mutations,
+      commitCount: () => commits,
+      rollbackCount: () => rollbacks,
+      runCount: () => runs,
+    };
+  }
+
+  it('compiles insert values to buffered insert mutations and commits once', async () => {
+    const fake = fakeMutationDatabase();
+    const db = drizzle(fake.database);
+    await db.transaction(
+      async (tx) => {
+        await tx.insert(singers).values([
+          { id: 'a', name: 'Ada' },
+          { id: 'b', name: 'Grace' },
+        ]);
+      },
+      { mode: 'bufferedMutations' },
+    );
+    expect(fake.mutations).toEqual([
+      {
+        kind: 'insert',
+        table: 'singers',
+        payload: [
+          { id: 'a', name: 'Ada' },
+          { id: 'b', name: 'Grace' },
+        ],
+      },
+    ]);
+    expect(fake.commitCount()).toBe(1);
+    expect(fake.runCount()).toBe(0);
+  });
+
+  it('maps values through mapToDriverValue and the commitTimestamp sentinel', async () => {
+    const fake = fakeMutationDatabase();
+    const db = drizzle(fake.database);
+    await db.transaction(
+      async (tx) => {
+        await tx.insert(events).values({
+          id: 'e1',
+          count: 9_007_199_254_740_993n,
+          updatedAt: commitTimestamp(),
+        });
+      },
+      { mode: 'bufferedMutations' },
+    );
+    expect(fake.mutations).toEqual([
+      {
+        kind: 'insert',
+        table: 'events',
+        payload: [
+          {
+            id: 'e1',
+            // bigint rides as a decimal string, same as the DML path.
+            count: '9007199254740993',
+            updated_at: 'spanner.commit_timestamp()',
+          },
+        ],
+      },
+    ]);
+  });
+
+  it('compiles update with exact primary-key equality to an update mutation', async () => {
+    const fake = fakeMutationDatabase();
+    const db = drizzle(fake.database);
+    await db.transaction(
+      async (tx) => {
+        await tx
+          .update(albums)
+          .set({ title: 'New Title' })
+          .where(and(eq(albums.albumId, 'al1'), eq(albums.singerId, 's1')));
+      },
+      { mode: 'bufferedMutations' },
+    );
+    expect(fake.mutations).toEqual([
+      {
+        kind: 'update',
+        table: 'albums',
+        payload: [{ singer_id: 's1', album_id: 'al1', title: 'New Title' }],
+      },
+    ]);
+  });
+
+  it('rejects update whose WHERE is not exact equality on every key column', async () => {
+    const fake = fakeMutationDatabase();
+    const db = drizzle(fake.database);
+
+    // Missing one primary-key column.
+    await expect(
+      db.transaction(
+        async (tx) => {
+          await tx.update(albums).set({ title: 'x' }).where(eq(albums.singerId, 's1'));
+        },
+        { mode: 'bufferedMutations' },
+      ),
+    ).rejects.toBeInstanceOf(SpannerInvalidArgumentError);
+
+    // A non-equality predicate.
+    await expect(
+      db.transaction(
+        async (tx) => {
+          await tx.update(singers).set({ name: 'x' }).where(gt(singers.id, 'a'));
+        },
+        { mode: 'bufferedMutations' },
+      ),
+    ).rejects.toBeInstanceOf(SpannerInvalidArgumentError);
+
+    // An equality on a non-key column.
+    await expect(
+      db.transaction(
+        async (tx) => {
+          await tx
+            .update(albums)
+            .set({ title: 'x' })
+            .where(and(eq(albums.singerId, 's1'), eq(albums.title, 'old')));
+        },
+        { mode: 'bufferedMutations' },
+      ),
+    ).rejects.toBeInstanceOf(SpannerInvalidArgumentError);
+
+    // No WHERE at all.
+    await expect(
+      db.transaction(
+        async (tx) => {
+          await tx.update(singers).set({ name: 'x' });
+        },
+        { mode: 'bufferedMutations' },
+      ),
+    ).rejects.toBeInstanceOf(SpannerInvalidArgumentError);
+
+    expect(fake.mutations).toEqual([]);
+  });
+
+  it('compiles delete to key-addressed deleteRows in primary-key order', async () => {
+    const fake = fakeMutationDatabase();
+    const db = drizzle(fake.database);
+    await db.transaction(
+      async (tx) => {
+        // WHERE order is reversed on purpose; keys must follow PK order.
+        await tx
+          .delete(albums)
+          .where(and(eq(albums.albumId, 'al1'), eq(albums.singerId, 's1')));
+        await tx.delete(singers).where(eq(singers.id, 'a'));
+      },
+      { mode: 'bufferedMutations' },
+    );
+    expect(fake.mutations).toEqual([
+      { kind: 'deleteRows', table: 'albums', payload: [['s1', 'al1']] },
+      { kind: 'deleteRows', table: 'singers', payload: [['a']] },
+    ]);
+  });
+
+  it('throws typed errors on reads, $count, and returning', async () => {
+    const fake = fakeMutationDatabase();
+    const db = drizzle(fake.database);
+
+    await expect(
+      db.transaction(
+        async (tx) => {
+          // The mutation transaction type has no select; the session runner
+          // is the runtime backstop for casts.
+          await (tx as unknown as SpannerDatabase).select().from(singers);
+        },
+        { mode: 'bufferedMutations' },
+      ),
+    ).rejects.toBeInstanceOf(SpannerInvalidArgumentError);
+
+    await expect(
+      db.transaction(
+        async (tx) => {
+          await (tx as unknown as SpannerDatabase).$count(singers);
+        },
+        { mode: 'bufferedMutations' },
+      ),
+    ).rejects.toBeInstanceOf(SpannerInvalidArgumentError);
+
+    await expect(
+      db.transaction(
+        async (tx) => {
+          await tx.insert(singers).values({ id: 'a', name: 'Ada' }).returning();
+        },
+        { mode: 'bufferedMutations' },
+      ),
+    ).rejects.toBeInstanceOf(SpannerInvalidArgumentError);
+
+    expect(fake.commitCount()).toBe(0);
+    expect(fake.rollbackCount()).toBe(3);
+  });
+
+  it('rolls back and skips commit when the callback throws', async () => {
+    const fake = fakeMutationDatabase();
+    const db = drizzle(fake.database);
+    await expect(
+      db.transaction(
+        async (tx) => {
+          await tx.insert(singers).values({ id: 'a', name: 'Ada' });
+          throw new Error('boom');
+        },
+        { mode: 'bufferedMutations' },
+      ),
+    ).rejects.toThrow('boom');
+    expect(fake.commitCount()).toBe(0);
+    expect(fake.rollbackCount()).toBe(1);
   });
 });

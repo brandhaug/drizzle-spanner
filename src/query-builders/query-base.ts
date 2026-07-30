@@ -4,6 +4,8 @@ import type { Query, SQLWrapper } from 'drizzle-orm/sql';
 import { Param, SQL } from 'drizzle-orm/sql';
 import type { SpannerDialect } from '../dialect.js';
 import type { SelectedFieldsOrdered } from '../internal.js';
+import { SpannerInvalidArgumentError } from '../errors.js';
+import type { SpannerMutationSink } from '../mutations.js';
 import type { SpannerPreparedQuery, SpannerQueryMetadata, SpannerSession } from '../session.js';
 import { NO_CLIENT_MESSAGE } from '../session.js';
 import type { SpannerTimestampBounds } from '../staleness.js';
@@ -70,7 +72,23 @@ export abstract class SpannerQueryBase<TResult>
     );
   }
 
+  /**
+   * Buffers this query as a Spanner mutation. The DML builders override it;
+   * the default covers reads, which have no mutation form.
+   */
+  protected writeMutation(_sink: SpannerMutationSink): void {
+    throw new SpannerInvalidArgumentError({
+      message:
+        'Reads are not allowed inside a bufferedMutations transaction; use a read-write or read-only transaction for queries',
+    });
+  }
+
   override execute(): Promise<TResult> {
+    const sink = this.session?.mutationSink;
+    if (sink) {
+      this.writeMutation(sink);
+      return Promise.resolve(undefined as TResult);
+    }
     return this._prepare().execute();
   }
 }

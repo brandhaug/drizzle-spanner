@@ -46,6 +46,9 @@ function fakeDatabase(rows: { name: string; value: unknown }[][] = []) {
       rollbacks += 1;
       return undefined;
     },
+    insert() {},
+    update() {},
+    deleteRows() {},
   };
   const database: SpannerDriverDatabase = {
     async run(request) {
@@ -171,6 +174,9 @@ describe('db.transaction', () => {
               async rollback() {
                 return undefined;
               },
+              insert() {},
+              update() {},
+              deleteRows() {},
             });
           } catch (error) {
             if ((error as { code?: number }).code === GrpcStatus.ABORTED) continue;

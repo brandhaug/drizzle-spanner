@@ -32,6 +32,10 @@ export interface SpannerDriverTransaction {
   run(request: SpannerSqlRequest): Promise<[SpannerDriverRow[], ...unknown[]]>;
   commit(): Promise<unknown>;
   rollback(): Promise<unknown>;
+  /** Mutation buffer used by the bufferedMutations transaction mode. */
+  insert(table: string, rows: Record<string, unknown>[]): void;
+  update(table: string, rows: Record<string, unknown>[]): void;
+  deleteRows(table: string, keys: unknown[][]): void;
 }
 
 /** Options the driver's transaction runner accepts (`RunTransactionOptions`). */
@@ -135,6 +139,21 @@ class SnapshotRunner {
   }
 }
 
+/**
+ * bufferedMutations transaction: the query builders compile to mutations on
+ * the session's sink; anything that reaches the runner has no mutation form.
+ */
+class MutationModeRunner {
+  run(request: SpannerSqlRequest, isDml: boolean): Promise<SpannerDriverRow[]> {
+    void request;
+    throw new SpannerInvalidArgumentError({
+      message: isDml
+        ? 'Statements do not execute inside a bufferedMutations transaction; the insert/update/delete builders compile to mutations, and raw SQL needs a read-write transaction'
+        : 'Reads are not allowed inside a bufferedMutations transaction; use a read-write or read-only transaction for queries',
+    });
+  }
+}
+
 class MockRunner {
   run(): Promise<SpannerDriverRow[]> {
     throw new Error(NO_CLIENT_MESSAGE);
@@ -179,6 +198,23 @@ export interface SpannerReadOnlyTransaction {
   ): SpannerTransactionSelectBuilder<TSelection>;
   $count(table: AnySpannerTable | SQL, where?: SQL): Promise<number>;
   execute<T = Record<string, unknown>[]>(query: SQL): Promise<T>;
+}
+
+/** Options for a `db.transaction` that buffers mutations until commit. */
+export interface SpannerMutationTransactionOptions {
+  mode: 'bufferedMutations';
+}
+
+/**
+ * The surface a bufferedMutations transaction callback receives: writes only.
+ * Reads have no mutation form; the session throws typed errors as the
+ * runtime backstop, including for `.returning()`.
+ */
+export interface SpannerMutationTransaction {
+  insert<TTable extends AnySpannerTable>(table: TTable): SpannerInsertBuilder<TTable>;
+  update<TTable extends AnySpannerTable>(table: TTable): SpannerUpdateBuilder<TTable>;
+  delete<TTable extends AnySpannerTable>(table: TTable): SpannerDelete<TTable, void>;
+  rollback(): never;
 }
 
 /**
@@ -253,12 +289,19 @@ export class SpannerDatabase {
     options: SpannerReadOnlyTransactionOptions,
   ): Promise<T>;
   transaction<T>(
+    callback: (tx: SpannerMutationTransaction) => Promise<T>,
+    options: SpannerMutationTransactionOptions,
+  ): Promise<T>;
+  transaction<T>(
     callback: (tx: SpannerReadWriteTransaction) => Promise<T>,
     options?: SpannerTransactionOptions,
   ): Promise<T>;
   async transaction<T>(
     callback: (tx: never) => Promise<T>,
-    options: SpannerTransactionOptions | SpannerReadOnlyTransactionOptions = {},
+    options:
+      | SpannerTransactionOptions
+      | SpannerReadOnlyTransactionOptions
+      | SpannerMutationTransactionOptions = {},
   ): Promise<T> {
     const client = this.$client;
     if (!client) {
@@ -271,7 +314,8 @@ export class SpannerDatabase {
         options,
       );
     }
-    const { maxRetries, timeout } = options;
+    const bufferedMutations = 'mode' in options;
+    const { maxRetries, timeout } = bufferedMutations ? ({} as SpannerTransactionOptions) : options;
     const runCallback = callback as (tx: SpannerTransaction) => Promise<T>;
     let attempts = 0;
     try {
@@ -284,11 +328,18 @@ export class SpannerDatabase {
             message: `Read-write transaction aborted and maxRetries (${maxRetries}) was exhausted`,
           });
         }
-        const transactionSession = new SpannerSession(
-          new TransactionRunner(driverTransaction),
-          this.dialect,
-          this.session.options,
-        );
+        const transactionSession = bufferedMutations
+          ? new SpannerSession(
+              new MutationModeRunner(),
+              this.dialect,
+              this.session.options,
+              driverTransaction,
+            )
+          : new SpannerSession(
+              new TransactionRunner(driverTransaction),
+              this.dialect,
+              this.session.options,
+            );
         const tx = new SpannerTransaction(this.dialect, transactionSession, this.$client, this.options);
         try {
           const result = await runCallback(tx);
@@ -360,7 +411,10 @@ export class SpannerTransaction extends SpannerDatabase {
 
   override transaction<T>(
     _callback: (tx: never) => Promise<T>,
-    _options?: SpannerTransactionOptions | SpannerReadOnlyTransactionOptions,
+    _options?:
+      | SpannerTransactionOptions
+      | SpannerReadOnlyTransactionOptions
+      | SpannerMutationTransactionOptions,
   ): Promise<T> {
     throw new Error('Spanner does not support nested transactions (no savepoints)');
   }

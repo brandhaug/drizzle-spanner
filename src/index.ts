@@ -17,6 +17,7 @@ export * from './driver.js';
 export * from './errors.js';
 export * from './indexes.js';
 export * from './interleave.js';
+export * from './mutations.js';
 export * from './primary-keys.js';
 export * from './query-builders/delete.js';
 export * from './query-builders/insert.js';
