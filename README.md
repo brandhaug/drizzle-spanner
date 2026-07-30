@@ -27,9 +27,15 @@ driver's `Database` structurally and never imports the package itself, so
 CI runs the integration suite against each entry in this matrix; a breaking
 `drizzle-orm` beta fails here, not in your application.
 
-| drizzle-orm      | Runtimes                |
-| ---------------- | ----------------------- |
-| `1.0.0-beta.22`  | Node 20+ (LTS), Bun     |
+<!-- tested-versions:start -->
+| drizzle-orm | Runtimes |
+| --- | --- |
+| `1.0.0-beta.22` | Node 22, Node 24, Bun |
+<!-- tested-versions:end -->
+
+This table is generated from
+[`.github/tested-versions.json`](.github/tested-versions.json) by
+`node scripts/sync-tested-versions.ts`; CI fails when they drift.
 
 ## Quickstart
 

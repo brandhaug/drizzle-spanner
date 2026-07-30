@@ -1,0 +1,5 @@
+{
+  "drizzle-orm": ["1.0.0-beta.22"],
+  "node": ["22", "24"],
+  "bun": true
+}
