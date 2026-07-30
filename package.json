@@ -21,6 +21,11 @@
       "import": "./dist/migrator.js",
       "default": "./dist/migrator.js"
     },
+    "./internal": {
+      "types": "./dist/internal.d.ts",
+      "import": "./dist/internal.js",
+      "default": "./dist/internal.js"
+    },
     "./package.json": "./package.json"
   },
   "files": [

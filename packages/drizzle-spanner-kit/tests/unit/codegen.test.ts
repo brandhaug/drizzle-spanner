@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { renderSchemaModule } from '../../src/index.js';
-import type { SpannerEntity } from '../../src/index.js';
+import { renderSchemaModule } from '../../src/codegen.js';
+import type { SpannerEntity } from '../../src/snapshot.js';
 
 describe('renderSchemaModule', () => {
   it('renders tables with columns, keys, interleaving, indexes, constraints and sequences', () => {

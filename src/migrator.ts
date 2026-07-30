@@ -155,6 +155,6 @@ export async function migrate(
 }
 
 /** Recomputes the sha256 hash the bookkeeping table stores for a migration file. */
-export function migrationHash(sql: string): string {
+function migrationHash(sql: string): string {
   return createHash('sha256').update(sql).digest('hex');
 }

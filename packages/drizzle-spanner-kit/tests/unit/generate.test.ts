@@ -2,7 +2,8 @@ import { mkdtemp, readdir, readFile, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
-import { generate, parseSnapshot } from '../../src/index.js';
+import { generate } from '../../src/index.js';
+import { parseSnapshot } from '../../src/snapshot.js';
 
 const SCHEMA_V1 = `
 import { spannerTable, string } from 'drizzle-spanner';

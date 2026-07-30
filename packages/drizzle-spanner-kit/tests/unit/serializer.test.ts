@@ -21,7 +21,8 @@ import {
   tokenlist,
   uniqueIndex,
 } from 'drizzle-spanner';
-import { createSnapshot, serializeSchema } from '../../src/index.js';
+import { serializeSchema } from '../../src/serializer.js';
+import { createSnapshot } from '../../src/snapshot.js';
 
 describe('serializeSchema: columns', () => {
   it('serializes all twelve Spanner types with modes', () => {

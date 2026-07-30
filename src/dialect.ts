@@ -26,8 +26,8 @@ import type {
 import { Column } from 'drizzle-orm/column';
 import { and } from 'drizzle-orm/sql/expressions';
 import { Param, SQL, sql } from 'drizzle-orm/sql';
-import type { SelectedFieldsOrdered } from './internal.js';
-import { orderSelectedFields } from './internal.js';
+import type { SelectedFieldsOrdered } from './orm-internal.js';
+import { orderSelectedFields } from './orm-internal.js';
 import { SpannerColumn } from './columns/common.js';
 import type { SpannerTable } from './table.js';
 import { TableColumns } from './symbols.js';

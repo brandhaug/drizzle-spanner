@@ -8,6 +8,7 @@ export default defineConfig({
     // through node_modules).
     alias: {
       'drizzle-spanner/migrator': fileURLToPath(new URL('./src/migrator.ts', import.meta.url)),
+      'drizzle-spanner/internal': fileURLToPath(new URL('./src/internal.ts', import.meta.url)),
       'drizzle-spanner': fileURLToPath(new URL('./src/index.ts', import.meta.url)),
     },
   },

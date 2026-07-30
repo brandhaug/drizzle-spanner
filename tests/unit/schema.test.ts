@@ -295,7 +295,8 @@ describe('foreignKey', () => {
         }).onDelete('cascade'),
       ],
     );
-    const { ForeignKeyBuilder, getTableExtraConfig } = await import('../../src/index.js');
+    const { ForeignKeyBuilder } = await import('../../src/index.js');
+    const { getTableExtraConfig } = await import('../../src/internal.js');
     const entries = getTableExtraConfig(albums);
     const fk = entries.find((entry) => entry instanceof ForeignKeyBuilder) as InstanceType<
       typeof ForeignKeyBuilder
