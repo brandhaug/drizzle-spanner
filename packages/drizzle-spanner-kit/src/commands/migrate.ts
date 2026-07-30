@@ -1,4 +1,3 @@
-import type { SpannerDriverDatabase } from 'drizzle-spanner';
 import { drizzle } from 'drizzle-spanner';
 import type { SpannerMigrationResult } from 'drizzle-spanner/migrator';
 import { migrate as migrateDatabase } from 'drizzle-spanner/migrator';
@@ -17,7 +16,7 @@ export async function migrate(
   const databaseConfig = requireDatabase(config, 'migrate');
   const connection = await connectDatabase(databaseConfig);
   try {
-    const db = drizzle(connection.database as unknown as SpannerDriverDatabase);
+    const db = drizzle(connection.database);
     return await migrateDatabase(db, { migrationsFolder: config.out });
   } finally {
     await connection.close();

@@ -1,6 +1,7 @@
 import type { KitDriverDatabase } from './connect.js';
 import type {
   ColumnEntity,
+  ForeignKeyAction,
   ForeignKeyEntity,
   IndexEntity,
   KeyPart,
@@ -12,7 +13,7 @@ const BOOKKEEPING_TABLE = 'drizzle_migrations';
 type Row = Record<string, unknown>;
 
 async function query(database: KitDriverDatabase, sql: string): Promise<Row[]> {
-  const [rows] = await database.run({ sql, json: true } as never);
+  const [rows] = await database.run({ sql, json: true });
   return rows as Row[];
 }
 
@@ -30,7 +31,7 @@ function yes(row: Row, column: string): boolean {
   return value === true || value === 'YES' || value === 'TRUE';
 }
 
-function toOnDelete(rule: string | null): 'cascade' | 'noAction' {
+function toOnDelete(rule: string | null): ForeignKeyAction {
   return rule === 'CASCADE' ? 'cascade' : 'noAction';
 }
 

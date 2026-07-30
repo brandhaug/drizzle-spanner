@@ -1,15 +1,20 @@
+import type { SpannerDriverDatabase, SpannerSqlRequest } from 'drizzle-spanner';
+import type { SpannerDriverDatabaseWithDdl } from 'drizzle-spanner/migrator';
 import type { SpannerKitDatabaseConfig } from './config.js';
 
-/** Structural view of the driver pieces the kit's commands use. */
-export interface KitDriverDatabase {
-  run(request: {
-    sql: string;
-    params?: Record<string, unknown>;
-    types?: Record<string, unknown>;
-  }): Promise<[unknown[], ...unknown[]]>;
-  updateSchema(statements: string[]): Promise<[{ promise(): Promise<unknown> }, ...unknown[]]>;
-  close(): Promise<unknown>;
-}
+/** The published request shape with `params`/`types` optional — kit reads carry none. */
+export type KitSqlRequest = Pick<SpannerSqlRequest, 'sql' | 'json'> &
+  Partial<Pick<SpannerSqlRequest, 'params' | 'types'>>;
+
+/**
+ * Structural view of the driver pieces the kit's commands use, composed from
+ * the published runtime types plus a kit-shaped `run` overload and `close`.
+ */
+export type KitDriverDatabase = SpannerDriverDatabase &
+  Pick<SpannerDriverDatabaseWithDdl, 'updateSchema'> & {
+    run(request: KitSqlRequest): Promise<[unknown[], ...unknown[]]>;
+    close(): Promise<unknown>;
+  };
 
 export interface KitConnection {
   database: KitDriverDatabase;
@@ -36,7 +41,7 @@ export async function connectDatabase(config: SpannerKitDatabaseConfig): Promise
   const spanner = new spannerModule.Spanner({ projectId: config.project });
   const database = spanner
     .instance(config.instance)
-    .database(config.database) as unknown as KitDriverDatabase;
+    .database(config.database) as KitDriverDatabase;
   return {
     database,
     async close() {

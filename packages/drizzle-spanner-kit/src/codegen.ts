@@ -3,6 +3,7 @@ import type {
   ColumnEntity,
   ForeignKeyEntity,
   IndexEntity,
+  KeyPart,
   PrimaryKeyEntity,
   SpannerEntity,
   TableEntity,
@@ -78,7 +79,7 @@ function renderColumn(column: ColumnEntity, inlinePrimaryKey: boolean): string {
   return `${camelCase(column.name)}: ${expression},`;
 }
 
-function keyPartRef(part: { name: string; order: 'asc' | 'desc' }): string {
+function keyPartRef(part: KeyPart): string {
   return `t.${camelCase(part.name)}${part.order === 'desc' ? '.desc()' : ''}`;
 }
 
