@@ -52,8 +52,17 @@ function fakeDatabase(rows: { name: string; value: unknown }[][] = []) {
       calls.push({ request, via: 'run' });
       return [rows];
     },
-    async runTransactionAsync(runFn) {
+    async runTransactionAsync<T>(
+      optionsOrRunFn:
+        | { timeout?: number }
+        | ((tx: SpannerDriverTransaction) => Promise<T>),
+      maybeRunFn?: (tx: SpannerDriverTransaction) => Promise<T>,
+    ): Promise<T> {
+      const runFn = typeof optionsOrRunFn === 'function' ? optionsOrRunFn : maybeRunFn!;
       return runFn(transaction);
+    },
+    async getSnapshot(): Promise<never> {
+      throw new Error('these fakes take no snapshots');
     },
   };
   return {
@@ -136,7 +145,13 @@ describe('db.transaction', () => {
     const database: SpannerDriverDatabase = {
       run: fake.database.run,
       // Simulates the driver's AsyncTransactionRunner: retry runFn on ABORTED.
-      async runTransactionAsync(runFn) {
+      async runTransactionAsync<T>(
+        optionsOrRunFn:
+          | { timeout?: number }
+          | ((tx: SpannerDriverTransaction) => Promise<T>),
+        maybeRunFn?: (tx: SpannerDriverTransaction) => Promise<T>,
+      ): Promise<T> {
+        const runFn = typeof optionsOrRunFn === 'function' ? optionsOrRunFn : maybeRunFn!;
         for (;;) {
           try {
             return await runFn({
@@ -163,6 +178,7 @@ describe('db.transaction', () => {
           }
         }
       },
+      getSnapshot: fake.database.getSnapshot,
     };
     const db = drizzle(database);
     await db.transaction(async (tx) => {
@@ -178,6 +194,9 @@ describe('db.transaction', () => {
       },
       async runTransactionAsync() {
         throw Object.assign(new Error('Deadline exceeded'), { name: 'DeadlineError' });
+      },
+      async getSnapshot(): Promise<never> {
+        throw new Error('these fakes take no snapshots');
       },
     };
     const db = drizzle(database);
@@ -204,6 +223,9 @@ describe('error taxonomy', () => {
         throw error;
       },
       async runTransactionAsync() {
+        throw error;
+      },
+      async getSnapshot(): Promise<never> {
         throw error;
       },
     };

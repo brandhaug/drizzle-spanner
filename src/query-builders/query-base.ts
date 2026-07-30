@@ -6,6 +6,7 @@ import type { SpannerDialect } from '../dialect.js';
 import type { SelectedFieldsOrdered } from '../internal.js';
 import type { SpannerPreparedQuery, SpannerQueryMetadata, SpannerSession } from '../session.js';
 import { NO_CLIENT_MESSAGE } from '../session.js';
+import type { SpannerTimestampBounds } from '../staleness.js';
 import type { SpannerColumns } from '../table.js';
 
 /** Wraps plain values in `Param` bound to their table column; SQL passes through. */
@@ -32,6 +33,9 @@ export abstract class SpannerQueryBase<TResult>
   static override readonly [entityKind]: string = 'SpannerQueryBase';
 
   declare readonly _: { readonly dialect: 'spanner'; readonly result: TResult };
+
+  /** Set by `SpannerSelect.withStaleness`; undefined for every other builder. */
+  protected stalenessBounds: SpannerTimestampBounds | undefined;
 
   constructor(
     private readonly session: SpannerSession | undefined,
@@ -62,7 +66,7 @@ export abstract class SpannerQueryBase<TResult>
       this.dialect.sqlToQuery(this.getSQL()),
       fields,
       fields ? undefined : () => undefined as TResult,
-      { type: this.queryType },
+      { type: this.queryType, staleness: this.stalenessBounds },
     );
   }
 
