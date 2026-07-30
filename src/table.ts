@@ -9,6 +9,8 @@ import type {
   SpannerExtraConfigColumn,
 } from './columns/common.js';
 import { SpannerColumnBuilder } from './columns/common.js';
+import type { CheckBuilder } from './checks.js';
+import type { ForeignKeyBuilder } from './foreign-keys.js';
 import type { IndexBuilder } from './indexes.js';
 import { InterleaveBuilder } from './interleave.js';
 import { PrimaryKeyBuilder } from './primary-keys.js';
@@ -39,7 +41,9 @@ export class SpannerTable<T extends TableConfig = TableConfig> extends Table<T> 
 export type SpannerTableExtraConfigValue =
   | IndexBuilder
   | PrimaryKeyBuilder
-  | InterleaveBuilder<any>;
+  | InterleaveBuilder<any>
+  | ForeignKeyBuilder
+  | CheckBuilder;
 
 type ColumnsDataOf<TColumnsMap extends Record<string, ColumnBuilderBase>> = {
   [Key in keyof TColumnsMap]: TColumnsMap[Key]['_']['data'];
@@ -52,7 +56,12 @@ type ColumnsDataOf<TColumnsMap extends Record<string, ColumnBuilderBase>> = {
  */
 export type SpannerTableExtraConfigValueFor<
   TColumnsMap extends Record<string, ColumnBuilderBase>,
-> = IndexBuilder | PrimaryKeyBuilder | InterleaveBuilder<ColumnsDataOf<TColumnsMap>>;
+> =
+  | IndexBuilder
+  | PrimaryKeyBuilder
+  | InterleaveBuilder<ColumnsDataOf<TColumnsMap>>
+  | ForeignKeyBuilder
+  | CheckBuilder;
 
 export type SpannerTableWithColumns<T extends TableConfig> = SpannerTable<T> &
   T['columns'] &
@@ -81,6 +90,16 @@ export function getPrimaryKeyColumns(table: SpannerTable): SpannerColumn<any>[] 
     }
   }
   return Object.values(columns).filter((column) => column.primary);
+}
+
+/**
+ * Extra-config entries of a table (indexes, composite primary key,
+ * interleaving, foreign keys, checks). Public read surface for
+ * drizzle-spanner-kit's serializer.
+ */
+export function getTableExtraConfig(table: SpannerTable): SpannerTableExtraConfigValue[] {
+  const builder = table[ExtraConfigBuilder];
+  return builder ? builder(table[ExtraConfigColumns]) : [];
 }
 
 function primaryKeyColumnNames(table: SpannerTable): string[] {
