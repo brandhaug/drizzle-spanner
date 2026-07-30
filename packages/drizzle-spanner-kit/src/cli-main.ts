@@ -47,9 +47,19 @@ async function promptRename(candidate: RenameCandidate): Promise<string | null> 
   }
 }
 
-async function confirmPlan(statements: string[]): Promise<boolean> {
+function printPlan(statements: string[]): void {
   console.log('The following DDL will be applied:\n');
   for (const statement of statements) console.log(`${statement};\n`);
+}
+
+/** `--yes`: still print the plan (spec: push always prints it) before applying. */
+async function acceptPlan(statements: string[]): Promise<boolean> {
+  printPlan(statements);
+  return true;
+}
+
+async function confirmPlan(statements: string[]): Promise<boolean> {
+  printPlan(statements);
   const readline = createInterface({ input: process.stdin, output: process.stdout });
   try {
     const answer = await readline.question('Apply these statements? [y/N] ');
@@ -111,9 +121,9 @@ export async function main(argv: string[] = process.argv.slice(2)): Promise<numb
         return 0;
       }
       case 'push': {
+        const confirm = values.yes ? acceptPlan : interactive ? confirmPlan : undefined;
         const result = await push(config, {
-          yes: values.yes,
-          confirm: interactive && !values.yes ? confirmPlan : undefined,
+          confirm,
           resolveRename: interactive ? promptRename : undefined,
           acceptDrops: values['accept-drops'],
         });
@@ -122,8 +132,7 @@ export async function main(argv: string[] = process.argv.slice(2)): Promise<numb
         } else if (result.applied) {
           console.log(`Applied ${result.statements.length} statements.`);
         } else {
-          console.log('Plan:\n');
-          for (const statement of result.statements) console.log(`${statement};\n`);
+          if (!confirm) printPlan(result.statements);
           console.log('Not applied. Re-run with --yes or confirm interactively.');
         }
         return 0;
