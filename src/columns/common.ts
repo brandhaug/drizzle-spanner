@@ -45,7 +45,7 @@ export type BuildSpannerColumns<
 
 export type BuildSpannerExtraConfigColumns<
   TConfigMap extends Record<string, ColumnBuilderBase>,
-> = { [Key in keyof TConfigMap]: SpannerExtraConfigColumn } & {};
+> = { [Key in keyof TConfigMap]: SpannerExtraConfigColumn<Key & string> } & {};
 
 export abstract class SpannerColumnBuilder<
   T extends ColumnBuilderBaseConfig<ColumnType> = ColumnBuilderBaseConfig<ColumnType>,
@@ -129,9 +129,15 @@ export abstract class SpannerFloatColumn<
 /**
  * Column facade handed to the extra-config callback of `spannerTable` so
  * `index().on(...)` and `primaryKey()` can capture key parts with sort order.
+ *
+ * `TName` is the column's key in the table's columns map. It is phantom — it
+ * exists so `primaryKey({ columns })` can capture the key order at the type
+ * level, which `interleaveInParent` needs for its PK-prefix check.
  */
-export class SpannerExtraConfigColumn extends Column {
+export class SpannerExtraConfigColumn<TName extends string = string> extends Column {
   static override readonly [entityKind]: string = 'SpannerExtraConfigColumn';
+
+  declare protected $name: TName;
 
   indexConfig: { order: 'asc' | 'desc' } = { order: 'asc' };
 
