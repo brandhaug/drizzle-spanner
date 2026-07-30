@@ -9,7 +9,11 @@ const EMULATOR_IMAGE = 'gcr.io/cloud-spanner-emulator/emulator:latest';
 
 // Captured at import time, same as the runtime harness: a stopped container
 // from an earlier test file must not masquerade as an external emulator.
-const EXTERNAL_EMULATOR_HOST = process.env.SPANNER_EMULATOR_HOST;
+// The OWNED marker covers single-process runners (bun test) that import this
+// module lazily, after another harness already mutated the env.
+const EXTERNAL_EMULATOR_HOST = process.env.DRIZZLE_SPANNER_TEST_OWNED
+  ? undefined
+  : process.env.SPANNER_EMULATOR_HOST;
 
 export interface KitEmulatorHarness {
   host: string;
@@ -30,6 +34,7 @@ export async function startKitEmulator(): Promise<KitEmulatorHarness> {
       .withWaitStrategy(Wait.forLogMessage(/gRPC server listening/i))
       .start();
     host = `${container.getHost()}:${container.getMappedPort(9010)}`;
+    process.env.DRIZZLE_SPANNER_TEST_OWNED = '1';
   }
   process.env.SPANNER_EMULATOR_HOST = host;
 
