@@ -208,7 +208,8 @@ describe('extra config builders', () => {
     );
     expect(albums).toBeDefined();
 
-    // Invalid: child PK does not start with the parent PK.
+    // Invalid: child PK does not start with the parent PK. Caught at compile
+    // time too — the key order of `primaryKey({ columns })` is type-visible.
     expect(() =>
       spannerTable(
         'broken',
@@ -216,6 +217,7 @@ describe('extra config builders', () => {
           id: string('id', { length: 36 }).notNull(),
           other: string('other', { length: 36 }).notNull(),
         },
+        // @ts-expect-error — the child PK starts with `other`, not the parent PK `id`
         (t2) => [
           primaryKey({ columns: [t2.other, t2.id] }),
           interleaveInParent(singers),
@@ -274,6 +276,33 @@ describe('interleaveInParent compile-time check', () => {
         },
         // @ts-expect-error — the child does not declare the parent PK column `id`
         () => [interleaveInParent(parent)],
+      ),
+    ).toThrow(/must start with the primary key/);
+  });
+
+  it('leaves key orders it cannot read to the runtime check', async () => {
+    const { interleaveInParent, primaryKey } = await import('../../src/index.js');
+    // The parent PK is composite, so its key order is not type-visible. The
+    // child below violates the prefix rule and must still compile — a false
+    // compile error here would reject legal schemas elsewhere.
+    const parent = spannerTable(
+      'composite_parent',
+      {
+        a: string('a', { length: 36 }).notNull(),
+        b: string('b', { length: 36 }).notNull(),
+      },
+      (t) => [primaryKey({ columns: [t.a, t.b] })],
+    );
+
+    expect(() =>
+      spannerTable(
+        'composite_child',
+        {
+          a: string('a', { length: 36 }).notNull(),
+          b: string('b', { length: 36 }).notNull(),
+          c: string('c', { length: 36 }).notNull(),
+        },
+        (t) => [primaryKey({ columns: [t.b, t.a, t.c] }), interleaveInParent(parent)],
       ),
     ).toThrow(/must start with the primary key/);
   });

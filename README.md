@@ -91,8 +91,10 @@ relation through `defineRelations`:
 
 Spanner matches the interleave prefix by column **name**: the child's
 primary key must start with the parent's key columns under the same names,
-so the parent key here is `singer_id`, not `id` — `spannerTable` enforces
-this at definition time.
+so the parent key here is `singer_id`, not `id`. The types reject a child
+that omits a parent key column, declares it with a different type, or puts
+it in the wrong key position; `spannerTable` enforces the full rule at
+definition time, including the key orders the types cannot read.
 
 ```ts
 import { defineRelations } from 'drizzle-orm/relations';

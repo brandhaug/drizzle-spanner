@@ -13,6 +13,7 @@ import type { CheckBuilder } from './checks.js';
 import type { ForeignKeyBuilder } from './foreign-keys.js';
 import type { IndexBuilder } from './indexes.js';
 import { InterleaveBuilder } from './interleave.js';
+import type { AdmissiblePkOrder } from './interleave.js';
 import { PrimaryKeyBuilder } from './primary-keys.js';
 import { ExtraConfigBuilder, ExtraConfigColumns, TableColumns, TableName } from './symbols.js';
 
@@ -52,14 +53,17 @@ type ColumnsDataOf<TColumnsMap extends Record<string, ColumnBuilderBase>> = {
 /**
  * The extra-config union, parameterized so an `interleaveInParent` entry
  * type-checks that this table declares every type-visible parent primary-key
- * column with a matching data type.
+ * column with a matching data type, and — where `TEntries`, the union of the
+ * other entries, carries a type-visible key order — declares them in the
+ * parent's key order.
  */
 export type SpannerTableExtraConfigValueFor<
   TColumnsMap extends Record<string, ColumnBuilderBase>,
+  TEntries = never,
 > =
   | IndexBuilder
   | PrimaryKeyBuilder
-  | InterleaveBuilder<ColumnsDataOf<TColumnsMap>>
+  | InterleaveBuilder<ColumnsDataOf<TColumnsMap>, AdmissiblePkOrder<TEntries>>
   | ForeignKeyBuilder
   | CheckBuilder;
 
@@ -128,15 +132,22 @@ function validateInterleavePrefix(child: SpannerTable, interleave: InterleaveBui
   }
 }
 
+/**
+ * `TExtraConfig` is inferred from the entries the callback returns and fed back
+ * into their own element constraint, which is what lets an `interleaveInParent`
+ * entry check itself against the `primaryKey({ columns })` entry beside it.
+ */
 export function spannerTable<
   TTableName extends string,
   TColumnsMap extends Record<string, ColumnBuilderBase>,
+  TExtraConfig extends readonly SpannerTableExtraConfigValueFor<
+    TColumnsMap,
+    TExtraConfig[number]
+  >[],
 >(
   name: TTableName,
   columns: TColumnsMap,
-  extraConfig?: (
-    self: BuildSpannerExtraConfigColumns<TColumnsMap>,
-  ) => SpannerTableExtraConfigValueFor<TColumnsMap>[],
+  extraConfig?: (self: BuildSpannerExtraConfigColumns<TColumnsMap>) => TExtraConfig,
 ): SpannerTableWithColumns<{
   name: TTableName;
   schema: undefined;
@@ -159,7 +170,9 @@ export function spannerTable<
   table[ExtraConfigColumns] = builtExtraConfigColumns;
 
   if (extraConfig) {
-    table[ExtraConfigBuilder] = extraConfig as (
+    // The declared parameter is keyed on `TColumnsMap`, so the widened
+    // `Record` form of the callback is only reachable through `unknown`.
+    table[ExtraConfigBuilder] = extraConfig as unknown as (
       self: Record<string, SpannerExtraConfigColumn>,
     ) => SpannerTableExtraConfigValue[];
     for (const entry of extraConfig(
