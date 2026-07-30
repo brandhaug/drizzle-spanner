@@ -347,11 +347,10 @@ export class SpannerDialect {
           ((relation as { optional?: boolean }).optional ?? false) ||
           (join !== true && !!(join as { where?: unknown }).where),
       });
-      selectionArr.push(
-        isSingleRelation
-          ? sql`(${innerQuery.sql}) as ${sql.identifier(key)}`
-          : sql`array(${innerQuery.sql}) as ${sql.identifier(key)}`,
-      );
+      // Spanner cannot return a bare STRUCT as a column value, so to-one
+      // relations also compile to ARRAY(...) (with LIMIT 1 from mode
+      // 'first'); the decoder unwraps the single element.
+      selectionArr.push(sql`array(${innerQuery.sql}) as ${sql.identifier(key)}`);
     }
     if (extras?.sql) selectionArr.push(extras.sql);
     if (selectionArr.length === 0) {
