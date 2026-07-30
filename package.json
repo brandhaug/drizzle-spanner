@@ -34,6 +34,8 @@
     "typecheck": "tsc --noEmit",
     "lint": "eslint src tests packages",
     "test": "vitest run tests/unit packages/drizzle-spanner-kit/tests/unit",
+    "check:types": "attw --pack . --profile esm-only && attw --pack packages/drizzle-spanner-kit --profile esm-only",
+    "check:pack": "node scripts/check-pack.ts",
     "test:integration": "vitest run tests/integration packages/drizzle-spanner-kit/tests/integration --fileParallelism=false",
     "test:integration:bun": "bun test tests/integration packages/drizzle-spanner-kit/tests/integration --timeout 180000",
     "emulator:up": "docker compose up -d",
@@ -51,6 +53,7 @@
     }
   },
   "devDependencies": {
+    "@arethetypeswrong/cli": "^0.18.5",
     "@google-cloud/spanner": "^8.10.0",
     "@types/node": "^24.0.0",
     "drizzle-orm": "1.0.0-beta.22",

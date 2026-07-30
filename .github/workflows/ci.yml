@@ -40,6 +40,26 @@ jobs:
       - name: README tested-versions table is in sync
         run: node scripts/sync-tested-versions.ts --check
 
+  package-hygiene:
+    name: Types resolution and pack contents
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: lts/*
+          cache: npm
+      - run: npm ci
+      - run: npm run build
+      - run: npm run build -w drizzle-spanner-kit
+      - run: npm run check:types
+      - run: npm run check:pack
+      - name: Dry-run publish drizzle-spanner
+        run: npm publish --dry-run
+      - name: Dry-run publish drizzle-spanner-kit
+        run: npm publish --dry-run
+        working-directory: packages/drizzle-spanner-kit
+
   # Node LTS set crossed with every supported drizzle-orm beta: a breaking
   # beta must fail here, not in a user application.
   integration-node:
