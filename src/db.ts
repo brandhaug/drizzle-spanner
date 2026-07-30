@@ -4,7 +4,8 @@ import type { SQL } from 'drizzle-orm/sql';
 import type { SpannerDialect } from './dialect.js';
 import { GrpcStatus, SpannerAbortedError, wrapSpannerError } from './errors.js';
 import type { SpannerDriverRow, SpannerSqlRequest } from './session.js';
-import { SpannerSession } from './session.js';
+import { NO_CLIENT_MESSAGE, SpannerSession } from './session.js';
+import { unwrapDriverWrapper } from './columns/common.js';
 import { SpannerDelete } from './query-builders/delete.js';
 import { SpannerInsertBuilder } from './query-builders/insert.js';
 import type { SpannerSelectedFields } from './query-builders/select.js';
@@ -63,8 +64,19 @@ class TransactionRunner {
 
 class MockRunner {
   run(): Promise<SpannerDriverRow[]> {
-    throw new Error('Cannot execute a query on a mock database: no client is attached');
+    throw new Error(NO_CLIENT_MESSAGE);
   }
+}
+
+/**
+ * `DrizzleConfig` keys the adapter accepts but does not consume yet:
+ * `relations` feeds the milestone-2 relational query builder and `cache` the
+ * milestone-2 cache integration. They are carried so user config is stable
+ * across milestones.
+ */
+export interface SpannerDatabaseOptions {
+  relations?: unknown;
+  cache?: unknown;
 }
 
 export class SpannerDatabase {
@@ -76,6 +88,8 @@ export class SpannerDatabase {
     /** @internal */
     readonly session: SpannerSession,
     readonly $client: SpannerDriverDatabase | undefined,
+    /** @internal */
+    readonly options: SpannerDatabaseOptions = {},
   ) {}
 
   select(): SpannerSelectBuilder<undefined>;
@@ -101,14 +115,9 @@ export class SpannerDatabase {
   /** `select count(*) from table [where ...]` returning a number. */
   async $count(table: AnySpannerTable | SQL, where?: SQL): Promise<number> {
     const query = this.dialect.sqlToQuery(this.dialect.buildCountQuery(table as never, where));
-    const prepared = this.session.prepareQuery<number>(query, undefined, (rows) => {
-      const cell = rows[0]?.[0];
-      const raw =
-        typeof cell === 'object' && cell !== null && 'value' in cell
-          ? (cell as { value: unknown }).value
-          : cell;
-      return Number(raw);
-    });
+    const prepared = this.session.prepareQuery<number>(query, undefined, (rows) =>
+      Number(unwrapDriverWrapper(rows[0]?.[0])),
+    );
     return prepared.execute();
   }
 
@@ -134,7 +143,7 @@ export class SpannerDatabase {
           this.dialect,
           this.session.options,
         );
-        const tx = new SpannerTransaction(this.dialect, transactionSession, this.$client);
+        const tx = new SpannerTransaction(this.dialect, transactionSession, this.$client, this.options);
         try {
           const result = await callback(tx);
           await driverTransaction.commit();

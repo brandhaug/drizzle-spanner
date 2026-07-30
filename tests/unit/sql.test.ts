@@ -5,6 +5,7 @@ import {
   commitTimestamp,
   drizzle,
   int64,
+  sequence,
   spannerTable,
   string,
   timestamp,
@@ -72,6 +73,19 @@ describe('insert SQL', () => {
       'insert into `singers` (`id`, `name`, `plays`, `updated_at`) values (default, @p0, default, default), (default, @p1, default, default)',
     );
     expect(query.params).toEqual(['Ada', 'Grace']);
+  });
+
+  it('renders sequence().nextValue() as GET_NEXT_SEQUENCE_VALUE', () => {
+    const seq = sequence('singer_id_seq');
+    const t = spannerTable('t', {
+      id: int64('id', { mode: 'bigint' }).primaryKey(),
+      name: string('name', { length: 'max' }),
+    });
+    const query = db.insert(t).values({ id: seq.nextValue(), name: 'Ada' }).toSQL();
+    expect(query.sql).toBe(
+      'insert into `t` (`id`, `name`) values (GET_NEXT_SEQUENCE_VALUE(SEQUENCE `singer_id_seq`), @p0)',
+    );
+    expect(query.params).toEqual(['Ada']);
   });
 
   it('renders the commitTimestamp() sentinel as PENDING_COMMIT_TIMESTAMP()', () => {

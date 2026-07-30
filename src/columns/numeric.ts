@@ -2,7 +2,8 @@ import type { ColumnBuilderBaseConfig } from 'drizzle-orm/column-builder';
 import type { ColumnBaseConfig } from 'drizzle-orm/column';
 import { entityKind } from 'drizzle-orm/entity';
 import type { SpannerTable } from '../table.js';
-import { SpannerColumn, SpannerColumnBuilder } from './common.js';
+import type { SpannerTypeHint } from '../type-hints.js';
+import { SpannerColumn, SpannerColumnBuilder, unwrapDriverWrapper } from './common.js';
 
 export interface SpannerNumericConfig<TMode extends 'string' | 'number' = 'string' | 'number'> {
   mode: TMode;
@@ -10,10 +11,7 @@ export interface SpannerNumericConfig<TMode extends 'string' | 'number' = 'strin
 
 /** The driver always returns NUMERIC cells as `Numeric` wrappers `{ value: '3.14' }`. */
 function unwrapNumeric(value: unknown): string {
-  if (typeof value === 'object' && value !== null && 'value' in value) {
-    return String((value as { value: unknown }).value);
-  }
-  return String(value);
+  return String(unwrapDriverWrapper(value));
 }
 
 export interface SpannerNumericStringBuilderConfig extends ColumnBuilderBaseConfig<'string numeric'> {
@@ -39,6 +37,10 @@ export class SpannerNumericString extends SpannerColumn<ColumnBaseConfig<'string
 
   getSQLType(): string {
     return 'NUMERIC';
+  }
+
+  typeHint(): SpannerTypeHint {
+    return 'numeric';
   }
 
   override mapFromDriverValue(value: unknown): string | null {
@@ -74,6 +76,10 @@ export class SpannerNumericNumber extends SpannerColumn<ColumnBaseConfig<'number
 
   getSQLType(): string {
     return 'NUMERIC';
+  }
+
+  typeHint(): SpannerTypeHint {
+    return 'numeric';
   }
 
   override mapFromDriverValue(value: unknown): number | null {

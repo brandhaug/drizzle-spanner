@@ -70,9 +70,8 @@ describe('int64', () => {
 
 describe('remaining column types', () => {
   it('renders the Spanner DDL type for every column', async () => {
-    const { float64, float32, numeric, bytes, bool, date, timestamp, json } = await import(
-      '../../src/index.js'
-    );
+    const { float64, float32, numeric, bytes, bool, date, timestamp, json, tokenlist } =
+      await import('../../src/index.js');
     const t = spannerTable('t', {
       f64: float64('f64'),
       f32: float32('f32'),
@@ -84,6 +83,7 @@ describe('remaining column types', () => {
       at: timestamp('at'),
       doc: json('doc'),
       tags: string('tags', { length: 'max' }).array(),
+      tokens: tokenlist('tokens'),
     });
     expect(t.f64.getSQLType()).toBe('FLOAT64');
     expect(t.f32.getSQLType()).toBe('FLOAT32');
@@ -95,6 +95,7 @@ describe('remaining column types', () => {
     expect(t.at.getSQLType()).toBe('TIMESTAMP');
     expect(t.doc.getSQLType()).toBe('JSON');
     expect(t.tags.getSQLType()).toBe('ARRAY<STRING(MAX)>');
+    expect(t.tokens.getSQLType()).toBe('TOKENLIST');
   });
 
   it('float64 unwraps driver Float wrappers', async () => {
@@ -217,6 +218,30 @@ describe('extra config builders', () => {
         ],
       ),
     ).toThrow(/must start with the primary key/);
+  });
+});
+
+describe('primary-key alternatives', () => {
+  it('generatedAsIdentity marks int64 columns as identity with a default', async () => {
+    const t = spannerTable('t', {
+      id: int64('id').primaryKey().generatedAsIdentity(),
+      big: int64('big', { mode: 'bigint' }).generatedAsIdentity(),
+    });
+    expect(t.id.hasDefault).toBe(true);
+    expect(t.id.generatedIdentity).toEqual({ type: 'byDefault' });
+    expect(t.big.generatedIdentity).toEqual({ type: 'byDefault' });
+  });
+
+  it('tokenlist is a generated-column-only type', async () => {
+    const { tokenlist } = await import('../../src/index.js');
+    const { sql } = await import('drizzle-orm/sql');
+    const t = spannerTable('docs', {
+      id: string('id', { length: 36 }).primaryKey(),
+      body: string('body', { length: 'max' }),
+      bodyTokens: tokenlist('body_tokens').generatedAlwaysAs(sql`TOKENIZE_FULLTEXT(body)`),
+    });
+    expect(t.bodyTokens.getSQLType()).toBe('TOKENLIST');
+    expect(t.bodyTokens.generated?.type).toBe('always');
   });
 });
 

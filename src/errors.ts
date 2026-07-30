@@ -8,6 +8,8 @@ import { DrizzleError } from 'drizzle-orm/errors';
 export interface SpannerErrorQueryContext {
   sql: string;
   paramNames: string[];
+  /** Column name behind each positional parameter, when bound through a schema column. */
+  paramColumns?: (string | undefined)[];
 }
 
 export interface SpannerErrorOptions {
@@ -91,6 +93,24 @@ export const GrpcStatus = {
 const CONSTRAINT_MESSAGE = /unique|foreign key|check constraint|already exists|parent row|constraint/i;
 
 /**
+ * Hint for INVALID_ARGUMENT parameter failures. When the driver message names
+ * a parameter (`p3`), the hint names the column it binds — or states that it
+ * is not bound through a table column, which is the untyped case.
+ */
+function parameterHint(message: string, query: SpannerErrorQueryContext | undefined): string {
+  const match = /\bp(\d+)\b/.exec(message);
+  if (match) {
+    const index = Number(match[1]);
+    const column = query?.paramColumns?.[index];
+    if (column) {
+      return `parameter @p${index} binds column "${column}"; check the value against that column's Spanner type`;
+    }
+    return `parameter @p${index} is not bound through a table column, so no type hint was sent; null and empty-array values need a schema column to derive their type hint from`;
+  }
+  return 'a null or empty-array parameter needs a type hint; drizzle-spanner derives hints from schema columns, so make sure the value is bound through a table column';
+}
+
+/**
  * Wraps a driver/gRPC error into the typed taxonomy. Errors that carry no
  * gRPC code (programming errors, rollbacks) pass through unchanged.
  */
@@ -114,7 +134,7 @@ export function wrapSpannerError(error: unknown, query?: SpannerErrorQueryContex
       return new SpannerInvalidArgumentError({
         ...options,
         message: /parameter/i.test(message)
-          ? `${message} (hint: a null or empty-array parameter needs a type hint; drizzle-spanner derives hints from schema columns, so make sure the value is bound through a table column)`
+          ? `${message} (hint: ${parameterHint(message, query)})`
           : message,
       });
     case GrpcStatus.UNAVAILABLE:

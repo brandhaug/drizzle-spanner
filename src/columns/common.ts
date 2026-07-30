@@ -14,6 +14,15 @@ import { entityKind } from 'drizzle-orm/entity';
 import type { SQL } from 'drizzle-orm/sql';
 import type { Table } from 'drizzle-orm/table';
 import type { SpannerTable } from '../table.js';
+import type { SpannerTypeHint } from '../type-hints.js';
+import { arrayTypeHint } from '../type-hints.js';
+
+/** The driver wraps INT64/NUMERIC/COUNT cells in `{ value: '42' }` objects. */
+export function unwrapDriverWrapper(value: unknown): unknown {
+  return typeof value === 'object' && value !== null && 'value' in value
+    ? (value as { value: unknown }).value
+    : value;
+}
 
 /**
  * Local replacements for drizzle-orm's `BuildColumn`/`BuildColumns` helpers.
@@ -93,6 +102,9 @@ export abstract class SpannerColumn<
     super(table as unknown as Table, config);
     this.table = table;
   }
+
+  /** Parameter type hint the dialect emits for values bound to this column. */
+  abstract typeHint(): SpannerTypeHint;
 }
 
 /**
@@ -168,6 +180,10 @@ export class SpannerArray extends SpannerColumn<ColumnBaseConfig<'array'>> {
 
   getSQLType(): string {
     return `ARRAY<${this.baseColumn.getSQLType()}>`;
+  }
+
+  typeHint(): SpannerTypeHint {
+    return arrayTypeHint(this.baseColumn.typeHint());
   }
 
   override mapFromDriverValue(value: unknown): unknown {

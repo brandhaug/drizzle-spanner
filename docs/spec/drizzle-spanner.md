@@ -67,7 +67,11 @@ builders use Spanner-native type names, so schema code mirrors DDL one to one.
 - **Interleaving:** an extra-config entry,
   `interleaveInParent(parent, { onDelete: 'cascade' | 'noAction' })`, in the
   third argument of `spannerTable`. The types check at compile time that the
-  parent primary-key columns prefix the child primary key.
+  child declares every parent primary-key column with a matching data type
+  (for keys declared with `.primaryKey()` on the column builder — TypeScript
+  cannot see key order or composite `primaryKey({ columns })` entries);
+  `spannerTable` validates the full name-order prefix rule at definition
+  time.
 - **Commit timestamps:** `timestamp('col', { allowCommitTimestamp: true })`
   declares the DDL option; the exported `commitTimestamp()` sentinel is the
   write-site value in `values()` and `set()`. The value is unreadable until
