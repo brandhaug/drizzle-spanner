@@ -1,4 +1,4 @@
-import { SpannerDdlError } from 'drizzle-spanner';
+import { applyDdlStatements } from 'drizzle-spanner/migrator';
 import type { ResolvedSpannerKitConfig } from '../config.js';
 import { requireDatabase } from '../config.js';
 import type { KitDriverDatabase } from '../connect.js';
@@ -24,26 +24,8 @@ export interface PushResult {
 }
 
 /** Applies one batched DDL operation, surfacing partial failure typed. */
-export async function applyDdl(database: KitDriverDatabase, statements: string[]): Promise<void> {
-  try {
-    const [operation] = await database.updateSchema(statements);
-    await operation.promise();
-  } catch (error) {
-    const metadata = (error as { metadata?: { commitTimestamps?: unknown[] } }).metadata;
-    const statementIndex = Array.isArray(metadata?.commitTimestamps)
-      ? metadata.commitTimestamps.length
-      : undefined;
-    throw new SpannerDdlError({
-      message: `push failed to apply the DDL plan${
-        statementIndex !== undefined && statements[statementIndex] !== undefined
-          ? `; failed statement (index ${statementIndex}): ${statements[statementIndex]}`
-          : ''
-      }`,
-      code: (error as { code?: number }).code,
-      cause: error,
-      statementIndex,
-    });
-  }
+async function applyDdl(database: KitDriverDatabase, statements: string[]): Promise<void> {
+  await applyDdlStatements(database, statements, 'push failed to apply the DDL plan');
 }
 
 /**

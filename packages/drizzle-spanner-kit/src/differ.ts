@@ -16,7 +16,7 @@ import {
   foreignKeyConstraintSql,
   renameTableSql,
 } from './ddl.js';
-import { bucketEntities } from './entities.js';
+import { bucketEntities, groupByTable, orderTablesParentsFirst } from './entities.js';
 import type {
   CheckEntity,
   ColumnEntity,
@@ -206,34 +206,6 @@ function typeChangeAllowed(from: string, to: string): boolean {
   return fromMatch !== null && toMatch !== null && fromMatch[1] === toMatch[1];
 }
 
-/** Topologically orders tables parents-first by interleaving and FK targets. */
-function orderTablesParentsFirst(
-  tables: TableEntity[],
-  fksByTable: Map<string, ForeignKeyEntity[]>,
-): TableEntity[] {
-  const remaining = new Map(tables.map((table) => [table.name, table]));
-  const ordered: TableEntity[] = [];
-  const visiting = new Set<string>();
-
-  const visit = (table: TableEntity): void => {
-    if (!remaining.has(table.name) || visiting.has(table.name)) return;
-    visiting.add(table.name);
-    const dependencies: string[] = [];
-    if (table.interleave) dependencies.push(table.interleave.parent);
-    for (const fk of fksByTable.get(table.name) ?? []) dependencies.push(fk.foreignTable);
-    for (const dependency of dependencies) {
-      const parent = remaining.get(dependency);
-      if (parent && parent !== table) visit(parent);
-    }
-    visiting.delete(table.name);
-    remaining.delete(table.name);
-    ordered.push(table);
-  };
-
-  for (const table of tables) visit(table);
-  return ordered;
-}
-
 interface StatementBuckets {
   renames: string[];
   dropIndexes: string[];
@@ -362,12 +334,9 @@ export async function diffSnapshots(
   for (const index of prev.indexes.values()) {
     if (droppedNames.has(index.table)) buckets.dropIndexes.push(dropIndexSql(index.name));
   }
-  const fksOfDropped = new Map<string, ForeignKeyEntity[]>();
-  for (const fk of prev.fks.values()) {
-    if (droppedNames.has(fk.table)) {
-      fksOfDropped.set(fk.table, [...(fksOfDropped.get(fk.table) ?? []), fk]);
-    }
-  }
+  const fksOfDropped = groupByTable(
+    [...prev.fks.values()].filter((fk) => droppedNames.has(fk.table)),
+  );
   buckets.dropTables.push(
     ...orderTablesParentsFirst(stillDropped, fksOfDropped)
       .reverse()
@@ -377,10 +346,7 @@ export async function diffSnapshots(
   // Created tables: parents before interleaved children and FK targets.
   const createdTables = [...cur.tables.values()].filter((table) => !prev.tables.has(table.name));
   const createdNames = new Set(createdTables.map((table) => table.name));
-  const curFksByTable = new Map<string, ForeignKeyEntity[]>();
-  for (const fk of cur.fks.values()) {
-    curFksByTable.set(fk.table, [...(curFksByTable.get(fk.table) ?? []), fk]);
-  }
+  const curFksByTable = groupByTable([...cur.fks.values()]);
   for (const table of orderTablesParentsFirst(createdTables, curFksByTable)) {
     const pk = cur.pks.get(table.name);
     if (!pk) {
