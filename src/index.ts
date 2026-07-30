@@ -22,6 +22,7 @@ export * from './primary-keys.js';
 export * from './query-builders/delete.js';
 export * from './query-builders/insert.js';
 export * from './query-builders/query-base.js';
+export * from './query-builders/query.js';
 export * from './query-builders/select.js';
 export * from './query-builders/update.js';
 export * from './sequence.js';

@@ -1,6 +1,21 @@
 import type { Casing } from 'drizzle-orm/utils';
+import { aliasedTable } from 'drizzle-orm/alias';
 import { CasingCache } from 'drizzle-orm/casing';
 import { entityKind, is } from 'drizzle-orm/entity';
+import { DrizzleError } from 'drizzle-orm/errors';
+import type {
+  AnyRelations,
+  BuildRelationalQueryResult,
+  TableRelationalConfig,
+} from 'drizzle-orm/relations';
+import {
+  getTableAsAliasSQL,
+  One,
+  relationExtrasToSQL,
+  relationsFilterToSQL,
+  relationsOrderToSQL,
+  relationToSQL,
+} from 'drizzle-orm/relations';
 import type {
   DriverValueEncoder,
   Query,
@@ -9,6 +24,7 @@ import type {
   SQLChunk,
 } from 'drizzle-orm/sql';
 import { Column } from 'drizzle-orm/column';
+import { and } from 'drizzle-orm/sql/expressions';
 import { Param, SQL, sql } from 'drizzle-orm/sql';
 import type { SelectedFieldsOrdered } from './internal.js';
 import { orderSelectedFields } from './internal.js';
@@ -207,6 +223,177 @@ export class SpannerDialect {
     const whereSql = where ? sql` where ${where}` : undefined;
     return sql`select count(*) as ${sql.identifier('count')} from ${table}${whereSql}`;
   }
+
+  private buildRqbColumn(table: SpannerTable, column: unknown, key: string): SQL {
+    if (is(column, Column)) {
+      return sql`${table}.${sql.identifier(this.casing.getColumnCasing(column))} as ${sql.identifier(key)}`;
+    }
+    throw new DrizzleError({
+      message: `Field "${key}" is not a column; the relational query builder selects table columns (use extras for SQL expressions)`,
+    });
+  }
+
+  /** Column list of one RQB level, honoring the `columns` include/exclude config. */
+  private buildRqbColumns(
+    table: SpannerTable,
+    selection: BuildRelationalQueryResult['selection'],
+    config?: SpannerRelationalQueryConfigEntry,
+  ): SQL | undefined {
+    const columnContainer = table[TableColumns];
+    const columnsConfig = config === true || config === undefined ? undefined : config.columns;
+    const columnIdentifiers: SQL[] = [];
+    const pushColumn = (key: string, column: SpannerColumn<any>): void => {
+      columnIdentifiers.push(this.buildRqbColumn(table, column, key));
+      selection.push({ key, field: column as never });
+    };
+    if (columnsConfig) {
+      const entries = Object.entries(columnsConfig).filter(([, value]) => value !== undefined);
+      const included = entries.filter(([, value]) => value);
+      if (included.length > 0) {
+        for (const [key] of included) pushColumn(key, columnContainer[key]!);
+      } else {
+        // Exclusion mode: everything except the false keys.
+        for (const [key, column] of Object.entries(columnContainer)) {
+          if (columnsConfig[key] === false) continue;
+          pushColumn(key, column);
+        }
+      }
+      return columnIdentifiers.length > 0 ? sql.join(columnIdentifiers, sql`, `) : undefined;
+    }
+    for (const [key, column] of Object.entries(columnContainer)) pushColumn(key, column);
+    return sql.join(columnIdentifiers, sql`, `);
+  }
+
+  /**
+   * Relational query compiler (spec: relational queries). Nested collections
+   * become correlated `ARRAY(SELECT AS STRUCT ...)` subqueries and to-one
+   * relations a scalar `(SELECT AS STRUCT ... LIMIT 1)` — one round trip,
+   * decoded with full type fidelity through the driver's STRUCT values.
+   */
+  buildRelationalQuery(config: SpannerRelationalQueryInput): BuildRelationalQueryResult {
+    const { schema, tableConfig, queryConfig, relationWhere, mode, throughJoin } = config;
+    const selection: BuildRelationalQueryResult['selection'] = [];
+    const isSingle = mode === 'first';
+    const params = queryConfig === true ? undefined : queryConfig;
+    const currentPath = config.errorPath ?? '';
+    const currentDepth = config.depth ?? 0;
+    const table = currentDepth
+      ? (config.table as SpannerTable)
+      : (aliasedTable(config.table as never, `d${currentDepth}`) as unknown as SpannerTable);
+
+    const limit = isSingle ? 1 : params?.limit;
+    const offset = params?.offset;
+    const filter = params?.where
+      ? relationsFilterToSQL(
+          table as never,
+          params.where as never,
+          tableConfig.relations,
+          schema,
+          this.casing,
+        )
+      : undefined;
+    const where = filter && relationWhere ? and(filter, relationWhere) : (filter ?? relationWhere);
+    const order = params?.orderBy
+      ? relationsOrderToSQL(table as never, params.orderBy as never)
+      : undefined;
+
+    const columns = this.buildRqbColumns(table, selection, queryConfig);
+    const extras = params?.extras
+      ? relationExtrasToSQL(table as never, params.extras as never)
+      : undefined;
+    if (extras) selection.push(...extras.selection);
+
+    const selectionArr: SQL[] = columns ? [columns] : [];
+    const withEntries = params?.with
+      ? Object.entries(params.with as Record<string, unknown>).filter(([, value]) => value)
+      : [];
+    for (const [key, join] of withEntries) {
+      const relation = tableConfig.relations[key]!;
+      const isSingleRelation = is(relation, One);
+      const targetTable = aliasedTable(
+        relation.targetTable as never,
+        `d${currentDepth + 1}`,
+      ) as unknown as SpannerTable;
+      const throughTable = relation.throughTable
+        ? (aliasedTable(relation.throughTable as never, `tr${currentDepth}`) as unknown as SpannerTable)
+        : undefined;
+      const built = relationToSQL(
+        this.casing,
+        relation,
+        table as never,
+        targetTable as never,
+        throughTable as never,
+      );
+      const innerThroughJoin = throughTable
+        ? sql` inner join ${getTableAsAliasSQL(throughTable as never)} on ${built.joinCondition}`
+        : undefined;
+      const innerQuery = this.buildRelationalQuery({
+        schema,
+        table: targetTable,
+        tableConfig: schema[relation.targetTableName]!,
+        queryConfig: join as SpannerRelationalQueryConfigEntry,
+        relationWhere: built.filter,
+        mode: isSingleRelation ? 'first' : 'many',
+        errorPath: `${currentPath.length > 0 ? `${currentPath}.` : ''}${key}`,
+        depth: currentDepth + 1,
+        throughJoin: innerThroughJoin,
+      });
+      selection.push({
+        field: targetTable as never,
+        key,
+        selection: innerQuery.selection,
+        isArray: !isSingleRelation,
+        isOptional:
+          ((relation as { optional?: boolean }).optional ?? false) ||
+          (join !== true && !!(join as { where?: unknown }).where),
+      });
+      selectionArr.push(
+        isSingleRelation
+          ? sql`(${innerQuery.sql}) as ${sql.identifier(key)}`
+          : sql`array(${innerQuery.sql}) as ${sql.identifier(key)}`,
+      );
+    }
+    if (extras?.sql) selectionArr.push(extras.sql);
+    if (selectionArr.length === 0) {
+      throw new DrizzleError({
+        message: `No fields selected for table "${tableConfig.name}"${currentPath ? ` ("${currentPath}")` : ''}`,
+      });
+    }
+
+    const selectKeyword = currentDepth ? sql`select as struct ` : sql`select `;
+    return {
+      sql: sql`${selectKeyword}${sql.join(selectionArr, sql`, `)} from ${getTableAsAliasSQL(table as never)}${throughJoin}${sql` where ${where}`.if(where)}${sql` order by ${order}`.if(order)}${sql` limit ${limit}`.if(limit !== undefined)}${sql` offset ${offset}`.if(offset !== undefined)}`,
+      selection,
+    };
+  }
+}
+
+/**
+ * Loose internal view of `DBQueryConfig`: the public API types constrain the
+ * config; the compiler here only reads the fields that exist per mode.
+ */
+interface SpannerRelationalQueryParams {
+  columns?: Record<string, boolean | undefined>;
+  where?: unknown;
+  extras?: unknown;
+  orderBy?: unknown;
+  limit?: number;
+  offset?: number;
+  with?: Record<string, unknown>;
+}
+
+type SpannerRelationalQueryConfigEntry = SpannerRelationalQueryParams | true | undefined;
+
+export interface SpannerRelationalQueryInput {
+  schema: AnyRelations;
+  table: SpannerTable;
+  tableConfig: TableRelationalConfig;
+  queryConfig: SpannerRelationalQueryConfigEntry;
+  relationWhere?: SQL;
+  mode: 'first' | 'many';
+  errorPath?: string;
+  depth?: number;
+  throughJoin?: SQL;
 }
 
 export type { Query };

@@ -1,5 +1,6 @@
 import { entityKind } from 'drizzle-orm/entity';
 import { TransactionRollbackError } from 'drizzle-orm/errors';
+import type { AnyRelations, EmptyRelations } from 'drizzle-orm/relations';
 import type { SQL } from 'drizzle-orm/sql';
 import type { SpannerDialect } from './dialect.js';
 import {
@@ -15,13 +16,14 @@ import { NO_CLIENT_MESSAGE, SpannerSession } from './session.js';
 import { unwrapDriverWrapper } from './columns/common.js';
 import { SpannerDelete } from './query-builders/delete.js';
 import { SpannerInsertBuilder } from './query-builders/insert.js';
+import { SpannerRelationalQueryBuilder } from './query-builders/query.js';
 import type {
   SpannerSelectedFields,
   SpannerTransactionSelectBuilder,
 } from './query-builders/select.js';
 import { SpannerSelectBuilder } from './query-builders/select.js';
 import { SpannerUpdateBuilder } from './query-builders/update.js';
-import type { AnySpannerTable } from './table.js';
+import type { AnySpannerTable, SpannerTable } from './table.js';
 
 /**
  * Structural view of the `@google-cloud/spanner` surfaces this adapter uses.
@@ -161,15 +163,19 @@ class MockRunner {
 }
 
 /**
- * `DrizzleConfig` keys the adapter accepts but does not consume yet:
- * `relations` feeds the milestone-2 relational query builder and `cache` the
- * milestone-2 cache integration. They are carried so user config is stable
- * across milestones.
+ * `DrizzleConfig` keys carried on the database: `relations` feeds the
+ * relational query builder (`db.query`); `cache` is reserved for the cache
+ * integration so user config stays stable across milestones.
  */
 export interface SpannerDatabaseOptions {
-  relations?: unknown;
+  relations?: AnyRelations;
   cache?: unknown;
 }
+
+/** `db.query.<table>` builders derived from the `relations` config. */
+export type SpannerRelationalQueries<TRelations extends AnyRelations> = {
+  [K in keyof TRelations]: SpannerRelationalQueryBuilder<TRelations, TRelations[K]>;
+};
 
 /** Options for a read-write `db.transaction`. */
 export interface SpannerTransactionOptions {
@@ -191,13 +197,14 @@ export interface SpannerReadOnlyTransactionOptions {
  * DML is absent at the type level and the session throws a typed error as
  * the runtime backstop.
  */
-export interface SpannerReadOnlyTransaction {
+export interface SpannerReadOnlyTransaction<TRelations extends AnyRelations = EmptyRelations> {
   select(): SpannerTransactionSelectBuilder<undefined>;
   select<TSelection extends SpannerSelectedFields>(
     fields: TSelection,
   ): SpannerTransactionSelectBuilder<TSelection>;
   $count(table: AnySpannerTable | SQL, where?: SQL): Promise<number>;
   execute<T = Record<string, unknown>[]>(query: SQL): Promise<T>;
+  query: SpannerRelationalQueries<TRelations>;
 }
 
 /** Options for a `db.transaction` that buffers mutations until commit. */
@@ -222,15 +229,21 @@ export interface SpannerMutationTransaction {
  * `SpannerTransaction` except that its select type omits `withStaleness`
  * (single-use bounded reads cannot run on an open transaction).
  */
-export type SpannerReadWriteTransaction = Omit<SpannerTransaction, 'select'> & {
+export type SpannerReadWriteTransaction<TRelations extends AnyRelations = EmptyRelations> = Omit<
+  SpannerTransaction<TRelations>,
+  'select'
+> & {
   select(): SpannerTransactionSelectBuilder<undefined>;
   select<TSelection extends SpannerSelectedFields>(
     fields: TSelection,
   ): SpannerTransactionSelectBuilder<TSelection>;
 };
 
-export class SpannerDatabase {
+export class SpannerDatabase<TRelations extends AnyRelations = EmptyRelations> {
   static readonly [entityKind]: string = 'SpannerDatabase';
+
+  /** Relational queries over the `relations` config: `db.query.<table>.findMany(...)`. */
+  readonly query: SpannerRelationalQueries<TRelations>;
 
   constructor(
     /** @internal */
@@ -240,7 +253,19 @@ export class SpannerDatabase {
     readonly $client: SpannerDriverDatabase | undefined,
     /** @internal */
     readonly options: SpannerDatabaseOptions = {},
-  ) {}
+  ) {
+    const query = {} as Record<string, SpannerRelationalQueryBuilder<TRelations, never>>;
+    for (const [tableName, tableConfig] of Object.entries(options.relations ?? {})) {
+      query[tableName] = new SpannerRelationalQueryBuilder(
+        options.relations!,
+        tableConfig.table as SpannerTable,
+        tableConfig,
+        dialect,
+        session,
+      );
+    }
+    this.query = query as SpannerRelationalQueries<TRelations>;
+  }
 
   select(): SpannerSelectBuilder<undefined>;
   select<TSelection extends SpannerSelectedFields>(
@@ -285,7 +310,7 @@ export class SpannerDatabase {
    * bounds the number of ABORTED re-executions on top of the first attempt.
    */
   transaction<T>(
-    callback: (tx: SpannerReadOnlyTransaction) => Promise<T>,
+    callback: (tx: SpannerReadOnlyTransaction<TRelations>) => Promise<T>,
     options: SpannerReadOnlyTransactionOptions,
   ): Promise<T>;
   transaction<T>(
@@ -293,7 +318,7 @@ export class SpannerDatabase {
     options: SpannerMutationTransactionOptions,
   ): Promise<T>;
   transaction<T>(
-    callback: (tx: SpannerReadWriteTransaction) => Promise<T>,
+    callback: (tx: SpannerReadWriteTransaction<TRelations>) => Promise<T>,
     options?: SpannerTransactionOptions,
   ): Promise<T>;
   async transaction<T>(
@@ -309,14 +334,14 @@ export class SpannerDatabase {
     }
     if ('readOnly' in options) {
       return this.readOnlyTransaction(
-        callback as (tx: SpannerReadOnlyTransaction) => Promise<T>,
+        callback as (tx: SpannerReadOnlyTransaction<TRelations>) => Promise<T>,
         client,
         options,
       );
     }
     const bufferedMutations = 'mode' in options;
     const { maxRetries, timeout } = bufferedMutations ? ({} as SpannerTransactionOptions) : options;
-    const runCallback = callback as (tx: SpannerTransaction) => Promise<T>;
+    const runCallback = callback as (tx: SpannerTransaction<TRelations>) => Promise<T>;
     let attempts = 0;
     try {
       const runFn = async (driverTransaction: SpannerDriverTransaction): Promise<T> => {
@@ -340,7 +365,12 @@ export class SpannerDatabase {
               this.dialect,
               this.session.options,
             );
-        const tx = new SpannerTransaction(this.dialect, transactionSession, this.$client, this.options);
+        const tx = new SpannerTransaction<TRelations>(
+          this.dialect,
+          transactionSession,
+          this.$client,
+          this.options,
+        );
         try {
           const result = await runCallback(tx);
           await driverTransaction.commit();
@@ -379,7 +409,7 @@ export class SpannerDatabase {
    * consistent. There is nothing to commit; the snapshot ends afterwards.
    */
   private async readOnlyTransaction<T>(
-    callback: (tx: SpannerReadOnlyTransaction) => Promise<T>,
+    callback: (tx: SpannerReadOnlyTransaction<TRelations>) => Promise<T>,
     client: SpannerDriverDatabase,
     options: SpannerReadOnlyTransactionOptions,
   ): Promise<T> {
@@ -396,7 +426,12 @@ export class SpannerDatabase {
         this.dialect,
         this.session.options,
       );
-      const tx = new SpannerTransaction(this.dialect, snapshotSession, this.$client, this.options);
+      const tx = new SpannerTransaction<TRelations>(
+        this.dialect,
+        snapshotSession,
+        this.$client,
+        this.options,
+      );
       return await callback(tx);
     } catch (error) {
       throw wrapSpannerError(error);
@@ -406,7 +441,9 @@ export class SpannerDatabase {
   }
 }
 
-export class SpannerTransaction extends SpannerDatabase {
+export class SpannerTransaction<
+  TRelations extends AnyRelations = EmptyRelations,
+> extends SpannerDatabase<TRelations> {
   static override readonly [entityKind]: string = 'SpannerTransaction';
 
   override transaction<T>(
