@@ -8,7 +8,7 @@ import { driverRowToObject } from './session.js';
 
 export interface SpannerMigrationConfig {
   migrationsFolder: string;
-  /** Bookkeeping table name; defaults to `__drizzle_migrations`. */
+  /** Bookkeeping table name; defaults to `drizzle_migrations`. */
   migrationsTable?: string;
 }
 
@@ -109,7 +109,7 @@ export async function migrate(
   if (typeof client.updateSchema !== 'function') {
     throw new Error('migrate: the attached client has no updateSchema (pass the driver Database)');
   }
-  const migrationsTable = config.migrationsTable ?? '__drizzle_migrations';
+  const migrationsTable = config.migrationsTable ?? 'drizzle_migrations';
   const migrations = readMigrationFiles({
     migrationsFolder: config.migrationsFolder,
   } satisfies MigrationConfig);
