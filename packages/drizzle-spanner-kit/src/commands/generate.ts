@@ -1,5 +1,5 @@
 import type { ResolvedSpannerKitConfig } from '../config.js';
-import type { RenameResolver } from '../differ.js';
+import type { RenameResolver, ResolvedRename } from '../differ.js';
 import { diffSnapshots } from '../differ.js';
 import { loadSchemaExports } from '../loader.js';
 import { formatTimestamp, readLatestSnapshot, writeMigrationFolder } from '../migrations.js';
@@ -21,7 +21,7 @@ export interface GenerateResult {
   /** The written migration folder, or null when the diff is empty. */
   folder: string | null;
   statements: string[];
-  renames: string[];
+  renames: ResolvedRename[];
 }
 
 /** `generate`: schema module -> snapshot -> diff against the latest snapshot -> migration folder. */
@@ -41,7 +41,8 @@ export async function generate(
   }
   const snapshot = createSnapshot(ddl, {
     prevIds: prevSnapshot ? [prevSnapshot.id] : [],
-    renames,
+    // The v8 snapshot format records renames as `old->new` journal strings.
+    renames: renames.map(({ from, to }) => `${from}->${to}`),
   });
   const folder = await writeMigrationFolder(
     config.out,
