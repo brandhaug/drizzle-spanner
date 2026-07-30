@@ -43,8 +43,9 @@ owns every dialect class and extends only exported drizzle-orm base modules.
   helpers (the upstream `Dialect` type union is closed), a `drizzle()` driver
   entry point for `@google-cloud/spanner`, and a `migrate()` function.
 - **Build and publish:** ESM-first with `exports` map subpaths mirroring
-  drizzle-orm's layout (`drizzle-spanner`, `drizzle-spanner/migrator`, and a
-  future `drizzle-spanner/effect`). Every class carries a
+  drizzle-orm's layout (`drizzle-spanner`, `drizzle-spanner/migrator`,
+  `drizzle-spanner/internal` for audited non-public surfaces the kit consumes,
+  and a future `drizzle-spanner/effect`). Every class carries a
   `static [entityKind]` marker so drizzle's `is()` dispatch works.
 - **Runtimes:** Node is first-class. Bun is supported and verified by the
   emulator smoke test (gRPC over `node:http2` passed on Bun 1.3.3, see
@@ -87,8 +88,10 @@ builders use Spanner-native type names, so schema code mirrors DDL one to one.
   `ON UPDATE`.
 
 ```ts
+// The parent key is named `singer_id`: Spanner matches the interleave
+// prefix by column name, so the child's pk must start with this exact name.
 const singers = spannerTable('singers', {
-  id: string('id', { length: 36 }).primaryKey().defaultGenerateUuid(),
+  singerId: string('singer_id', { length: 36 }).primaryKey().defaultGenerateUuid(),
   name: string('name', { length: 'max' }).notNull(),
   updatedAt: timestamp('updated_at', { allowCommitTimestamp: true }),
 });
@@ -150,7 +153,7 @@ through.
 const db = drizzle(spannerDatabase, { relations });
 
 await db.transaction(async (tx) => {
-  await tx.update(singers).set({ name: 'Ada L.' }).where(eq(singers.id, id));
+  await tx.update(singers).set({ name: 'Ada L.' }).where(eq(singers.singerId, id));
 }); // re-runs automatically on ABORTED
 
 const rows = await db
@@ -183,7 +186,10 @@ as reference.
   change, interleave change), `generate` refuses with a typed diagnostic that
   explains the manual path (new table, backfill, swap). The tool never emits a
   silent `DROP` + `CREATE`. `push` shares the differ and inherits this rule,
-  and always prints the full DDL plan and asks for confirmation first.
+  and always prints the full DDL plan and asks for confirmation first
+  (`--yes` skips the question, never the plan). Non-interactive runs refuse
+  ambiguous renames unless `--accept-drops` explicitly allows treating them
+  as drop+create.
 - **Applying:** `migrate` applies each migration through `updateSchema` as one
   batched long-running DDL operation and records completion in a
   `drizzle_migrations` table (Spanner table names cannot start with an
@@ -236,8 +242,10 @@ single statement, so they carry the code and the raw error only.
 
 - **Unit tests** cover SQL generation (dialect output) without a database.
 - **Integration tests** run against the Spanner emulator via testcontainers:
-  one container per test worker, because emulator state is in-memory (free
-  isolation) and the emulator serializes read-write transactions. The
+  a fresh emulator instance per test file, with files run serially
+  (`--fileParallelism=false`), because emulator state is in-memory (free
+  isolation) and the emulator serializes read-write transactions. A shared
+  external emulator is reused when `SPANNER_EMULATOR_HOST` is set. The
   docker-compose setup from
   [#7](https://github.com/brandhaug/drizzle-spanner/issues/7) (branch
   `task/spanner-emulator`) remains the interactive dev loop.
