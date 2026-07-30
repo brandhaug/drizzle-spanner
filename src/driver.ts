@@ -1,4 +1,4 @@
-import type { AnyRelations } from 'drizzle-orm/relations';
+import type { AnyRelations, EmptyRelations } from 'drizzle-orm/relations';
 import type { DrizzleConfig } from 'drizzle-orm/utils';
 import type { Logger } from 'drizzle-orm/logger';
 import { DefaultLogger } from 'drizzle-orm/logger';
@@ -20,26 +20,28 @@ function resolveLogger(logger: SpannerDrizzleConfig['logger']): Logger | undefin
 /**
  * Entry point: takes a constructed `@google-cloud/spanner` `Database`
  * (session-pool configuration belongs to the client) and drizzle config.
- * `relations` and `cache` are carried for the milestone-2 consumers.
+ * `relations` (from `defineRelations`) powers `db.query`.
  */
-export function drizzle(
+export function drizzle<TRelations extends AnyRelations = EmptyRelations>(
   client: SpannerDriverDatabase,
-  config: SpannerDrizzleConfig = {},
-): SpannerDatabase {
+  config: SpannerDrizzleConfig<TRelations> = {},
+): SpannerDatabase<TRelations> {
   const dialect = new SpannerDialect({ casing: config.casing });
   const session = createDatabaseSession(client, dialect, {
     logger: resolveLogger(config.logger),
   });
-  return new SpannerDatabase(dialect, session, client, {
+  return new SpannerDatabase<TRelations>(dialect, session, client, {
     relations: config.relations,
     cache: config.cache,
   });
 }
 
 /** A database with no client attached — SQL generation only; execution throws. */
-drizzle.mock = (config: SpannerDrizzleConfig = {}): SpannerDatabase => {
+drizzle.mock = <TRelations extends AnyRelations = EmptyRelations>(
+  config: SpannerDrizzleConfig<TRelations> = {},
+): SpannerDatabase<TRelations> => {
   const dialect = new SpannerDialect({ casing: config.casing });
-  return new SpannerDatabase(dialect, createMockSession(dialect), undefined, {
+  return new SpannerDatabase<TRelations>(dialect, createMockSession(dialect), undefined, {
     relations: config.relations,
     cache: config.cache,
   });

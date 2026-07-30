@@ -25,8 +25,19 @@ export interface SpannerSqlRequest {
 
 /** A driver row in array mode: one `{ name, value }` cell per selected field. */
 export type SpannerDriverRow = { name: string; value: unknown }[] & {
-  toJSON?: () => Record<string, unknown>;
+  toJSON?: (options?: { wrapNumbers?: boolean }) => Record<string, unknown>;
 };
+
+/**
+ * A driver row as a mutable object keyed by selection alias. `toJSON` with
+ * `wrapNumbers` converts nested STRUCT / ARRAY<STRUCT> values to plain
+ * objects while keeping the driver's number wrappers, so drizzle's column
+ * decoders see the same cell values as the flat row path.
+ */
+export function driverRowToObject(row: SpannerDriverRow): Record<string, unknown> {
+  if (row.toJSON) return row.toJSON({ wrapNumbers: true });
+  return Object.fromEntries(row.map((cell) => [cell.name, cell.value]));
+}
 
 /**
  * Where a statement executes. Reads run on `database.run`; DML must run inside
@@ -83,6 +94,8 @@ export class SpannerPreparedQuery<T = unknown> implements PreparedQuery {
     private readonly fields: SelectedFieldsOrdered | undefined,
     private readonly customResultMapper?: (rows: unknown[][]) => T,
     private readonly queryMetadata?: SpannerQueryMetadata,
+    /** Relational queries map whole driver rows (nested STRUCTs), not cell arrays. */
+    private readonly rawRowMapper?: (rows: Record<string, unknown>[]) => T,
   ) {}
 
   getQuery(): Query {
@@ -116,6 +129,9 @@ export class SpannerPreparedQuery<T = unknown> implements PreparedQuery {
       });
     }
 
+    if (this.rawRowMapper) {
+      return this.rawRowMapper(rawRows.map(driverRowToObject));
+    }
     if (!this.fields && !this.customResultMapper) {
       return rawRows.map((row) => (row.toJSON ? row.toJSON() : row)) as T;
     }
@@ -158,6 +174,22 @@ export class SpannerSession {
       fields,
       customResultMapper,
       queryMetadata,
+    );
+  }
+
+  /** Prepares a relational query whose rows decode as whole objects (nested STRUCTs). */
+  prepareRelationalQuery<T = unknown>(
+    query: SpannerQueryWithTypings,
+    mapper: (rows: Record<string, unknown>[]) => T,
+  ): SpannerPreparedQuery<T> {
+    return new SpannerPreparedQuery(
+      this.runner,
+      query,
+      this.logger,
+      undefined,
+      undefined,
+      { type: 'select' },
+      mapper,
     );
   }
 
