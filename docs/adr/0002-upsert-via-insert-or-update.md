@@ -40,6 +40,7 @@ not milestone 2.
 - No `ON CONFLICT`-style partial column updates: `INSERT OR UPDATE`
   replaces the full column list given in the statement. The API docs
   must state this difference from other dialects' `onConflictDoUpdate`.
-- `INSERT OR UPDATE` has no mutation-mode equivalent in the buffered-
-  mutations transaction; Spanner's `insertOrUpdate` mutation covers that
-  path if wanted later.
+- `INSERT OR UPDATE` has no DML form inside the buffered-mutations
+  transaction; there `.orUpdate()` compiles to Spanner's `insertOrUpdate`
+  mutation instead (implemented with the upsert API). `.orIgnore()` has no
+  mutation equivalent and throws a typed error in that mode.

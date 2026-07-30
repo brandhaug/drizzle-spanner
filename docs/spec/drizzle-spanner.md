@@ -31,7 +31,7 @@ owns every dialect class and extends only exported drizzle-orm base modules.
   each new beta. A breaking beta must fail in CI, not in a user application.
 - **Permitted imports:** only the base subpaths verified in
   `docs/research/drizzle-dialect-internals.md` (`entity`, `table`, `column`,
-  `column-builder`, `sql`, `session`, `query-promise`, `runnable-query`,
+  `column-builder`, `sql`, `sql/expressions`, `session`, `query-promise`, `runnable-query`,
   `query-builders/query-builder`, `selection-proxy`, `subquery`, `alias`,
   `relations`, `casing`, `utils`, `errors`, `logger`, `tracing`, `migrator`,
   `cache/core`). Other dialects' cores are reference reading only. An ESLint
@@ -81,7 +81,9 @@ builders use Spanner-native type names, so schema code mirrors DDL one to one.
   the transaction commits.
 - **Indexes and the rest:** `index().on(...)` with Spanner extensions
   `.nullFiltered()` and `.storing(...)`; generated columns via
-  `.generatedAlwaysAs(sql)`; defaults via `.default()`; foreign keys have no
+  `.generatedAlwaysAs(sql)`; defaults via `.default()`; `foreignKey()` and
+  `check()` extra-config builders (required so `pull` can re-emit
+  introspected constraints in this schema API); foreign keys have no
   `ON UPDATE`.
 
 ```ts

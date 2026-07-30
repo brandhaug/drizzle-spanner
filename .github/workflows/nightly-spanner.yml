@@ -1,0 +1,36 @@
+name: Nightly real Spanner
+
+# Anything the emulator cannot execute (spec: test strategy) runs nightly
+# against a real Spanner instance. Requires repository secrets:
+#   GCP_WORKLOAD_IDENTITY_PROVIDER, GCP_SERVICE_ACCOUNT
+# and repository variables:
+#   GCP_PROJECT, SPANNER_INSTANCE
+# The job is skipped silently while those are not configured.
+
+on:
+  schedule:
+    - cron: '17 3 * * *'
+  workflow_dispatch:
+
+jobs:
+  integration-real-spanner:
+    runs-on: ubuntu-latest
+    if: vars.GCP_PROJECT != ''
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: lts/*
+          cache: npm
+      - uses: google-github-actions/auth@v2
+        with:
+          workload_identity_provider: ${{ secrets.GCP_WORKLOAD_IDENTITY_PROVIDER }}
+          service_account: ${{ secrets.GCP_SERVICE_ACCOUNT }}
+      - run: npm ci
+      - run: npm run test:integration
+        env:
+          GOOGLE_CLOUD_PROJECT: ${{ vars.GCP_PROJECT }}
+          DRIZZLE_SPANNER_TEST_INSTANCE: ${{ vars.SPANNER_INSTANCE }}
