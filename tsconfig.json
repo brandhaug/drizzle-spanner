@@ -16,7 +16,11 @@
     "esModuleInterop": true,
     "forceConsistentCasingInFileNames": true,
     "verbatimModuleSyntax": true,
-    "types": ["node"]
+    "types": ["node"],
+    "paths": {
+      "drizzle-spanner": ["./src/index.ts"],
+      "drizzle-spanner-kit": ["./packages/drizzle-spanner-kit/src/index.ts"]
+    }
   },
-  "include": ["src", "tests", "scripts"]
+  "include": ["src", "tests", "scripts", "packages/drizzle-spanner-kit/src", "packages/drizzle-spanner-kit/tests"]
 }
