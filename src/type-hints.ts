@@ -16,22 +16,22 @@ export type SpannerScalarTypeHint =
   | 'date'
   | 'timestamp'
   | 'json'
-  | 'none';
+  | 'none'
 
-export type SpannerTypeHint = SpannerScalarTypeHint | `array:${SpannerScalarTypeHint}`;
+export type SpannerTypeHint = SpannerScalarTypeHint | `array:${SpannerScalarTypeHint}`
 
 /** Spanner arrays cannot nest, so the element hint is always scalar. */
 export function arrayTypeHint(element: SpannerTypeHint): SpannerTypeHint {
-  return `array:${element}` as SpannerTypeHint;
+  return `array:${element}` as SpannerTypeHint
 }
 
 /** The `types` entry shape `@google-cloud/spanner` accepts per parameter. */
-export type SpannerDriverParamType = string | { type: 'array'; child: string };
+export type SpannerDriverParamType = string | { type: 'array'; child: string }
 
 /** Decodes a hint into a driver `types` entry; `none` yields no entry. */
 export function toDriverParamType(hint: string): SpannerDriverParamType | undefined {
-  if (hint === 'none') return undefined;
+  if (hint === 'none') return undefined
   return hint.startsWith('array:')
     ? { type: 'array', child: hint.slice('array:'.length) }
-    : hint;
+    : hint
 }

@@ -20,14 +20,16 @@ npm run build -w drizzle-spanner-kit
 ## Tests
 
 | Command                        | What it runs                                                        |
-| ------------------------------ | -------------------------------------------------------------------- |
+| ------------------------------ | ------------------------------------------------------------------- |
 | `npm test`                     | Unit tests for both packages (SQL generation, no database)          |
-| `npm run test:integration`     | Emulator integration tests via testcontainers (needs Docker)         |
+| `npm run test:integration`     | Emulator integration tests via testcontainers (needs Docker)        |
 | `npm run test:integration:bun` | The integration suite under Bun against an already-running emulator |
-| `npm run lint`                 | ESLint over `src`, `tests` and `packages`                            |
-| `npm run typecheck`            | `tsc --noEmit` over the whole workspace                              |
-| `npm run check:types`          | `arethetypeswrong` against the packed tarballs                       |
-| `npm run check:pack`           | `npm pack` contents match the dist-only whitelist                    |
+| `npm run lint`                 | oxlint over the workspace (`npm run lint:fix` applies fixes)        |
+| `npm run format`               | oxfmt over the workspace (`npm run format:check` in CI)             |
+| `npm run check`                | typecheck + lint + format check + unit tests                        |
+| `npm run typecheck`            | `tsc --noEmit` over the whole workspace                             |
+| `npm run check:types`          | `arethetypeswrong` against the packed tarballs                      |
+| `npm run check:pack`           | `npm pack` contents match the dist-only whitelist                   |
 
 Integration tests start one emulator container per test worker
 (testcontainers manages the lifecycle; emulator state is in-memory, so
@@ -45,9 +47,9 @@ expects a running emulator and `SPANNER_EMULATOR_HOST=localhost:9010`. See
 [docs/emulator.md](docs/emulator.md) for what the emulator cannot do; those
 paths run nightly against real Spanner (`.github/workflows/nightly-spanner.yml`).
 
-## The ESLint drizzle-orm import rule
+## The lint rule for drizzle-orm imports
 
-`eslint.config.js` restricts runtime imports to the drizzle-orm base
+`.oxlintrc.json` restricts runtime imports to the drizzle-orm base
 subpaths listed in the spec's package-layout section (`drizzle-orm/table`,
 `drizzle-orm/session`, ...). Root imports and other dialects' modules
 (`drizzle-orm/pg-core`, ...) are errors.
@@ -58,7 +60,7 @@ an unexported path couples this package to drizzle internals that can change
 in any beta, which is exactly the breakage the CI beta matrix exists to
 catch. Other dialects' sources are reference reading only. If a new base
 subpath is genuinely needed, add it to the spec's permitted list and the
-ESLint config in the same PR.
+oxlint config in the same PR.
 
 ## The beta-matrix policy
 

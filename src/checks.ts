@@ -1,12 +1,12 @@
-import { entityKind } from 'drizzle-orm/entity';
-import type { SQL } from 'drizzle-orm/sql';
+import { entityKind } from 'drizzle-orm/entity'
+import type { SQL } from 'drizzle-orm/sql'
 
 export class CheckBuilder {
-  static readonly [entityKind]: string = 'SpannerCheckBuilder';
+  static readonly [entityKind]: string = 'SpannerCheckBuilder'
 
   constructor(
     readonly name: string,
-    readonly value: SQL,
+    readonly value: SQL
   ) {}
 }
 
@@ -16,5 +16,5 @@ export class CheckBuilder {
  * subqueries or references to other tables.
  */
 export function check(name: string, value: SQL): CheckBuilder {
-  return new CheckBuilder(name, value);
+  return new CheckBuilder(name, value)
 }

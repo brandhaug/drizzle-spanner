@@ -28,9 +28,11 @@ CI runs the integration suite against each entry in this matrix; a breaking
 `drizzle-orm` beta fails here, not in your application.
 
 <!-- tested-versions:start -->
-| drizzle-orm | Runtimes |
-| --- | --- |
+
+| drizzle-orm     | Runtimes              |
+| --------------- | --------------------- |
 | `1.0.0-beta.22` | Node 22, Node 24, Bun |
+
 <!-- tested-versions:end -->
 
 This table is generated from
@@ -39,11 +41,11 @@ This table is generated from
 
 ### Runtime support
 
-| Runtime          | Status                                                                    |
-| ---------------- | ------------------------------------------------------------------------- |
-| Node             | First-class. `engines` requires >= 20; CI tests the current LTS set.      |
-| Bun              | Supported; the integration suite runs under Bun in CI (gRPC over `node:http2`). |
-| Edge runtimes    | **Unsupported.** `@google-cloud/spanner` requires gRPC, which edge runtimes do not provide. |
+| Runtime       | Status                                                                                      |
+| ------------- | ------------------------------------------------------------------------------------------- |
+| Node          | First-class. `engines` requires >= 20; CI tests the current LTS set.                        |
+| Bun           | Supported; the integration suite runs under Bun in CI (gRPC over `node:http2`).             |
+| Edge runtimes | **Unsupported.** `@google-cloud/spanner` requires gRPC, which edge runtimes do not provide. |
 
 `drizzle-spanner-kit` needs Node >= 22.18 (it loads TypeScript config files
 through the runtime's native TS support) or Bun.
@@ -55,20 +57,20 @@ requires a primary key on every table and has no auto-increment; the
 recommended default is a `STRING(36)` UUID key:
 
 ```ts
-import { Spanner } from '@google-cloud/spanner';
-import { drizzle, spannerTable, string, timestamp } from 'drizzle-spanner';
+import { Spanner } from '@google-cloud/spanner'
+import { drizzle, spannerTable, string, timestamp } from 'drizzle-spanner'
 
 export const singers = spannerTable('singers', {
   id: string('id', { length: 36 }).primaryKey().defaultGenerateUuid(),
   name: string('name', { length: 'max' }).notNull(),
-  updatedAt: timestamp('updated_at', { allowCommitTimestamp: true }),
-});
+  updatedAt: timestamp('updated_at', { allowCommitTimestamp: true })
+})
 
-const spanner = new Spanner({ projectId: 'my-project' });
-const database = spanner.instance('my-instance').database('my-database');
-const db = drizzle(database);
+const spanner = new Spanner({ projectId: 'my-project' })
+const database = spanner.instance('my-instance').database('my-database')
+const db = drizzle(database)
 
-const rows = await db.select().from(singers);
+const rows = await db.select().from(singers)
 ```
 
 ### Primary keys
@@ -97,50 +99,50 @@ it in the wrong key position; `spannerTable` enforces the full rule at
 definition time, including the key orders the types cannot read.
 
 ```ts
-import { defineRelations } from 'drizzle-orm/relations';
+import { defineRelations } from 'drizzle-orm/relations'
 import {
   index,
   interleaveInParent,
   primaryKey,
   spannerTable,
-  string,
-} from 'drizzle-spanner';
+  string
+} from 'drizzle-spanner'
 
 const singers = spannerTable('singers', {
   singerId: string('singer_id', { length: 36 }).primaryKey().defaultGenerateUuid(),
-  name: string('name', { length: 'max' }).notNull(),
-});
+  name: string('name', { length: 'max' }).notNull()
+})
 
 const albums = spannerTable(
   'albums',
   {
     singerId: string('singer_id', { length: 36 }).notNull(),
     albumId: string('album_id', { length: 36 }).notNull(),
-    title: string('title', { length: 1024 }),
+    title: string('title', { length: 1024 })
   },
   (t) => [
     primaryKey({ columns: [t.singerId, t.albumId] }),
     interleaveInParent(singers, { onDelete: 'cascade' }),
-    index('idx_albums_title').on(t.title).nullFiltered(),
-  ],
-);
+    index('idx_albums_title').on(t.title).nullFiltered()
+  ]
+)
 
 const relations = defineRelations({ singers, albums }, (r) => ({
   singers: {
-    albums: r.many.albums(),
+    albums: r.many.albums()
   },
   albums: {
     singer: r.one.singers({
       from: r.albums.singerId,
-      to: r.singers.singerId,
-    }),
-  },
-}));
+      to: r.singers.singerId
+    })
+  }
+}))
 
-const db = drizzle(database, { relations });
+const db = drizzle(database, { relations })
 const withAlbums = await db.query.singers.findMany({
-  with: { albums: true },
-});
+  with: { albums: true }
+})
 ```
 
 Nested collections compile to correlated `ARRAY(SELECT AS STRUCT ...)`
@@ -155,11 +157,11 @@ loop:
 ```ts
 await db.transaction(
   async (tx) => {
-    const [singer] = await tx.select().from(singers).limit(1);
-    await tx.update(singers).set({ name: 'Ada' });
+    const [singer] = await tx.select().from(singers).limit(1)
+    await tx.update(singers).set({ name: 'Ada' })
   },
-  { maxRetries: 3, timeout: 60_000 },
-);
+  { maxRetries: 3, timeout: 60_000 }
+)
 ```
 
 <!-- prettier-ignore -->
@@ -178,20 +180,17 @@ Read-only transactions run on a snapshot and accept a staleness bound
 ```ts
 await db.transaction(
   async (tx) => {
-    return tx.select().from(singers);
+    return tx.select().from(singers)
   },
-  { readOnly: true, staleness: { exactStaleness: '15s' } },
-);
+  { readOnly: true, staleness: { exactStaleness: '15s' } }
+)
 ```
 
 Single-use bounded reads support two additional bounds, `maxStaleness` and
 `minReadTimestamp`, which Spanner accepts on single-use reads only:
 
 ```ts
-const rows = await db
-  .select()
-  .from(singers)
-  .withStaleness({ maxStaleness: '10s' });
+const rows = await db.select().from(singers).withStaleness({ maxStaleness: '10s' })
 ```
 
 ### Buffered mutations
@@ -204,10 +203,10 @@ mode.
 ```ts
 await db.transaction(
   async (tx) => {
-    await tx.insert(events).values(batch);
+    await tx.insert(events).values(batch)
   },
-  { mode: 'bufferedMutations' },
-);
+  { mode: 'bufferedMutations' }
+)
 ```
 
 ### Counting, raw SQL, and a client-less database
@@ -218,11 +217,11 @@ The standard drizzle idioms ship with the runtime: `db.$count` is a
 and tests need no `@google-cloud/spanner` install:
 
 ```ts
-const total = await db.$count(singers, eq(singers.name, 'Ada'));
-const rows = await db.execute(sql`SELECT 1 AS one`);
+const total = await db.$count(singers, eq(singers.name, 'Ada'))
+const rows = await db.execute(sql`SELECT 1 AS one`)
 
-const mockDb = drizzle.mock();
-const { sql: text, params } = mockDb.select().from(singers).toSQL();
+const mockDb = drizzle.mock()
+const { sql: text, params } = mockDb.select().from(singers).toSQL()
 ```
 
 ## Upsert
@@ -232,11 +231,7 @@ GoogleSQL's `INSERT OR UPDATE` / `INSERT OR IGNORE`, and `.returning()`
 composes with both:
 
 ```ts
-await db
-  .insert(singers)
-  .values({ id, name: 'Ada' })
-  .orUpdate()
-  .returning();
+await db.insert(singers).values({ id, name: 'Ada' }).orUpdate().returning()
 ```
 
 <!-- prettier-ignore -->
@@ -253,7 +248,7 @@ await db
 Configure it with a `drizzle-spanner.config.ts`:
 
 ```ts
-import { defineConfig } from 'drizzle-spanner-kit';
+import { defineConfig } from 'drizzle-spanner-kit'
 
 export default defineConfig({
   schema: './src/schema.ts',
@@ -261,9 +256,9 @@ export default defineConfig({
   database: {
     project: 'my-project',
     instance: 'my-instance',
-    database: 'my-database',
-  },
-});
+    database: 'my-database'
+  }
+})
 ```
 
 Generate a migration from your schema changes, then apply it:
@@ -277,9 +272,9 @@ Applications that migrate at startup use the runtime migrator instead of the
 CLI:
 
 ```ts
-import { migrate } from 'drizzle-spanner/migrator';
+import { migrate } from 'drizzle-spanner/migrator'
 
-await migrate(db, { migrationsFolder: './drizzle' });
+await migrate(db, { migrationsFolder: './drizzle' })
 ```
 
 Applied migrations are recorded in a `drizzle_migrations` bookkeeping table

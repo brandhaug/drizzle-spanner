@@ -1,12 +1,12 @@
-import { parseArgs } from 'node:util';
-import { createInterface } from 'node:readline/promises';
-import { generate } from './commands/generate.js';
-import { migrate } from './commands/migrate.js';
-import { pull } from './commands/pull.js';
-import { push } from './commands/push.js';
-import { loadConfig } from './config.js';
-import { DiffRefusedError } from './differ.js';
-import type { RenameCandidate } from './differ.js';
+import { parseArgs } from 'node:util'
+import { createInterface } from 'node:readline/promises'
+import { generate } from './commands/generate.js'
+import { migrate } from './commands/migrate.js'
+import { pull } from './commands/pull.js'
+import { push } from './commands/push.js'
+import { loadConfig } from './config.js'
+import { DiffRefusedError } from './differ.js'
+import type { RenameCandidate } from './differ.js'
 
 const HELP = `drizzle-spanner-kit <command> [options]
 
@@ -24,48 +24,50 @@ Options:
   --accept-drops        With --no-interactive: treat ambiguous renames as drop+create
   --yes                 push: apply the printed plan without prompting
   --help                Show this help
-`;
+`
 
 async function promptRename(candidate: RenameCandidate): Promise<string | null> {
-  const readline = createInterface({ input: process.stdin, output: process.stdout });
+  const readline = createInterface({ input: process.stdin, output: process.stdout })
   try {
     const scope =
       candidate.kind === 'table'
         ? `Table "${candidate.dropped}"`
-        : `Column "${candidate.dropped}" of "${candidate.table}"`;
-    console.log(`${scope} is gone from the schema. Was it renamed?`);
-    candidate.created.forEach((name, index) => console.log(`  ${index + 1}) renamed to ${name}`));
-    console.log('  0) no, it was dropped');
-    const answer = await readline.question('> ');
-    const choice = Number(answer.trim());
+        : `Column "${candidate.dropped}" of "${candidate.table}"`
+    console.log(`${scope} is gone from the schema. Was it renamed?`)
+    candidate.created.forEach((name, index) =>
+      console.log(`  ${index + 1}) renamed to ${name}`)
+    )
+    console.log('  0) no, it was dropped')
+    const answer = await readline.question('> ')
+    const choice = Number(answer.trim())
     if (Number.isInteger(choice) && choice >= 1 && choice <= candidate.created.length) {
-      return candidate.created[choice - 1]!;
+      return candidate.created[choice - 1]!
     }
-    return null;
+    return null
   } finally {
-    readline.close();
+    readline.close()
   }
 }
 
 function printPlan(statements: string[]): void {
-  console.log('The following DDL will be applied:\n');
-  for (const statement of statements) console.log(`${statement};\n`);
+  console.log('The following DDL will be applied:\n')
+  for (const statement of statements) console.log(`${statement};\n`)
 }
 
 /** `--yes`: still print the plan (spec: push always prints it) before applying. */
 async function acceptPlan(statements: string[]): Promise<boolean> {
-  printPlan(statements);
-  return true;
+  printPlan(statements)
+  return true
 }
 
 async function confirmPlan(statements: string[]): Promise<boolean> {
-  printPlan(statements);
-  const readline = createInterface({ input: process.stdin, output: process.stdout });
+  printPlan(statements)
+  const readline = createInterface({ input: process.stdin, output: process.stdout })
   try {
-    const answer = await readline.question('Apply these statements? [y/N] ');
-    return /^y(es)?$/i.test(answer.trim());
+    const answer = await readline.question('Apply these statements? [y/N] ')
+    return /^y(es)?$/i.test(answer.trim())
   } finally {
-    readline.close();
+    readline.close()
   }
 }
 
@@ -80,16 +82,16 @@ export async function main(argv: string[] = process.argv.slice(2)): Promise<numb
       'no-interactive': { type: 'boolean' },
       'accept-drops': { type: 'boolean' },
       yes: { type: 'boolean' },
-      help: { type: 'boolean' },
-    },
-  });
-  const command = positionals[0];
+      help: { type: 'boolean' }
+    }
+  })
+  const command = positionals[0]
   if (values.help || !command) {
-    console.log(HELP);
-    return command ? 0 : 1;
+    console.log(HELP)
+    return command ? 0 : 1
   }
-  const config = await loadConfig(values.config ?? './drizzle-spanner.config.ts');
-  const interactive = process.stdin.isTTY === true && values['no-interactive'] !== true;
+  const config = await loadConfig(values.config ?? './drizzle-spanner.config.ts')
+  const interactive = process.stdin.isTTY === true && values['no-interactive'] !== true
 
   try {
     switch (command) {
@@ -97,55 +99,57 @@ export async function main(argv: string[] = process.argv.slice(2)): Promise<numb
         const result = await generate(config, {
           name: values.name,
           resolveRename: interactive ? promptRename : undefined,
-          acceptDrops: values['accept-drops'],
-        });
+          acceptDrops: values['accept-drops']
+        })
         console.log(
           result.folder
             ? `Wrote ${result.folder} (${result.statements.length} statements)`
-            : 'No schema changes.',
-        );
-        return 0;
+            : 'No schema changes.'
+        )
+        return 0
       }
       case 'migrate': {
-        const result = await migrate(config);
+        const result = await migrate(config)
         console.log(
           result.applied.length > 0
             ? `Applied ${result.applied.length} migration(s): ${result.applied.join(', ')}`
-            : 'Nothing to apply.',
-        );
-        return 0;
+            : 'Nothing to apply.'
+        )
+        return 0
       }
       case 'pull': {
-        const result = await pull(config, { schemaFile: values['schema-file'] });
-        console.log(`Wrote ${result.schemaFile} (${result.tables} tables) and ${result.folder}`);
-        return 0;
+        const result = await pull(config, { schemaFile: values['schema-file'] })
+        console.log(
+          `Wrote ${result.schemaFile} (${result.tables} tables) and ${result.folder}`
+        )
+        return 0
       }
       case 'push': {
-        const confirm = values.yes ? acceptPlan : interactive ? confirmPlan : undefined;
+        const confirm = values.yes ? acceptPlan : interactive ? confirmPlan : undefined
         const result = await push(config, {
           confirm,
           resolveRename: interactive ? promptRename : undefined,
-          acceptDrops: values['accept-drops'],
-        });
+          acceptDrops: values['accept-drops']
+        })
         if (result.statements.length === 0) {
-          console.log('No schema changes.');
+          console.log('No schema changes.')
         } else if (result.applied) {
-          console.log(`Applied ${result.statements.length} statements.`);
+          console.log(`Applied ${result.statements.length} statements.`)
         } else {
-          if (!confirm) printPlan(result.statements);
-          console.log('Not applied. Re-run with --yes or confirm interactively.');
+          if (!confirm) printPlan(result.statements)
+          console.log('Not applied. Re-run with --yes or confirm interactively.')
         }
-        return 0;
+        return 0
       }
       default:
-        console.error(`Unknown command: ${command}\n\n${HELP}`);
-        return 1;
+        console.error(`Unknown command: ${command}\n\n${HELP}`)
+        return 1
     }
   } catch (error) {
     if (error instanceof DiffRefusedError) {
-      console.error(error.message);
-      return 1;
+      console.error(error.message)
+      return 1
     }
-    throw error;
+    throw error
   }
 }

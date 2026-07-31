@@ -2,13 +2,19 @@
   "name": "drizzle-spanner-kit",
   "version": "0.1.0",
   "description": "Migration CLI for drizzle-spanner: generate, migrate, pull and push against Google Cloud Spanner (GoogleSQL)",
-  "type": "module",
   "license": "MIT",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/brandhaug/drizzle-spanner.git",
     "directory": "packages/drizzle-spanner-kit"
   },
+  "bin": {
+    "drizzle-spanner-kit": "./dist/cli.js"
+  },
+  "files": [
+    "dist"
+  ],
+  "type": "module",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
   "exports": {
@@ -19,14 +25,11 @@
     },
     "./package.json": "./package.json"
   },
-  "bin": {
-    "drizzle-spanner-kit": "./dist/cli.js"
-  },
-  "files": [
-    "dist"
-  ],
   "scripts": {
     "build": "tsc -p tsconfig.build.json"
+  },
+  "devDependencies": {
+    "drizzle-spanner": "file:../.."
   },
   "peerDependencies": {
     "@google-cloud/spanner": ">=7.0.0",
@@ -37,9 +40,6 @@
     "@google-cloud/spanner": {
       "optional": true
     }
-  },
-  "devDependencies": {
-    "drizzle-spanner": "file:../.."
   },
   "engines": {
     "node": ">=22.18"

@@ -1,79 +1,81 @@
-import { describe, expect, it } from 'vitest';
-import { getTableName } from 'drizzle-orm/table';
-import { getTableColumns } from 'drizzle-orm/utils';
-import { int64, spannerTable, string } from '../../src/index.js';
-import { SpannerPrecisionError } from '../../src/index.js';
-import { IndexedColumn } from '../../src/indexes.js';
-import type { IndexBuilder } from '../../src/indexes.js';
+import { describe, expect, it } from 'vitest'
+import { getTableName } from 'drizzle-orm/table'
+import { getTableColumns } from 'drizzle-orm/utils'
+import { int64, spannerTable, string } from '../../src/index.js'
+import { SpannerPrecisionError } from '../../src/index.js'
+import { IndexedColumn } from '../../src/indexes.js'
+import type { IndexBuilder } from '../../src/indexes.js'
 
 describe('spannerTable', () => {
   it('builds a table with named columns', () => {
     const singers = spannerTable('singers', {
       id: string('id', { length: 36 }).primaryKey(),
-      name: string('name', { length: 'max' }).notNull(),
-    });
+      name: string('name', { length: 'max' }).notNull()
+    })
 
-    expect(getTableName(singers)).toBe('singers');
-    const columns = getTableColumns(singers);
-    expect(Object.keys(columns)).toEqual(['id', 'name']);
-    expect(singers.id.name).toBe('id');
-    expect(singers.id.primary).toBe(true);
-    expect(singers.name.notNull).toBe(true);
-  });
-});
+    expect(getTableName(singers)).toBe('singers')
+    const columns = getTableColumns(singers)
+    expect(Object.keys(columns)).toEqual(['id', 'name'])
+    expect(singers.id.name).toBe('id')
+    expect(singers.id.primary).toBe(true)
+    expect(singers.name.notNull).toBe(true)
+  })
+})
 
 describe('string', () => {
   it('renders STRING(n) and STRING(MAX)', () => {
     const t = spannerTable('t', {
       a: string('a', { length: 36 }),
-      b: string('b', { length: 'max' }),
-    });
-    expect(t.a.getSQLType()).toBe('STRING(36)');
-    expect(t.b.getSQLType()).toBe('STRING(MAX)');
-  });
+      b: string('b', { length: 'max' })
+    })
+    expect(t.a.getSQLType()).toBe('STRING(36)')
+    expect(t.b.getSQLType()).toBe('STRING(MAX)')
+  })
 
   it('defaultGenerateUuid marks the column as having a default', () => {
     const t = spannerTable('t', {
-      id: string('id', { length: 36 }).primaryKey().defaultGenerateUuid(),
-    });
-    expect(t.id.hasDefault).toBe(true);
-  });
-});
+      id: string('id', { length: 36 }).primaryKey().defaultGenerateUuid()
+    })
+    expect(t.id.hasDefault).toBe(true)
+  })
+})
 
 describe('int64', () => {
   it('renders INT64', () => {
-    const t = spannerTable('t', { n: int64('n') });
-    expect(t.n.getSQLType()).toBe('INT64');
-  });
+    const t = spannerTable('t', { n: int64('n') })
+    expect(t.n.getSQLType()).toBe('INT64')
+  })
 
   it('number mode decodes the driver Int wrapper to number', () => {
-    const t = spannerTable('t', { n: int64('n') });
-    expect(t.n.mapFromDriverValue({ value: '42' })).toBe(42);
-    expect(t.n.mapFromDriverValue(null)).toBeNull();
-  });
+    const t = spannerTable('t', { n: int64('n') })
+    expect(t.n.mapFromDriverValue({ value: '42' })).toBe(42)
+    expect(t.n.mapFromDriverValue(null)).toBeNull()
+  })
 
   it('number mode throws SpannerPrecisionError past 2^53-1', () => {
-    const t = spannerTable('t', { n: int64('n') });
+    const t = spannerTable('t', { n: int64('n') })
     expect(() => t.n.mapFromDriverValue({ value: '9007199254740993' })).toThrow(
-      SpannerPrecisionError,
-    );
-  });
+      SpannerPrecisionError
+    )
+  })
 
   it('bigint mode decodes to bigint across the full INT64 range', () => {
-    const t = spannerTable('t', { n: int64('n', { mode: 'bigint' }) });
-    expect(t.n.mapFromDriverValue({ value: '9223372036854775807' })).toBe(9223372036854775807n);
-  });
+    const t = spannerTable('t', { n: int64('n', { mode: 'bigint' }) })
+    expect(t.n.mapFromDriverValue({ value: '9223372036854775807' })).toBe(
+      9223372036854775807n
+    )
+  })
 
   it('bigint mode encodes bigint as a string for the driver', () => {
-    const t = spannerTable('t', { n: int64('n', { mode: 'bigint' }) });
-    expect(t.n.mapToDriverValue(9223372036854775807n)).toBe('9223372036854775807');
-  });
-});
+    const t = spannerTable('t', { n: int64('n', { mode: 'bigint' }) })
+    expect(t.n.mapToDriverValue(9223372036854775807n)).toBe('9223372036854775807')
+  })
+})
 
 describe('remaining column types', () => {
   it('renders the Spanner DDL type for every column', async () => {
     const { float64, float32, numeric, bytes, bool, date, timestamp, json, tokenlist } =
-      await import('../../src/index.js');
+      await import('../../src/index.js')
     const t = spannerTable('t', {
       f64: float64('f64'),
       f32: float32('f32'),
@@ -85,128 +87,134 @@ describe('remaining column types', () => {
       at: timestamp('at'),
       doc: json('doc'),
       tags: string('tags', { length: 'max' }).array(),
-      tokens: tokenlist('tokens'),
-    });
-    expect(t.f64.getSQLType()).toBe('FLOAT64');
-    expect(t.f32.getSQLType()).toBe('FLOAT32');
-    expect(t.num.getSQLType()).toBe('NUMERIC');
-    expect(t.bin.getSQLType()).toBe('BYTES(MAX)');
-    expect(t.bin2.getSQLType()).toBe('BYTES(1024)');
-    expect(t.flag.getSQLType()).toBe('BOOL');
-    expect(t.day.getSQLType()).toBe('DATE');
-    expect(t.at.getSQLType()).toBe('TIMESTAMP');
-    expect(t.doc.getSQLType()).toBe('JSON');
-    expect(t.tags.getSQLType()).toBe('ARRAY<STRING(MAX)>');
-    expect(t.tokens.getSQLType()).toBe('TOKENLIST');
-  });
+      tokens: tokenlist('tokens')
+    })
+    expect(t.f64.getSQLType()).toBe('FLOAT64')
+    expect(t.f32.getSQLType()).toBe('FLOAT32')
+    expect(t.num.getSQLType()).toBe('NUMERIC')
+    expect(t.bin.getSQLType()).toBe('BYTES(MAX)')
+    expect(t.bin2.getSQLType()).toBe('BYTES(1024)')
+    expect(t.flag.getSQLType()).toBe('BOOL')
+    expect(t.day.getSQLType()).toBe('DATE')
+    expect(t.at.getSQLType()).toBe('TIMESTAMP')
+    expect(t.doc.getSQLType()).toBe('JSON')
+    expect(t.tags.getSQLType()).toBe('ARRAY<STRING(MAX)>')
+    expect(t.tokens.getSQLType()).toBe('TOKENLIST')
+  })
 
   it('float64 unwraps driver Float wrappers', async () => {
-    const { float64 } = await import('../../src/index.js');
-    const t = spannerTable('t', { x: float64('x') });
-    expect(t.x.mapFromDriverValue({ value: 1.5 })).toBe(1.5);
-    expect(t.x.mapFromDriverValue(2.5)).toBe(2.5);
-  });
+    const { float64 } = await import('../../src/index.js')
+    const t = spannerTable('t', { x: float64('x') })
+    expect(t.x.mapFromDriverValue({ value: 1.5 })).toBe(1.5)
+    expect(t.x.mapFromDriverValue(2.5)).toBe(2.5)
+  })
 
   it('numeric decodes the driver Numeric wrapper to a string by default', async () => {
-    const { numeric } = await import('../../src/index.js');
-    const t = spannerTable('t', { x: numeric('x') });
-    expect(t.x.mapFromDriverValue({ value: '3.141592653' })).toBe('3.141592653');
-  });
+    const { numeric } = await import('../../src/index.js')
+    const t = spannerTable('t', { x: numeric('x') })
+    expect(t.x.mapFromDriverValue({ value: '3.141592653' })).toBe('3.141592653')
+  })
 
   it('numeric number mode decodes to number', async () => {
-    const { numeric } = await import('../../src/index.js');
-    const t = spannerTable('t', { x: numeric('x', { mode: 'number' }) });
-    expect(t.x.mapFromDriverValue({ value: '3.5' })).toBe(3.5);
-  });
+    const { numeric } = await import('../../src/index.js')
+    const t = spannerTable('t', { x: numeric('x', { mode: 'number' }) })
+    expect(t.x.mapFromDriverValue({ value: '3.5' })).toBe(3.5)
+  })
 
   it('date decodes to a YYYY-MM-DD string by default and Date in date mode', async () => {
-    const { date } = await import('../../src/index.js');
+    const { date } = await import('../../src/index.js')
     const t = spannerTable('t', {
       s: date('s'),
-      d: date('d', { mode: 'date' }),
-    });
-    expect(t.s.mapFromDriverValue(new Date('2026-07-29T00:00:00Z'))).toBe('2026-07-29');
+      d: date('d', { mode: 'date' })
+    })
+    expect(t.s.mapFromDriverValue(new Date('2026-07-29T00:00:00Z'))).toBe('2026-07-29')
     expect(t.d.mapFromDriverValue(new Date('2026-07-29T00:00:00Z'))).toEqual(
-      new Date('2026-07-29T00:00:00Z'),
-    );
-  });
+      new Date('2026-07-29T00:00:00Z')
+    )
+  })
 
   it('timestamp decodes PreciseDate to a plain Date', async () => {
-    const { timestamp } = await import('../../src/index.js');
-    const t = spannerTable('t', { at: timestamp('at') });
-    const decoded = t.at.mapFromDriverValue(new Date('2026-07-29T10:00:00Z'));
-    expect(decoded).toBeInstanceOf(Date);
-    expect((decoded as Date).toISOString()).toBe('2026-07-29T10:00:00.000Z');
-  });
+    const { timestamp } = await import('../../src/index.js')
+    const t = spannerTable('t', { at: timestamp('at') })
+    const decoded = t.at.mapFromDriverValue(new Date('2026-07-29T10:00:00Z'))
+    expect(decoded).toBeInstanceOf(Date)
+    expect((decoded as Date).toISOString()).toBe('2026-07-29T10:00:00.000Z')
+  })
 
   it('timestamp records the allowCommitTimestamp DDL option', async () => {
-    const { timestamp } = await import('../../src/index.js');
+    const { timestamp } = await import('../../src/index.js')
     const t = spannerTable('t', {
       at: timestamp('at', { allowCommitTimestamp: true }),
-      plain: timestamp('plain'),
-    });
-    expect((t.at as unknown as { allowCommitTimestamp: boolean }).allowCommitTimestamp).toBe(true);
-    expect((t.plain as unknown as { allowCommitTimestamp: boolean }).allowCommitTimestamp).toBe(
-      false,
-    );
-  });
+      plain: timestamp('plain')
+    })
+    expect(
+      (t.at as unknown as { allowCommitTimestamp: boolean }).allowCommitTimestamp
+    ).toBe(true)
+    expect(
+      (t.plain as unknown as { allowCommitTimestamp: boolean }).allowCommitTimestamp
+    ).toBe(false)
+  })
 
   it('array maps element values through the base column', async () => {
-    const { int64 } = await import('../../src/index.js');
-    const t = spannerTable('t', { ns: int64('ns').array() });
-    expect(t.ns.mapFromDriverValue([{ value: '1' }, { value: '2' }, null])).toEqual([1, 2, null]);
-  });
-});
+    const { int64 } = await import('../../src/index.js')
+    const t = spannerTable('t', { ns: int64('ns').array() })
+    expect(t.ns.mapFromDriverValue([{ value: '1' }, { value: '2' }, null])).toEqual([
+      1,
+      2,
+      null
+    ])
+  })
+})
 
 describe('extra config builders', () => {
   it('index captures nullFiltered, storing and key order', async () => {
-    const { index } = await import('../../src/index.js');
+    const { index } = await import('../../src/index.js')
     const t = spannerTable('t', {
       a: string('a', { length: 36 }).primaryKey(),
       b: string('b', { length: 'max' }),
-      c: string('c', { length: 'max' }),
-    });
-    const builders: IndexBuilder[] = [];
+      c: string('c', { length: 'max' })
+    })
+    const builders: IndexBuilder[] = []
     spannerTable(
       't2',
       {
         a: string('a', { length: 36 }).primaryKey(),
         b: string('b', { length: 'max' }),
-        c: string('c', { length: 'max' }),
+        c: string('c', { length: 'max' })
       },
       (cols) => {
-        const b = index('idx_b').on(cols.b.desc()).nullFiltered().storing(t.c);
-        builders.push(b);
-        return [b];
-      },
-    );
-    const config = builders[0]!.config;
-    expect(config.name).toBe('idx_b');
-    expect(config.nullFiltered).toBe(true);
-    const keyPart = config.columns[0]!;
-    expect(keyPart).toBeInstanceOf(IndexedColumn);
-    expect((keyPart as IndexedColumn).order).toBe('desc');
-    expect(config.storing).toHaveLength(1);
-  });
+        const b = index('idx_b').on(cols.b.desc()).nullFiltered().storing(t.c)
+        builders.push(b)
+        return [b]
+      }
+    )
+    const config = builders[0]!.config
+    expect(config.name).toBe('idx_b')
+    expect(config.nullFiltered).toBe(true)
+    const keyPart = config.columns[0]!
+    expect(keyPart).toBeInstanceOf(IndexedColumn)
+    expect((keyPart as IndexedColumn).order).toBe('desc')
+    expect(config.storing).toHaveLength(1)
+  })
 
   it('interleaveInParent validates the PK prefix at definition time', async () => {
-    const { primaryKey, interleaveInParent } = await import('../../src/index.js');
+    const { primaryKey, interleaveInParent } = await import('../../src/index.js')
     const singers = spannerTable('singers', {
-      id: string('id', { length: 36 }).primaryKey(),
-    });
+      id: string('id', { length: 36 }).primaryKey()
+    })
     // Valid: child PK starts with the parent PK.
     const albums = spannerTable(
       'albums',
       {
         id: string('id', { length: 36 }).notNull(),
-        albumId: string('album_id', { length: 36 }).notNull(),
+        albumId: string('album_id', { length: 36 }).notNull()
       },
       (t2) => [
         primaryKey({ columns: [t2.id, t2.albumId] }),
-        interleaveInParent(singers, { onDelete: 'cascade' }),
-      ],
-    );
-    expect(albums).toBeDefined();
+        interleaveInParent(singers, { onDelete: 'cascade' })
+      ]
+    )
+    expect(albums).toBeDefined()
 
     // Invalid: child PK does not start with the parent PK. Caught at compile
     // time too — the key order of `primaryKey({ columns })` is type-visible.
@@ -215,73 +223,75 @@ describe('extra config builders', () => {
         'broken',
         {
           id: string('id', { length: 36 }).notNull(),
-          other: string('other', { length: 36 }).notNull(),
+          other: string('other', { length: 36 }).notNull()
         },
         // @ts-expect-error — the child PK starts with `other`, not the parent PK `id`
         (t2) => [
           primaryKey({ columns: [t2.other, t2.id] }),
-          interleaveInParent(singers),
-        ],
-      ),
-    ).toThrow(/must start with the primary key/);
-  });
-});
+          interleaveInParent(singers)
+        ]
+      )
+    ).toThrow(/must start with the primary key/)
+  })
+})
 
 describe('primary-key alternatives', () => {
   it('generatedAsIdentity marks int64 columns as identity with a default', async () => {
     const t = spannerTable('t', {
       id: int64('id').primaryKey().generatedAsIdentity(),
-      big: int64('big', { mode: 'bigint' }).generatedAsIdentity(),
-    });
-    expect(t.id.hasDefault).toBe(true);
-    expect(t.id.generatedIdentity).toEqual({ type: 'byDefault' });
-    expect(t.big.generatedIdentity).toEqual({ type: 'byDefault' });
-  });
+      big: int64('big', { mode: 'bigint' }).generatedAsIdentity()
+    })
+    expect(t.id.hasDefault).toBe(true)
+    expect(t.id.generatedIdentity).toEqual({ type: 'byDefault' })
+    expect(t.big.generatedIdentity).toEqual({ type: 'byDefault' })
+  })
 
   it('tokenlist is a generated-column-only type', async () => {
-    const { tokenlist } = await import('../../src/index.js');
-    const { sql } = await import('drizzle-orm/sql');
+    const { tokenlist } = await import('../../src/index.js')
+    const { sql } = await import('drizzle-orm/sql')
     const t = spannerTable('docs', {
       id: string('id', { length: 36 }).primaryKey(),
       body: string('body', { length: 'max' }),
-      bodyTokens: tokenlist('body_tokens').generatedAlwaysAs(sql`TOKENIZE_FULLTEXT(body)`),
-    });
-    expect(t.bodyTokens.getSQLType()).toBe('TOKENLIST');
-    expect(t.bodyTokens.generated?.type).toBe('always');
-  });
-});
+      bodyTokens: tokenlist('body_tokens').generatedAlwaysAs(
+        sql`TOKENIZE_FULLTEXT(body)`
+      )
+    })
+    expect(t.bodyTokens.getSQLType()).toBe('TOKENLIST')
+    expect(t.bodyTokens.generated?.type).toBe('always')
+  })
+})
 
 describe('interleaveInParent compile-time check', () => {
   it('rejects a child that lacks the parent primary-key column', async () => {
-    const { interleaveInParent, primaryKey } = await import('../../src/index.js');
+    const { interleaveInParent, primaryKey } = await import('../../src/index.js')
     const parent = spannerTable('parent', {
-      id: string('id', { length: 36 }).primaryKey(),
-    });
+      id: string('id', { length: 36 }).primaryKey()
+    })
 
     // Valid: the child declares the parent's PK column with a matching type.
     spannerTable(
       'child_ok',
       {
         id: string('id', { length: 36 }).notNull(),
-        child: string('child', { length: 36 }).notNull(),
+        child: string('child', { length: 36 }).notNull()
       },
-      (t) => [primaryKey({ columns: [t.id, t.child] }), interleaveInParent(parent)],
-    );
+      (t) => [primaryKey({ columns: [t.id, t.child] }), interleaveInParent(parent)]
+    )
 
     expect(() =>
       spannerTable(
         'child_bad',
         {
-          other: string('other', { length: 36 }).primaryKey(),
+          other: string('other', { length: 36 }).primaryKey()
         },
         // @ts-expect-error — the child does not declare the parent PK column `id`
-        () => [interleaveInParent(parent)],
-      ),
-    ).toThrow(/must start with the primary key/);
-  });
+        () => [interleaveInParent(parent)]
+      )
+    ).toThrow(/must start with the primary key/)
+  })
 
   it('leaves key orders it cannot read to the runtime check', async () => {
-    const { interleaveInParent, primaryKey } = await import('../../src/index.js');
+    const { interleaveInParent, primaryKey } = await import('../../src/index.js')
     // The parent PK is composite, so its key order is not type-visible. The
     // child below violates the prefix rule and must still compile — a false
     // compile error here would reject legal schemas elsewhere.
@@ -289,10 +299,10 @@ describe('interleaveInParent compile-time check', () => {
       'composite_parent',
       {
         a: string('a', { length: 36 }).notNull(),
-        b: string('b', { length: 36 }).notNull(),
+        b: string('b', { length: 36 }).notNull()
       },
-      (t) => [primaryKey({ columns: [t.a, t.b] })],
-    );
+      (t) => [primaryKey({ columns: [t.a, t.b] })]
+    )
 
     expect(() =>
       spannerTable(
@@ -300,62 +310,70 @@ describe('interleaveInParent compile-time check', () => {
         {
           a: string('a', { length: 36 }).notNull(),
           b: string('b', { length: 36 }).notNull(),
-          c: string('c', { length: 36 }).notNull(),
+          c: string('c', { length: 36 }).notNull()
         },
-        (t) => [primaryKey({ columns: [t.b, t.a, t.c] }), interleaveInParent(parent)],
-      ),
-    ).toThrow(/must start with the primary key/);
-  });
-});
+        (t) => [primaryKey({ columns: [t.b, t.a, t.c] }), interleaveInParent(parent)]
+      )
+    ).toThrow(/must start with the primary key/)
+  })
+})
 
 describe('foreignKey', () => {
   it('captures columns, foreign columns and onDelete', async () => {
-    const { foreignKey, spannerTable: table, string: str } = await import('../../src/index.js');
+    const {
+      foreignKey,
+      spannerTable: table,
+      string: str
+    } = await import('../../src/index.js')
     const singers = table('singers', {
-      id: str('id', { length: 36 }).primaryKey(),
-    });
+      id: str('id', { length: 36 }).primaryKey()
+    })
     const albums = table(
       'albums',
       {
         id: str('id', { length: 36 }).primaryKey(),
-        singerId: str('singer_id', { length: 36 }).notNull(),
+        singerId: str('singer_id', { length: 36 }).notNull()
       },
       (t) => [
         foreignKey({
           name: 'fk_albums_singer',
           columns: [t.singerId],
-          foreignColumns: [singers.id],
-        }).onDelete('cascade'),
-      ],
-    );
-    const { ForeignKeyBuilder } = await import('../../src/index.js');
-    const { getTableExtraConfig } = await import('../../src/internal.js');
-    const entries = getTableExtraConfig(albums);
-    const fk = entries.find((entry) => entry instanceof ForeignKeyBuilder) as InstanceType<
-      typeof ForeignKeyBuilder
-    >;
-    expect(fk).toBeDefined();
-    expect(fk.config.name).toBe('fk_albums_singer');
-    expect(fk.config.columns.map((c) => c.name)).toEqual(['singer_id']);
-    expect(fk.config.foreignColumns.map((c) => c.name)).toEqual(['id']);
-    expect(fk.config.foreignTable).toBe(singers);
-    expect(fk.config.onDelete).toBe('cascade');
-  });
+          foreignColumns: [singers.id]
+        }).onDelete('cascade')
+      ]
+    )
+    const { ForeignKeyBuilder } = await import('../../src/index.js')
+    const { getTableExtraConfig } = await import('../../src/internal.js')
+    const entries = getTableExtraConfig(albums)
+    const fk = entries.find(
+      (entry) => entry instanceof ForeignKeyBuilder
+    ) as InstanceType<typeof ForeignKeyBuilder>
+    expect(fk).toBeDefined()
+    expect(fk.config.name).toBe('fk_albums_singer')
+    expect(fk.config.columns.map((c) => c.name)).toEqual(['singer_id'])
+    expect(fk.config.foreignColumns.map((c) => c.name)).toEqual(['id'])
+    expect(fk.config.foreignTable).toBe(singers)
+    expect(fk.config.onDelete).toBe('cascade')
+  })
 
   it('defaults onDelete to noAction', async () => {
-    const { foreignKey, spannerTable: table, string: str } = await import('../../src/index.js');
-    const parent = table('p', { id: str('id', { length: 36 }).primaryKey() });
-    const fk = foreignKey({ columns: [], foreignColumns: [parent.id] });
-    expect(fk.config.onDelete).toBe('noAction');
-  });
-});
+    const {
+      foreignKey,
+      spannerTable: table,
+      string: str
+    } = await import('../../src/index.js')
+    const parent = table('p', { id: str('id', { length: 36 }).primaryKey() })
+    const fk = foreignKey({ columns: [], foreignColumns: [parent.id] })
+    expect(fk.config.onDelete).toBe('noAction')
+  })
+})
 
 describe('check', () => {
   it('captures name and expression', async () => {
-    const { check } = await import('../../src/index.js');
-    const { sql } = await import('drizzle-orm/sql');
-    const builder = check('positive_plays', sql`plays >= 0`);
-    expect(builder.name).toBe('positive_plays');
-    expect(builder.value).toBeDefined();
-  });
-});
+    const { check } = await import('../../src/index.js')
+    const { sql } = await import('drizzle-orm/sql')
+    const builder = check('positive_plays', sql`plays >= 0`)
+    expect(builder.name).toBe('positive_plays')
+    expect(builder.value).toBeDefined()
+  })
+})

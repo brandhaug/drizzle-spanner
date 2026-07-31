@@ -1,6 +1,6 @@
-import { describe, expect, it } from 'vitest';
-import { renderSchemaModule } from '../../src/codegen.js';
-import type { SpannerEntity } from '../../src/snapshot.js';
+import { describe, expect, it } from 'vitest'
+import { renderSchemaModule } from '../../src/codegen.js'
+import type { SpannerEntity } from '../../src/snapshot.js'
 
 describe('renderSchemaModule', () => {
   it('renders tables with columns, keys, interleaving, indexes, constraints and sequences', () => {
@@ -16,7 +16,7 @@ describe('renderSchemaModule', () => {
         default: 'GENERATE_UUID()',
         generated: null,
         generatedIdentity: false,
-        allowCommitTimestamp: false,
+        allowCommitTimestamp: false
       },
       {
         entityType: 'columns',
@@ -27,7 +27,7 @@ describe('renderSchemaModule', () => {
         default: null,
         generated: null,
         generatedIdentity: false,
-        allowCommitTimestamp: false,
+        allowCommitTimestamp: false
       },
       {
         entityType: 'columns',
@@ -38,10 +38,14 @@ describe('renderSchemaModule', () => {
         default: null,
         generated: null,
         generatedIdentity: false,
-        allowCommitTimestamp: true,
+        allowCommitTimestamp: true
       },
       { entityType: 'pks', table: 'singers', columns: [{ name: 'id', order: 'asc' }] },
-      { entityType: 'tables', name: 'albums', interleave: { parent: 'singers', onDelete: 'cascade' } },
+      {
+        entityType: 'tables',
+        name: 'albums',
+        interleave: { parent: 'singers', onDelete: 'cascade' }
+      },
       {
         entityType: 'columns',
         table: 'albums',
@@ -51,7 +55,7 @@ describe('renderSchemaModule', () => {
         default: null,
         generated: null,
         generatedIdentity: false,
-        allowCommitTimestamp: false,
+        allowCommitTimestamp: false
       },
       {
         entityType: 'columns',
@@ -62,7 +66,7 @@ describe('renderSchemaModule', () => {
         default: null,
         generated: null,
         generatedIdentity: false,
-        allowCommitTimestamp: false,
+        allowCommitTimestamp: false
       },
       {
         entityType: 'columns',
@@ -73,15 +77,15 @@ describe('renderSchemaModule', () => {
         default: null,
         generated: null,
         generatedIdentity: false,
-        allowCommitTimestamp: false,
+        allowCommitTimestamp: false
       },
       {
         entityType: 'pks',
         table: 'albums',
         columns: [
           { name: 'id', order: 'asc' },
-          { name: 'album_id', order: 'desc' },
-        ],
+          { name: 'album_id', order: 'desc' }
+        ]
       },
       {
         entityType: 'indexes',
@@ -90,7 +94,7 @@ describe('renderSchemaModule', () => {
         columns: [{ name: 'plays', order: 'asc' }],
         unique: false,
         nullFiltered: true,
-        storing: ['album_id'],
+        storing: ['album_id']
       },
       {
         entityType: 'fks',
@@ -99,15 +103,15 @@ describe('renderSchemaModule', () => {
         columns: ['id'],
         foreignTable: 'singers',
         foreignColumns: ['id'],
-        onDelete: 'cascade',
+        onDelete: 'cascade'
       },
       {
         entityType: 'checks',
         table: 'albums',
         name: 'positive_plays',
-        value: 'plays >= 0',
-      },
-    ];
+        value: 'plays >= 0'
+      }
+    ]
 
     expect(renderSchemaModule(entities)).toBe(`import { sql } from 'drizzle-orm/sql';
 import {
@@ -150,8 +154,8 @@ export const albums = spannerTable(
     check('positive_plays', sql\`plays >= 0\`),
   ],
 );
-`);
-  });
+`)
+  })
 
   it('renders single ascending primary keys inline on the column', () => {
     const entities: SpannerEntity[] = [
@@ -165,16 +169,16 @@ export const albums = spannerTable(
         default: null,
         generated: null,
         generatedIdentity: true,
-        allowCommitTimestamp: false,
+        allowCommitTimestamp: false
       },
-      { entityType: 'pks', table: 't', columns: [{ name: 'id', order: 'asc' }] },
-    ];
-    const source = renderSchemaModule(entities);
+      { entityType: 'pks', table: 't', columns: [{ name: 'id', order: 'asc' }] }
+    ]
+    const source = renderSchemaModule(entities)
     expect(source).toContain(
-      "id: int64('id').notNull().generatedAsIdentity().primaryKey(),",
-    );
-    expect(source).not.toContain('primaryKey({');
-  });
+      "id: int64('id').notNull().generatedAsIdentity().primaryKey(),"
+    )
+    expect(source).not.toContain('primaryKey({')
+  })
 
   it('renders arrays, generated columns and plain SQL defaults', () => {
     const entities: SpannerEntity[] = [
@@ -188,7 +192,7 @@ export const albums = spannerTable(
         default: null,
         generated: null,
         generatedIdentity: false,
-        allowCommitTimestamp: false,
+        allowCommitTimestamp: false
       },
       {
         entityType: 'columns',
@@ -199,7 +203,7 @@ export const albums = spannerTable(
         default: null,
         generated: null,
         generatedIdentity: false,
-        allowCommitTimestamp: false,
+        allowCommitTimestamp: false
       },
       {
         entityType: 'columns',
@@ -210,7 +214,7 @@ export const albums = spannerTable(
         default: 'CURRENT_TIMESTAMP()',
         generated: null,
         generatedIdentity: false,
-        allowCommitTimestamp: false,
+        allowCommitTimestamp: false
       },
       {
         entityType: 'columns',
@@ -221,15 +225,17 @@ export const albums = spannerTable(
         default: null,
         generated: { as: 'TOKENIZE_FULLTEXT(id)', stored: true },
         generatedIdentity: false,
-        allowCommitTimestamp: false,
+        allowCommitTimestamp: false
       },
-      { entityType: 'pks', table: 't', columns: [{ name: 'id', order: 'asc' }] },
-    ];
-    const source = renderSchemaModule(entities);
-    expect(source).toContain("tags: string('tags', { length: 64 }).array(),");
-    expect(source).toContain('created: timestamp(\'created\').default(sql`CURRENT_TIMESTAMP()`),');
+      { entityType: 'pks', table: 't', columns: [{ name: 'id', order: 'asc' }] }
+    ]
+    const source = renderSchemaModule(entities)
+    expect(source).toContain("tags: string('tags', { length: 64 }).array(),")
     expect(source).toContain(
-      "shadow: tokenlist('shadow').generatedAlwaysAs(sql`TOKENIZE_FULLTEXT(id)`),",
-    );
-  });
-});
+      "created: timestamp('created').default(sql`CURRENT_TIMESTAMP()`),"
+    )
+    expect(source).toContain(
+      "shadow: tokenlist('shadow').generatedAlwaysAs(sql`TOKENIZE_FULLTEXT(id)`),"
+    )
+  })
+})

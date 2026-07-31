@@ -1,31 +1,38 @@
-import { entityKind, is } from 'drizzle-orm/entity';
-import { QueryPromise } from 'drizzle-orm/query-promise';
-import type { Query, SQLWrapper } from 'drizzle-orm/sql';
-import { Param, SQL } from 'drizzle-orm/sql';
-import type { SpannerDialect } from '../dialect.js';
-import type { SelectedFieldsOrdered } from '../orm-internal.js';
-import { orderSelectedFields } from '../orm-internal.js';
-import { SpannerInvalidArgumentError } from '../errors.js';
-import type { SpannerMutationSink } from '../mutations.js';
-import { MUTATION_MODE_READ_MESSAGE, MUTATION_MODE_RETURNING_MESSAGE } from '../mutations.js';
-import type { SpannerPreparedQuery, SpannerQueryMetadata, SpannerSession } from '../session.js';
-import { NO_CLIENT_MESSAGE } from '../session.js';
-import type { SpannerTimestampBounds } from '../staleness.js';
-import type { SpannerColumns, SpannerTable } from '../table.js';
-import { TableColumns } from '../symbols.js';
-import type { SpannerSelectedFields } from './select.js';
+import { entityKind, is } from 'drizzle-orm/entity'
+import { QueryPromise } from 'drizzle-orm/query-promise'
+import type { Query, SQLWrapper } from 'drizzle-orm/sql'
+import { Param, SQL } from 'drizzle-orm/sql'
+import type { SpannerDialect } from '../dialect.js'
+import type { SelectedFieldsOrdered } from '../orm-internal.js'
+import { orderSelectedFields } from '../orm-internal.js'
+import { SpannerInvalidArgumentError } from '../errors.js'
+import type { SpannerMutationSink } from '../mutations.js'
+import {
+  MUTATION_MODE_READ_MESSAGE,
+  MUTATION_MODE_RETURNING_MESSAGE
+} from '../mutations.js'
+import type {
+  SpannerPreparedQuery,
+  SpannerQueryMetadata,
+  SpannerSession
+} from '../session.js'
+import { NO_CLIENT_MESSAGE } from '../session.js'
+import type { SpannerTimestampBounds } from '../staleness.js'
+import type { SpannerColumns, SpannerTable } from '../table.js'
+import { TableColumns } from '../symbols.js'
+import type { SpannerSelectedFields } from './select.js'
 
 /** Wraps plain values in `Param` bound to their table column; SQL passes through. */
 export function mapRowToParams(
   columns: SpannerColumns,
-  row: Record<string, unknown>,
+  row: Record<string, unknown>
 ): Record<string, Param | SQL> {
-  const mapped: Record<string, Param | SQL> = {};
+  const mapped: Record<string, Param | SQL> = {}
   for (const [key, value] of Object.entries(row)) {
-    if (value === undefined) continue;
-    mapped[key] = is(value, SQL) ? value : new Param(value, columns[key]);
+    if (value === undefined) continue
+    mapped[key] = is(value, SQL) ? value : new Param(value, columns[key])
   }
-  return mapped;
+  return mapped
 }
 
 /**
@@ -36,44 +43,44 @@ export abstract class SpannerQueryBase<TResult>
   extends QueryPromise<TResult>
   implements SQLWrapper
 {
-  static override readonly [entityKind]: string = 'SpannerQueryBase';
+  static override readonly [entityKind]: string = 'SpannerQueryBase'
 
-  declare readonly _: { readonly dialect: 'spanner'; readonly result: TResult };
+  declare readonly _: { readonly dialect: 'spanner'; readonly result: TResult }
 
   /** Set by `SpannerSelect.withStaleness`; undefined for every other builder. */
-  protected stalenessBounds: SpannerTimestampBounds | undefined;
+  protected stalenessBounds: SpannerTimestampBounds | undefined
 
   constructor(
     private readonly session: SpannerSession | undefined,
     protected readonly dialect: SpannerDialect,
-    private readonly queryType: SpannerQueryMetadata['type'],
+    private readonly queryType: SpannerQueryMetadata['type']
   ) {
-    super();
+    super()
   }
 
   /** @internal */
-  abstract getSQL(): SQL;
+  abstract getSQL(): SQL
 
   /** The selection rows map through; undefined for DML without `.returning()`. */
-  protected abstract selection(): SelectedFieldsOrdered | undefined;
+  protected abstract selection(): SelectedFieldsOrdered | undefined
 
   toSQL(): Query {
-    const { sql, params } = this.dialect.sqlToQuery(this.getSQL());
-    return { sql, params };
+    const { sql, params } = this.dialect.sqlToQuery(this.getSQL())
+    return { sql, params }
   }
 
   /** @internal */
   _prepare(): SpannerPreparedQuery<TResult> {
     if (!this.session) {
-      throw new Error(NO_CLIENT_MESSAGE);
+      throw new Error(NO_CLIENT_MESSAGE)
     }
-    const fields = this.selection();
+    const fields = this.selection()
     return this.session.prepareQuery<TResult>(
       this.dialect.sqlToQuery(this.getSQL()),
       fields,
       fields ? undefined : () => undefined as TResult,
-      { type: this.queryType, staleness: this.stalenessBounds },
-    );
+      { type: this.queryType, staleness: this.stalenessBounds }
+    )
   }
 
   /**
@@ -81,23 +88,23 @@ export abstract class SpannerQueryBase<TResult>
    * the default covers reads, which have no mutation form.
    */
   protected writeMutation(_sink: SpannerMutationSink): void {
-    throw new SpannerInvalidArgumentError({ message: MUTATION_MODE_READ_MESSAGE });
+    throw new SpannerInvalidArgumentError({ message: MUTATION_MODE_READ_MESSAGE })
   }
 
   override execute(): Promise<TResult> {
-    const sink = this.session?.mutationSink;
+    const sink = this.session?.mutationSink
     if (sink) {
-      this.writeMutation(sink);
-      return Promise.resolve(undefined as TResult);
+      this.writeMutation(sink)
+      return Promise.resolve(undefined as TResult)
     }
-    return this._prepare().execute();
+    return this._prepare().execute()
   }
 }
 
 /** Config shape the three DML builders share; each adds its own value fields. */
 export interface SpannerDmlConfig {
-  table: SpannerTable;
-  returning?: SelectedFieldsOrdered;
+  table: SpannerTable
+  returning?: SelectedFieldsOrdered
 }
 
 /**
@@ -106,36 +113,40 @@ export interface SpannerDmlConfig {
  * `returning()` overloads and their mutation compilation.
  */
 export abstract class SpannerDmlBase<TResult> extends SpannerQueryBase<TResult> {
-  static override readonly [entityKind]: string = 'SpannerDmlBase';
+  static override readonly [entityKind]: string = 'SpannerDmlBase'
 
-  protected abstract readonly config: SpannerDmlConfig;
+  protected abstract readonly config: SpannerDmlConfig
 
   /** Shared body of the builders' `returning()` overloads. */
-  protected setReturning(fields: SpannerSelectedFields = this.config.table[TableColumns]): this {
-    this.config.returning = orderSelectedFields(fields);
-    return this;
+  protected setReturning(
+    fields: SpannerSelectedFields = this.config.table[TableColumns]
+  ): this {
+    this.config.returning = orderSelectedFields(fields)
+    return this
   }
 
   protected selection(): SelectedFieldsOrdered | undefined {
-    return this.config.returning;
+    return this.config.returning
   }
 
   /** Runtime backstop for `.returning()` inside a bufferedMutations transaction. */
   protected assertNoReturningInMutation(): void {
     if (this.config.returning) {
-      throw new SpannerInvalidArgumentError({ message: MUTATION_MODE_RETURNING_MESSAGE });
+      throw new SpannerInvalidArgumentError({
+        message: MUTATION_MODE_RETURNING_MESSAGE
+      })
     }
   }
 }
 
 /** DML that takes a WHERE clause: update and delete. */
 export abstract class SpannerFilteredDmlBase<TResult> extends SpannerDmlBase<TResult> {
-  static override readonly [entityKind]: string = 'SpannerFilteredDmlBase';
+  static override readonly [entityKind]: string = 'SpannerFilteredDmlBase'
 
-  protected abstract override readonly config: SpannerDmlConfig & { where?: SQL };
+  protected abstract override readonly config: SpannerDmlConfig & { where?: SQL }
 
   where(where: SQL | undefined): this {
-    this.config.where = where;
-    return this;
+    this.config.where = where
+    return this
   }
 }
