@@ -1,31 +1,35 @@
-import { entityKind } from 'drizzle-orm/entity';
-import { TransactionRollbackError } from 'drizzle-orm/errors';
-import type { AnyRelations, EmptyRelations } from 'drizzle-orm/relations';
-import type { SQL } from 'drizzle-orm/sql';
-import type { SpannerDialect } from './dialect.js';
+import { entityKind } from 'drizzle-orm/entity'
+import { TransactionRollbackError } from 'drizzle-orm/errors'
+import type { AnyRelations, EmptyRelations } from 'drizzle-orm/relations'
+import type { SQL } from 'drizzle-orm/sql'
+import type { SpannerDialect } from './dialect.js'
 import {
   GrpcStatus,
   SpannerAbortedError,
   SpannerInvalidArgumentError,
-  wrapSpannerError,
-} from './errors.js';
-import type { SpannerMultiUseStaleness, SpannerTimestampBounds } from './staleness.js';
-import { toTimestampBounds } from './staleness.js';
-import type { SpannerDriverRow, SpannerQueryRunner, SpannerSqlRequest } from './session.js';
-import { NO_CLIENT_MESSAGE, SpannerSession } from './session.js';
-import type { SpannerMutationSink } from './mutations.js';
-import { MUTATION_MODE_READ_MESSAGE } from './mutations.js';
-import { unwrapDriverWrapper } from './columns/common.js';
-import { SpannerDelete } from './query-builders/delete.js';
-import { SpannerInsertBuilder } from './query-builders/insert.js';
-import { SpannerRelationalQueryBuilder } from './query-builders/query.js';
+  wrapSpannerError
+} from './errors.js'
+import type { SpannerMultiUseStaleness, SpannerTimestampBounds } from './staleness.js'
+import { toTimestampBounds } from './staleness.js'
+import type {
+  SpannerDriverRow,
+  SpannerQueryRunner,
+  SpannerSqlRequest
+} from './session.js'
+import { NO_CLIENT_MESSAGE, SpannerSession } from './session.js'
+import type { SpannerMutationSink } from './mutations.js'
+import { MUTATION_MODE_READ_MESSAGE } from './mutations.js'
+import { unwrapDriverWrapper } from './columns/common.js'
+import { SpannerDelete } from './query-builders/delete.js'
+import { SpannerInsertBuilder } from './query-builders/insert.js'
+import { SpannerRelationalQueryBuilder } from './query-builders/query.js'
 import type {
   SpannerSelectedFields,
-  SpannerTransactionSelectBuilder,
-} from './query-builders/select.js';
-import { SpannerSelectBuilder } from './query-builders/select.js';
-import { SpannerUpdateBuilder } from './query-builders/update.js';
-import type { AnySpannerTable, SpannerTable } from './table.js';
+  SpannerTransactionSelectBuilder
+} from './query-builders/select.js'
+import { SpannerSelectBuilder } from './query-builders/select.js'
+import { SpannerUpdateBuilder } from './query-builders/update.js'
+import type { AnySpannerTable, SpannerTable } from './table.js'
 
 /**
  * Structural view of the `@google-cloud/spanner` surfaces this adapter uses.
@@ -33,40 +37,42 @@ import type { AnySpannerTable, SpannerTable } from './table.js';
  * a hard import so unit tests and `drizzle.mock()` need no driver install.
  */
 export interface SpannerDriverTransaction {
-  run(request: SpannerSqlRequest): Promise<[SpannerDriverRow[], ...unknown[]]>;
-  commit(): Promise<unknown>;
-  rollback(): Promise<unknown>;
+  run(request: SpannerSqlRequest): Promise<[SpannerDriverRow[], ...unknown[]]>
+  commit(): Promise<unknown>
+  rollback(): Promise<unknown>
   /** Mutation buffer used by the bufferedMutations transaction mode. */
-  insert(table: string, rows: Record<string, unknown>[]): void;
-  update(table: string, rows: Record<string, unknown>[]): void;
-  upsert(table: string, rows: Record<string, unknown>[]): void;
-  deleteRows(table: string, keys: unknown[][]): void;
+  insert(table: string, rows: Record<string, unknown>[]): void
+  update(table: string, rows: Record<string, unknown>[]): void
+  upsert(table: string, rows: Record<string, unknown>[]): void
+  deleteRows(table: string, keys: unknown[][]): void
 }
 
 /** Options the driver's transaction runner accepts (`RunTransactionOptions`). */
 export interface SpannerDriverRunTransactionOptions {
-  timeout?: number;
+  timeout?: number
 }
 
 /** A read-only snapshot from `database.getSnapshot`. */
 export interface SpannerDriverSnapshot {
-  run(request: SpannerSqlRequest): Promise<[SpannerDriverRow[], ...unknown[]]>;
-  end(): void;
+  run(request: SpannerSqlRequest): Promise<[SpannerDriverRow[], ...unknown[]]>
+  end(): void
 }
 
 export interface SpannerDriverDatabase {
   run(
     request: SpannerSqlRequest,
-    bounds?: SpannerTimestampBounds,
-  ): Promise<[SpannerDriverRow[], ...unknown[]]>;
-  runTransactionAsync<T>(runFn: (transaction: SpannerDriverTransaction) => Promise<T>): Promise<T>;
+    bounds?: SpannerTimestampBounds
+  ): Promise<[SpannerDriverRow[], ...unknown[]]>
+  runTransactionAsync<T>(
+    runFn: (transaction: SpannerDriverTransaction) => Promise<T>
+  ): Promise<T>
   runTransactionAsync<T>(
     options: SpannerDriverRunTransactionOptions,
-    runFn: (transaction: SpannerDriverTransaction) => Promise<T>,
-  ): Promise<T>;
+    runFn: (transaction: SpannerDriverTransaction) => Promise<T>
+  ): Promise<T>
   getSnapshot(
-    bounds?: SpannerTimestampBounds,
-  ): Promise<readonly [SpannerDriverSnapshot, ...unknown[]]>;
+    bounds?: SpannerTimestampBounds
+  ): Promise<readonly [SpannerDriverSnapshot, ...unknown[]]>
 }
 
 /** Reads on `database.run`; each standalone DML statement in its own read-write transaction. */
@@ -76,31 +82,33 @@ class DatabaseRunner {
   async run(
     request: SpannerSqlRequest,
     isDml: boolean,
-    staleness?: SpannerTimestampBounds,
+    staleness?: SpannerTimestampBounds
   ): Promise<SpannerDriverRow[]> {
     if (!isDml) {
       const [rows] = staleness
         ? await this.database.run(request, staleness)
-        : await this.database.run(request);
-      return rows;
+        : await this.database.run(request)
+      return rows
     }
     // database.run is read-only; DML (with THEN RETURN) must go through a
     // read-write transaction, and txn.run (not runUpdate) yields the rows.
     return this.database.runTransactionAsync(async (transaction) => {
-      const [rows] = await transaction.run(request);
-      await transaction.commit();
-      return rows;
-    });
+      const [rows] = await transaction.run(request)
+      await transaction.commit()
+      return rows
+    })
   }
 }
 
 /** A single-use bounded read cannot run on an open transaction of any kind. */
-function rejectStalenessInTransaction(staleness: SpannerTimestampBounds | undefined): void {
+function rejectStalenessInTransaction(
+  staleness: SpannerTimestampBounds | undefined
+): void {
   if (staleness) {
     throw new SpannerInvalidArgumentError({
       message:
-        'withStaleness is a single-use bounded read and cannot run inside a transaction; run it on the database, or give the read-only transaction a staleness bound instead',
-    });
+        'withStaleness is a single-use bounded read and cannot run inside a transaction; run it on the database, or give the read-only transaction a staleness bound instead'
+    })
   }
 }
 
@@ -111,11 +119,11 @@ class TransactionRunner {
   async run(
     request: SpannerSqlRequest,
     _isDml: boolean,
-    staleness?: SpannerTimestampBounds,
+    staleness?: SpannerTimestampBounds
   ): Promise<SpannerDriverRow[]> {
-    rejectStalenessInTransaction(staleness);
-    const [rows] = await this.transaction.run(request);
-    return rows;
+    rejectStalenessInTransaction(staleness)
+    const [rows] = await this.transaction.run(request)
+    return rows
   }
 }
 
@@ -126,17 +134,17 @@ class SnapshotRunner {
   async run(
     request: SpannerSqlRequest,
     isDml: boolean,
-    staleness?: SpannerTimestampBounds,
+    staleness?: SpannerTimestampBounds
   ): Promise<SpannerDriverRow[]> {
     if (isDml) {
       throw new SpannerInvalidArgumentError({
         message:
-          'DML is not allowed in a read-only transaction; use a read-write db.transaction for writes',
-      });
+          'DML is not allowed in a read-only transaction; use a read-write db.transaction for writes'
+      })
     }
-    rejectStalenessInTransaction(staleness);
-    const [rows] = await this.snapshot.run(request);
-    return rows;
+    rejectStalenessInTransaction(staleness)
+    const [rows] = await this.snapshot.run(request)
+    return rows
   }
 }
 
@@ -146,18 +154,18 @@ class SnapshotRunner {
  */
 class MutationModeRunner {
   run(request: SpannerSqlRequest, isDml: boolean): Promise<SpannerDriverRow[]> {
-    void request;
+    void request
     throw new SpannerInvalidArgumentError({
       message: isDml
         ? 'Statements do not execute inside a bufferedMutations transaction; the insert/update/delete builders compile to mutations, and raw SQL needs a read-write transaction'
-        : MUTATION_MODE_READ_MESSAGE,
-    });
+        : MUTATION_MODE_READ_MESSAGE
+    })
   }
 }
 
 class MockRunner {
   run(): Promise<SpannerDriverRow[]> {
-    throw new Error(NO_CLIENT_MESSAGE);
+    throw new Error(NO_CLIENT_MESSAGE)
   }
 }
 
@@ -176,32 +184,32 @@ class MaxRetriesExhaustedError extends Error {}
  * stable when the cache integration lands.
  */
 export interface SpannerDatabaseOptions {
-  relations?: AnyRelations;
-  cache?: unknown;
+  relations?: AnyRelations
+  cache?: unknown
 }
 
 /** `db.query.<table>` builders derived from the `relations` config. */
 export type SpannerRelationalQueries<TRelations extends AnyRelations> = {
-  [K in keyof TRelations]: SpannerRelationalQueryBuilder<TRelations, TRelations[K]>;
-};
+  [K in keyof TRelations]: SpannerRelationalQueryBuilder<TRelations, TRelations[K]>
+}
 
 /** Options for a read-write `db.transaction`. */
 export interface SpannerTransactionOptions {
   /** ABORTED re-executions allowed on top of the first attempt. */
-  maxRetries?: number;
+  maxRetries?: number
   /** Overall deadline for the driver's retry loop, in milliseconds. */
-  timeout?: number;
+  timeout?: number
 }
 
 /** Options for a read-only `db.transaction` over the snapshot API. */
 export interface SpannerReadOnlyTransactionOptions {
-  readOnly: true;
+  readOnly: true
   /**
    * Timestamp bound of the snapshot; omitted means a strong read. Single-use
    * bounds (`maxStaleness`, `minReadTimestamp`) are excluded at the type
    * level — Spanner rejects them on multi-use snapshots.
    */
-  staleness?: SpannerMultiUseStaleness;
+  staleness?: SpannerMultiUseStaleness
 }
 
 /**
@@ -209,19 +217,21 @@ export interface SpannerReadOnlyTransactionOptions {
  * DML is absent at the type level and the session throws a typed error as
  * the runtime backstop.
  */
-export interface SpannerReadOnlyTransaction<TRelations extends AnyRelations = EmptyRelations> {
-  select(): SpannerTransactionSelectBuilder<undefined>;
+export interface SpannerReadOnlyTransaction<
+  TRelations extends AnyRelations = EmptyRelations
+> {
+  select(): SpannerTransactionSelectBuilder<undefined>
   select<TSelection extends SpannerSelectedFields>(
-    fields: TSelection,
-  ): SpannerTransactionSelectBuilder<TSelection>;
-  $count(table: AnySpannerTable | SQL, where?: SQL): Promise<number>;
-  execute<T = Record<string, unknown>[]>(query: SQL): Promise<T>;
-  query: SpannerRelationalQueries<TRelations>;
+    fields: TSelection
+  ): SpannerTransactionSelectBuilder<TSelection>
+  $count(table: AnySpannerTable | SQL, where?: SQL): Promise<number>
+  execute<T = Record<string, unknown>[]>(query: SQL): Promise<T>
+  query: SpannerRelationalQueries<TRelations>
 }
 
 /** Options for a `db.transaction` that buffers mutations until commit. */
 export interface SpannerMutationTransactionOptions {
-  mode: 'bufferedMutations';
+  mode: 'bufferedMutations'
 }
 
 /**
@@ -230,10 +240,10 @@ export interface SpannerMutationTransactionOptions {
  * runtime backstop, including for `.returning()`.
  */
 export interface SpannerMutationTransaction {
-  insert<TTable extends AnySpannerTable>(table: TTable): SpannerInsertBuilder<TTable>;
-  update<TTable extends AnySpannerTable>(table: TTable): SpannerUpdateBuilder<TTable>;
-  delete<TTable extends AnySpannerTable>(table: TTable): SpannerDelete<TTable, void>;
-  rollback(): never;
+  insert<TTable extends AnySpannerTable>(table: TTable): SpannerInsertBuilder<TTable>
+  update<TTable extends AnySpannerTable>(table: TTable): SpannerUpdateBuilder<TTable>
+  delete<TTable extends AnySpannerTable>(table: TTable): SpannerDelete<TTable, void>
+  rollback(): never
 }
 
 /**
@@ -241,15 +251,14 @@ export interface SpannerMutationTransaction {
  * `SpannerTransaction` except that its select type omits `withStaleness`
  * (single-use bounded reads cannot run on an open transaction).
  */
-export type SpannerReadWriteTransaction<TRelations extends AnyRelations = EmptyRelations> = Omit<
-  SpannerTransaction<TRelations>,
-  'select'
-> & {
-  select(): SpannerTransactionSelectBuilder<undefined>;
+export type SpannerReadWriteTransaction<
+  TRelations extends AnyRelations = EmptyRelations
+> = Omit<SpannerTransaction<TRelations>, 'select'> & {
+  select(): SpannerTransactionSelectBuilder<undefined>
   select<TSelection extends SpannerSelectedFields>(
-    fields: TSelection,
-  ): SpannerTransactionSelectBuilder<TSelection>;
-};
+    fields: TSelection
+  ): SpannerTransactionSelectBuilder<TSelection>
+}
 
 /**
  * Query surface shared by the database and the transaction objects. Holding
@@ -258,10 +267,10 @@ export type SpannerReadWriteTransaction<TRelations extends AnyRelations = EmptyR
  * inherits.
  */
 export class SpannerDatabaseCore<TRelations extends AnyRelations = EmptyRelations> {
-  static readonly [entityKind]: string = 'SpannerDatabaseCore';
+  static readonly [entityKind]: string = 'SpannerDatabaseCore'
 
   /** Relational queries over the `relations` config: `db.query.<table>.findMany(...)`. */
-  readonly query: SpannerRelationalQueries<TRelations>;
+  readonly query: SpannerRelationalQueries<TRelations>
 
   constructor(
     /** @internal */
@@ -270,68 +279,80 @@ export class SpannerDatabaseCore<TRelations extends AnyRelations = EmptyRelation
     readonly session: SpannerSession,
     readonly $client: SpannerDriverDatabase | undefined,
     /** @internal */
-    readonly options: SpannerDatabaseOptions = {},
+    readonly options: SpannerDatabaseOptions = {}
   ) {
-    const query = {} as Record<string, SpannerRelationalQueryBuilder<TRelations, never>>;
+    const query = {} as Record<string, SpannerRelationalQueryBuilder<TRelations, never>>
     for (const [tableName, tableConfig] of Object.entries(options.relations ?? {})) {
       query[tableName] = new SpannerRelationalQueryBuilder(
         options.relations!,
         tableConfig.table as SpannerTable,
         tableConfig,
         dialect,
-        session,
-      );
+        session
+      )
     }
-    this.query = query as SpannerRelationalQueries<TRelations>;
+    this.query = query as SpannerRelationalQueries<TRelations>
   }
 
-  select(): SpannerSelectBuilder<undefined>;
+  select(): SpannerSelectBuilder<undefined>
   select<TSelection extends SpannerSelectedFields>(
-    fields: TSelection,
-  ): SpannerSelectBuilder<TSelection>;
-  select(fields?: SpannerSelectedFields): SpannerSelectBuilder<SpannerSelectedFields | undefined> {
-    return new SpannerSelectBuilder(fields, this.session, this.dialect);
+    fields: TSelection
+  ): SpannerSelectBuilder<TSelection>
+  select(
+    fields?: SpannerSelectedFields
+  ): SpannerSelectBuilder<SpannerSelectedFields | undefined> {
+    return new SpannerSelectBuilder(fields, this.session, this.dialect)
   }
 
   insert<TTable extends AnySpannerTable>(table: TTable): SpannerInsertBuilder<TTable> {
-    return new SpannerInsertBuilder(table, this.session, this.dialect);
+    return new SpannerInsertBuilder(table, this.session, this.dialect)
   }
 
   update<TTable extends AnySpannerTable>(table: TTable): SpannerUpdateBuilder<TTable> {
-    return new SpannerUpdateBuilder(table, this.session, this.dialect);
+    return new SpannerUpdateBuilder(table, this.session, this.dialect)
   }
 
   delete<TTable extends AnySpannerTable>(table: TTable): SpannerDelete<TTable, void> {
-    return new SpannerDelete(table, this.session, this.dialect);
+    return new SpannerDelete(table, this.session, this.dialect)
   }
 
   /** `select count(*) from table [where ...]` returning a number. */
   async $count(table: AnySpannerTable | SQL, where?: SQL): Promise<number> {
-    const query = this.dialect.sqlToQuery(this.dialect.buildCountQuery(table, where));
+    const query = this.dialect.sqlToQuery(this.dialect.buildCountQuery(table, where))
     const prepared = this.session.prepareQuery<number>(query, undefined, (rows) =>
-      Number(unwrapDriverWrapper(rows[0]?.[0])),
-    );
-    return prepared.execute();
+      Number(unwrapDriverWrapper(rows[0]?.[0]))
+    )
+    return prepared.execute()
   }
 
   /** Raw SQL escape hatch; rows arrive as the driver's `toJSON()` objects. */
   execute<T = Record<string, unknown>[]>(query: SQL): Promise<T> {
-    return this.session.execute<T>(query);
+    return this.session.execute<T>(query)
   }
 }
 
 export class SpannerDatabase<
-  TRelations extends AnyRelations = EmptyRelations,
+  TRelations extends AnyRelations = EmptyRelations
 > extends SpannerDatabaseCore<TRelations> {
-  static override readonly [entityKind]: string = 'SpannerDatabase';
+  static override readonly [entityKind]: string = 'SpannerDatabase'
 
   /** One transaction-scoped session and its query surface. */
   private createTransactionScope(
     runner: SpannerQueryRunner,
-    mutationSink?: SpannerMutationSink,
+    mutationSink?: SpannerMutationSink
   ): SpannerTransaction<TRelations> {
-    const session = new SpannerSession(runner, this.dialect, this.session.options, mutationSink);
-    return new SpannerTransaction<TRelations>(this.dialect, session, this.$client, this.options);
+    const session = new SpannerSession(
+      runner,
+      this.dialect,
+      this.session.options,
+      mutationSink
+    )
+    return new SpannerTransaction<TRelations>(
+      this.dialect,
+      session,
+      this.$client,
+      this.options
+    )
   }
 
   /**
@@ -344,84 +365,91 @@ export class SpannerDatabase<
    */
   transaction<T>(
     callback: (tx: SpannerReadOnlyTransaction<TRelations>) => Promise<T>,
-    options: SpannerReadOnlyTransactionOptions,
-  ): Promise<T>;
+    options: SpannerReadOnlyTransactionOptions
+  ): Promise<T>
   transaction<T>(
     callback: (tx: SpannerMutationTransaction) => Promise<T>,
-    options: SpannerMutationTransactionOptions,
-  ): Promise<T>;
+    options: SpannerMutationTransactionOptions
+  ): Promise<T>
   transaction<T>(
     callback: (tx: SpannerReadWriteTransaction<TRelations>) => Promise<T>,
-    options?: SpannerTransactionOptions,
-  ): Promise<T>;
+    options?: SpannerTransactionOptions
+  ): Promise<T>
   async transaction<T>(
     callback: (tx: never) => Promise<T>,
     options:
       | SpannerTransactionOptions
       | SpannerReadOnlyTransactionOptions
-      | SpannerMutationTransactionOptions = {},
+      | SpannerMutationTransactionOptions = {}
   ): Promise<T> {
-    const client = this.$client;
+    const client = this.$client
     if (!client) {
-      throw new Error('Cannot start a transaction on a mock database: no client is attached');
+      throw new Error(
+        'Cannot start a transaction on a mock database: no client is attached'
+      )
     }
     if ('readOnly' in options) {
       return this.readOnlyTransaction(
         callback as (tx: SpannerReadOnlyTransaction<TRelations>) => Promise<T>,
         client,
-        options,
-      );
+        options
+      )
     }
-    const bufferedMutations = 'mode' in options;
-    const { maxRetries, timeout } = bufferedMutations ? ({} as SpannerTransactionOptions) : options;
-    const runCallback = callback as (tx: SpannerTransaction<TRelations>) => Promise<T>;
-    let attempts = 0;
+    const bufferedMutations = 'mode' in options
+    const { maxRetries, timeout } = bufferedMutations
+      ? ({} as SpannerTransactionOptions)
+      : options
+    const runCallback = callback as (tx: SpannerTransaction<TRelations>) => Promise<T>
+    let attempts = 0
     try {
       const runFn = async (driverTransaction: SpannerDriverTransaction): Promise<T> => {
-        attempts += 1;
+        attempts += 1
         if (maxRetries !== undefined && attempts > maxRetries + 1) {
           throw new MaxRetriesExhaustedError(
-            `Read-write transaction aborted and maxRetries (${maxRetries}) was exhausted`,
-          );
+            `Read-write transaction aborted and maxRetries (${maxRetries}) was exhausted`
+          )
         }
         const tx = bufferedMutations
           ? this.createTransactionScope(new MutationModeRunner(), driverTransaction)
-          : this.createTransactionScope(new TransactionRunner(driverTransaction));
+          : this.createTransactionScope(new TransactionRunner(driverTransaction))
         try {
-          const result = await runCallback(tx);
-          await driverTransaction.commit();
-          return result;
+          const result = await runCallback(tx)
+          await driverTransaction.commit()
+          return result
         } catch (error) {
           // The rollback is best-effort in every branch: on ABORTED it
           // releases locks a still-open server transaction may hold (a real
           // abort makes it a no-op), then the error propagates untouched so
           // the driver's transaction runner retries the whole callback.
           try {
-            await driverTransaction.rollback();
+            await driverTransaction.rollback()
           } catch {
             // The original error matters more.
           }
-          throw error;
+          throw error
         }
-      };
+      }
       return timeout === undefined
         ? await client.runTransactionAsync(runFn)
-        : await client.runTransactionAsync({ timeout }, runFn);
+        : await client.runTransactionAsync({ timeout }, runFn)
     } catch (error) {
       // Outside the driver's runner a gRPC code is safe to attach (spec:
       // each variant carries the status code).
       if (error instanceof MaxRetriesExhaustedError) {
-        throw new SpannerAbortedError({ message: error.message, code: GrpcStatus.ABORTED });
+        throw new SpannerAbortedError({
+          message: error.message,
+          code: GrpcStatus.ABORTED
+        })
       }
       // The driver's DeadlineError means ABORTED retries ran out of time.
       if ((error as { name?: string })?.name === 'DeadlineError') {
         throw new SpannerAbortedError({
           message: 'Read-write transaction aborted and retries were exhausted',
           code: GrpcStatus.ABORTED,
-          cause: error,
-        });
+          cause: error
+        })
       }
-      throw wrapSpannerError(error);
+      throw wrapSpannerError(error)
     }
   }
 
@@ -433,53 +461,55 @@ export class SpannerDatabase<
   private async readOnlyTransaction<T>(
     callback: (tx: SpannerReadOnlyTransaction<TRelations>) => Promise<T>,
     client: SpannerDriverDatabase,
-    options: SpannerReadOnlyTransactionOptions,
+    options: SpannerReadOnlyTransactionOptions
   ): Promise<T> {
-    const bounds = options.staleness && toTimestampBounds(options.staleness);
-    let snapshot: SpannerDriverSnapshot;
+    const bounds = options.staleness && toTimestampBounds(options.staleness)
+    let snapshot: SpannerDriverSnapshot
     try {
-      [snapshot] = bounds ? await client.getSnapshot(bounds) : await client.getSnapshot();
+      ;[snapshot] = bounds
+        ? await client.getSnapshot(bounds)
+        : await client.getSnapshot()
     } catch (error) {
-      throw wrapSpannerError(error);
+      throw wrapSpannerError(error)
     }
     try {
-      const tx = this.createTransactionScope(new SnapshotRunner(snapshot));
-      return await callback(tx);
+      const tx = this.createTransactionScope(new SnapshotRunner(snapshot))
+      return await callback(tx)
     } catch (error) {
-      throw wrapSpannerError(error);
+      throw wrapSpannerError(error)
     } finally {
-      snapshot.end();
+      snapshot.end()
     }
   }
 }
 
 export class SpannerTransaction<
-  TRelations extends AnyRelations = EmptyRelations,
+  TRelations extends AnyRelations = EmptyRelations
 > extends SpannerDatabaseCore<TRelations> {
-  static override readonly [entityKind]: string = 'SpannerTransaction';
+  static override readonly [entityKind]: string = 'SpannerTransaction'
 
   /**
    * Absent from the transaction types; this runtime backstop catches callers
    * who reach it through a database-typed reference.
    */
   transaction(): never {
-    throw new Error('Spanner does not support nested transactions (no savepoints)');
+    throw new Error('Spanner does not support nested transactions (no savepoints)')
   }
 
   /** Aborts the transaction by throwing `TransactionRollbackError`. */
   rollback(): never {
-    throw new TransactionRollbackError();
+    throw new TransactionRollbackError()
   }
 }
 
 export function createDatabaseSession(
   database: SpannerDriverDatabase,
   dialect: SpannerDialect,
-  options?: { logger?: SpannerSession['logger'] },
+  options?: { logger?: SpannerSession['logger'] }
 ): SpannerSession {
-  return new SpannerSession(new DatabaseRunner(database), dialect, options);
+  return new SpannerSession(new DatabaseRunner(database), dialect, options)
 }
 
 export function createMockSession(dialect: SpannerDialect): SpannerSession {
-  return new SpannerSession(new MockRunner(), dialect, {});
+  return new SpannerSession(new MockRunner(), dialect, {})
 }

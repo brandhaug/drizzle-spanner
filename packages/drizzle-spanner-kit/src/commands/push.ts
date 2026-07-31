@@ -1,31 +1,34 @@
-import { applyDdlStatements } from 'drizzle-spanner/migrator';
-import type { ResolvedSpannerKitConfig } from '../config.js';
-import { requireDatabase } from '../config.js';
-import type { KitDriverDatabase } from '../connect.js';
-import { connectDatabase } from '../connect.js';
-import type { RenameResolver } from '../differ.js';
-import { diffSnapshots } from '../differ.js';
-import { introspectDatabase } from '../introspect.js';
-import { loadSchemaExports } from '../loader.js';
-import { serializeSchema } from '../serializer.js';
+import { applyDdlStatements } from 'drizzle-spanner/migrator'
+import type { ResolvedSpannerKitConfig } from '../config.js'
+import { requireDatabase } from '../config.js'
+import type { KitDriverDatabase } from '../connect.js'
+import { connectDatabase } from '../connect.js'
+import type { RenameResolver } from '../differ.js'
+import { diffSnapshots } from '../differ.js'
+import { introspectDatabase } from '../introspect.js'
+import { loadSchemaExports } from '../loader.js'
+import { serializeSchema } from '../serializer.js'
 
 export interface PushOptions {
   /** Apply without asking; equivalent to answering yes. */
-  yes?: boolean;
+  yes?: boolean
   /** Asked with the full DDL plan when `yes` is not set. */
-  confirm?: (statements: string[]) => Promise<boolean>;
-  resolveRename?: RenameResolver;
-  acceptDrops?: boolean;
+  confirm?: (statements: string[]) => Promise<boolean>
+  resolveRename?: RenameResolver
+  acceptDrops?: boolean
 }
 
 export interface PushResult {
-  statements: string[];
-  applied: boolean;
+  statements: string[]
+  applied: boolean
 }
 
 /** Applies one batched DDL operation, surfacing partial failure typed. */
-async function applyDdl(database: KitDriverDatabase, statements: string[]): Promise<void> {
-  await applyDdlStatements(database, statements, 'push failed to apply the DDL plan');
+async function applyDdl(
+  database: KitDriverDatabase,
+  statements: string[]
+): Promise<void> {
+  await applyDdlStatements(database, statements, 'push failed to apply the DDL plan')
 }
 
 /**
@@ -36,30 +39,31 @@ async function applyDdl(database: KitDriverDatabase, statements: string[]): Prom
  */
 export async function push(
   config: Pick<ResolvedSpannerKitConfig, 'schema' | 'database'>,
-  options: PushOptions = {},
+  options: PushOptions = {}
 ): Promise<PushResult> {
-  const databaseConfig = requireDatabase(config, 'push');
-  const schemaExports = await loadSchemaExports(config.schema);
-  const desired = serializeSchema(schemaExports);
+  const databaseConfig = requireDatabase(config, 'push')
+  const schemaExports = await loadSchemaExports(config.schema)
+  const desired = serializeSchema(schemaExports)
 
-  const connection = await connectDatabase(databaseConfig);
+  const connection = await connectDatabase(databaseConfig)
   try {
-    const live = await introspectDatabase(connection.database);
+    const live = await introspectDatabase(connection.database)
     const { statements } = await diffSnapshots(live, desired, {
       resolveRename: options.resolveRename,
-      acceptDrops: options.acceptDrops,
-    });
+      acceptDrops: options.acceptDrops
+    })
     if (statements.length === 0) {
-      return { statements, applied: false };
+      return { statements, applied: false }
     }
     const confirmed =
-      options.yes === true || (options.confirm ? await options.confirm(statements) : false);
+      options.yes === true ||
+      (options.confirm ? await options.confirm(statements) : false)
     if (!confirmed) {
-      return { statements, applied: false };
+      return { statements, applied: false }
     }
-    await applyDdl(connection.database, statements);
-    return { statements, applied: true };
+    await applyDdl(connection.database, statements)
+    return { statements, applied: true }
   } finally {
-    await connection.close();
+    await connection.close()
   }
 }

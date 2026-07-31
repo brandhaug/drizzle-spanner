@@ -1,10 +1,10 @@
-import { randomUUID } from 'node:crypto';
-import { GenericContainer, Wait } from 'testcontainers';
-import type { StartedTestContainer } from 'testcontainers';
-import { Spanner } from '@google-cloud/spanner';
-import type { Instance } from '@google-cloud/spanner';
+import { randomUUID } from 'node:crypto'
+import { GenericContainer, Wait } from 'testcontainers'
+import type { StartedTestContainer } from 'testcontainers'
+import { Spanner } from '@google-cloud/spanner'
+import type { Instance } from '@google-cloud/spanner'
 
-const EMULATOR_IMAGE = 'gcr.io/cloud-spanner-emulator/emulator:latest';
+const EMULATOR_IMAGE = 'gcr.io/cloud-spanner-emulator/emulator:latest'
 
 // Captured at import time: the harnesses mutate SPANNER_EMULATOR_HOST for the
 // driver, and under single-process runners (bun test) a later test file must
@@ -13,18 +13,18 @@ const EMULATOR_IMAGE = 'gcr.io/cloud-spanner-emulator/emulator:latest';
 // harness already mutated the env.
 const EXTERNAL_EMULATOR_HOST = process.env.DRIZZLE_SPANNER_TEST_OWNED
   ? undefined
-  : process.env.SPANNER_EMULATOR_HOST;
+  : process.env.SPANNER_EMULATOR_HOST
 
 /** The Spanner instance integration tests run against. */
 export interface SpannerTestTarget {
-  spanner: Spanner;
-  instance: Instance;
-  project: string;
-  instanceName: string;
+  spanner: Spanner
+  instance: Instance
+  project: string
+  instanceName: string
   /** Set when the target is an emulator; absent on a real instance. */
-  emulatorHost?: string;
+  emulatorHost?: string
   /** Closes the client, drops an owned instance, stops an owned container. */
-  stop(): Promise<void>;
+  stop(): Promise<void>
 }
 
 /**
@@ -40,49 +40,53 @@ export interface SpannerTestTarget {
  *   Bun run) that emulator is reused; otherwise a container is started via
  *   testcontainers.
  */
-export async function startSpannerTestTarget(namePrefix: string): Promise<SpannerTestTarget> {
-  const realInstance = process.env.DRIZZLE_SPANNER_TEST_INSTANCE;
+export async function startSpannerTestTarget(
+  namePrefix: string
+): Promise<SpannerTestTarget> {
+  const realInstance = process.env.DRIZZLE_SPANNER_TEST_INSTANCE
   if (realInstance) {
-    const project = process.env.GOOGLE_CLOUD_PROJECT;
+    const project = process.env.GOOGLE_CLOUD_PROJECT
     if (!project) {
-      throw new Error('DRIZZLE_SPANNER_TEST_INSTANCE requires GOOGLE_CLOUD_PROJECT to be set');
+      throw new Error(
+        'DRIZZLE_SPANNER_TEST_INSTANCE requires GOOGLE_CLOUD_PROJECT to be set'
+      )
     }
-    const spanner = new Spanner({ projectId: project });
+    const spanner = new Spanner({ projectId: project })
     return {
       spanner,
       instance: spanner.instance(realInstance),
       project,
       instanceName: realInstance,
       async stop() {
-        spanner.close();
-      },
-    };
+        spanner.close()
+      }
+    }
   }
 
-  let container: StartedTestContainer | undefined;
-  let host = EXTERNAL_EMULATOR_HOST;
+  let container: StartedTestContainer | undefined
+  let host = EXTERNAL_EMULATOR_HOST
   if (!host) {
     // The emulator image is distroless, so testcontainers' internal port
     // probe cannot run; wait on the gRPC server's log line instead.
     container = await new GenericContainer(EMULATOR_IMAGE)
       .withExposedPorts(9010)
       .withWaitStrategy(Wait.forLogMessage(/gRPC server listening/i))
-      .start();
-    host = `${container.getHost()}:${container.getMappedPort(9010)}`;
-    process.env.DRIZZLE_SPANNER_TEST_OWNED = '1';
+      .start()
+    host = `${container.getHost()}:${container.getMappedPort(9010)}`
+    process.env.DRIZZLE_SPANNER_TEST_OWNED = '1'
   }
-  process.env.SPANNER_EMULATOR_HOST = host;
+  process.env.SPANNER_EMULATOR_HOST = host
 
-  const project = 'test-project';
-  const instanceName = `${namePrefix}-${randomUUID().slice(0, 8)}`;
-  const spanner = new Spanner({ projectId: project });
-  const instance = spanner.instance(instanceName);
+  const project = 'test-project'
+  const instanceName = `${namePrefix}-${randomUUID().slice(0, 8)}`
+  const spanner = new Spanner({ projectId: project })
+  const instance = spanner.instance(instanceName)
   const [, operation] = await instance.create({
     config: 'emulator-config',
     nodes: 1,
-    displayName: `${namePrefix} tests`,
-  });
-  await operation.promise();
+    displayName: `${namePrefix} tests`
+  })
+  await operation.promise()
 
   return {
     spanner,
@@ -91,8 +95,8 @@ export async function startSpannerTestTarget(namePrefix: string): Promise<Spanne
     instanceName,
     emulatorHost: host,
     async stop() {
-      spanner.close();
-      await container?.stop();
-    },
-  };
+      spanner.close()
+      await container?.stop()
+    }
+  }
 }

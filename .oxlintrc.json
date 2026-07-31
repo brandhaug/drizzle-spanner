@@ -1,0 +1,67 @@
+{
+  "plugins": ["typescript", "oxc"],
+  "env": {
+    "node": true,
+    "es2022": true
+  },
+  "ignorePatterns": ["node_modules/**", "dist/**", "**/*.d.ts"],
+  "rules": {
+    "typescript/no-explicit-any": "off",
+    "typescript/no-unused-vars": ["error", { "argsIgnorePattern": "^_" }]
+  },
+  "overrides": [
+    {
+      // The spec's package-layout section permits runtime imports only from
+      // these drizzle-orm base subpaths. Other dialects' cores are reference
+      // reading only.
+      "files": [
+        "src/**/*.ts",
+        "tests/**/*.ts",
+        "packages/*/src/**/*.ts",
+        "packages/*/tests/**/*.ts"
+      ],
+      "rules": {
+        "no-restricted-imports": [
+          "error",
+          {
+            "paths": [
+              {
+                "name": "drizzle-orm",
+                "message": "Import from a permitted drizzle-orm base subpath (see the spec package-layout section), not the root."
+              }
+            ],
+            "patterns": [
+              {
+                "group": [
+                  "drizzle-orm/**",
+                  "!drizzle-orm/entity",
+                  "!drizzle-orm/table",
+                  "!drizzle-orm/column",
+                  "!drizzle-orm/column-builder",
+                  "!drizzle-orm/sql",
+                  "!drizzle-orm/sql/expressions",
+                  "!drizzle-orm/session",
+                  "!drizzle-orm/query-promise",
+                  "!drizzle-orm/runnable-query",
+                  "!drizzle-orm/query-builders/query-builder",
+                  "!drizzle-orm/selection-proxy",
+                  "!drizzle-orm/subquery",
+                  "!drizzle-orm/alias",
+                  "!drizzle-orm/relations",
+                  "!drizzle-orm/casing",
+                  "!drizzle-orm/utils",
+                  "!drizzle-orm/errors",
+                  "!drizzle-orm/logger",
+                  "!drizzle-orm/tracing",
+                  "!drizzle-orm/migrator",
+                  "!drizzle-orm/cache/core"
+                ],
+                "message": "Only the base subpaths listed in the spec package-layout section are permitted at runtime."
+              }
+            ]
+          }
+        ]
+      }
+    }
+  ]
+}

@@ -1,13 +1,13 @@
-import { randomUUID } from 'node:crypto';
-import type { Database } from '@google-cloud/spanner';
-import { drizzle } from '../../src/index.js';
-import type { SpannerDatabase, SpannerDriverDatabase } from '../../src/index.js';
-import { startSpannerTestTarget } from './spanner-target.js';
+import { randomUUID } from 'node:crypto'
+import type { Database } from '@google-cloud/spanner'
+import { drizzle } from '../../src/index.js'
+import type { SpannerDatabase, SpannerDriverDatabase } from '../../src/index.js'
+import { startSpannerTestTarget } from './spanner-target.js'
 
 export interface EmulatorHarness {
-  db: SpannerDatabase;
-  database: Database;
-  cleanup(): Promise<void>;
+  db: SpannerDatabase
+  database: Database
+  cleanup(): Promise<void>
 }
 
 /**
@@ -15,16 +15,16 @@ export interface EmulatorHarness {
  * file gets its own randomly named database.
  */
 export async function startEmulator(ddl: string[]): Promise<EmulatorHarness> {
-  const target = await startSpannerTestTarget('test-instance');
+  const target = await startSpannerTestTarget('test-instance')
 
   const [database, databaseOperation] = await target.instance.createDatabase(
-    `test-db-${randomUUID().slice(0, 8)}`,
-  );
-  await databaseOperation.promise();
+    `test-db-${randomUUID().slice(0, 8)}`
+  )
+  await databaseOperation.promise()
 
   if (ddl.length > 0) {
-    const [ddlOperation] = await database.updateSchema(ddl);
-    await ddlOperation.promise();
+    const [ddlOperation] = await database.updateSchema(ddl)
+    await ddlOperation.promise()
   }
 
   return {
@@ -33,9 +33,9 @@ export async function startEmulator(ddl: string[]): Promise<EmulatorHarness> {
     async cleanup() {
       // A real instance outlives the run; drop the database instead of
       // leaving it behind. Emulator state dies with the container.
-      if (target.emulatorHost) await database.close();
-      else await database.delete();
-      await target.stop();
-    },
-  };
+      if (target.emulatorHost) await database.close()
+      else await database.delete()
+      await target.stop()
+    }
+  }
 }

@@ -34,7 +34,7 @@ owns every dialect class and extends only exported drizzle-orm base modules.
   `column-builder`, `sql`, `sql/expressions`, `session`, `query-promise`, `runnable-query`,
   `query-builders/query-builder`, `selection-proxy`, `subquery`, `alias`,
   `relations`, `casing`, `utils`, `errors`, `logger`, `tracing`, `migrator`,
-  `cache/core`). Other dialects' cores are reference reading only. An ESLint
+  `cache/core`). Other dialects' cores are reference reading only. An oxlint
   `no-restricted-imports` rule enforces this.
 - **Deliverables:** the 16-item table in the dialect-internals research is the
   class inventory: `SpannerDialect`, `SpannerSession`, `SpannerPreparedQuery`,
@@ -93,22 +93,22 @@ builders use Spanner-native type names, so schema code mirrors DDL one to one.
 const singers = spannerTable('singers', {
   singerId: string('singer_id', { length: 36 }).primaryKey().defaultGenerateUuid(),
   name: string('name', { length: 'max' }).notNull(),
-  updatedAt: timestamp('updated_at', { allowCommitTimestamp: true }),
-});
+  updatedAt: timestamp('updated_at', { allowCommitTimestamp: true })
+})
 
 const albums = spannerTable(
   'albums',
   {
     singerId: string('singer_id', { length: 36 }).notNull(),
     albumId: string('album_id', { length: 36 }).notNull(),
-    title: string('title', { length: 1024 }),
+    title: string('title', { length: 1024 })
   },
   (t) => [
     primaryKey({ columns: [t.singerId, t.albumId] }),
     interleaveInParent(singers, { onDelete: 'cascade' }),
-    index('idx_albums_title').on(t.title).nullFiltered(),
-  ],
-);
+    index('idx_albums_title').on(t.title).nullFiltered()
+  ]
+)
 ```
 
 ## Runtime API
@@ -138,7 +138,7 @@ through.
   this mode the insert, update, and delete builders compile to Spanner
   mutations buffered until commit; reads and `.returning()` throw typed
   errors. Model: `ruby-spanner-activerecord`'s `isolation:
-  :buffered_mutations`. There is no `db.mutate` namespace in v1. The open
+:buffered_mutations`. There is no `db.mutate` namespace in v1. The open
   item on `INSERT OR UPDATE` availability is resolved: it is available,
   including with `THEN RETURN` (see `docs/adr/0002-upsert-via-insert-or-update.md`);
   the upsert API ships after milestone 2.
@@ -150,23 +150,20 @@ through.
   ship with the runtime, matching first-party dialects.
 
 ```ts
-const db = drizzle(spannerDatabase, { relations });
+const db = drizzle(spannerDatabase, { relations })
 
 await db.transaction(async (tx) => {
-  await tx.update(singers).set({ name: 'Ada L.' }).where(eq(singers.singerId, id));
-}); // re-runs automatically on ABORTED
+  await tx.update(singers).set({ name: 'Ada L.' }).where(eq(singers.singerId, id))
+}) // re-runs automatically on ABORTED
 
-const rows = await db
-  .select()
-  .from(singers)
-  .withStaleness({ exactStaleness: '15s' });
+const rows = await db.select().from(singers).withStaleness({ exactStaleness: '15s' })
 
 await db.transaction(
   async (tx) => {
-    await tx.insert(events).values(batch); // buffered mutations
+    await tx.insert(events).values(batch) // buffered mutations
   },
-  { mode: 'bufferedMutations' },
-);
+  { mode: 'bufferedMutations' }
+)
 ```
 
 ## Migrations and introspection

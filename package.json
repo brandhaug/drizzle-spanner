@@ -2,12 +2,18 @@
   "name": "drizzle-spanner",
   "version": "0.1.0",
   "description": "Google Cloud Spanner (GoogleSQL) dialect for Drizzle ORM v1",
-  "type": "module",
   "license": "MIT",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/brandhaug/drizzle-spanner.git"
   },
+  "workspaces": [
+    "packages/*"
+  ],
+  "files": [
+    "dist"
+  ],
+  "type": "module",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
   "exports": {
@@ -28,16 +34,15 @@
     },
     "./package.json": "./package.json"
   },
-  "files": [
-    "dist"
-  ],
-  "workspaces": [
-    "packages/*"
-  ],
   "scripts": {
     "build": "tsc -p tsconfig.build.json",
     "typecheck": "tsc --noEmit",
-    "lint": "eslint src tests packages",
+    "lint": "oxlint",
+    "lint:fix": "oxlint --fix",
+    "format": "oxfmt --write",
+    "format:check": "oxfmt --check",
+    "check": "npm run typecheck && npm run lint && npm run format:check && npm test",
+    "check:fix": "npm run lint:fix && npm run format",
     "test": "vitest run tests/unit packages/drizzle-spanner-kit/tests/unit",
     "check:types": "attw --pack . --profile esm-only && attw --pack packages/drizzle-spanner-kit --profile esm-only",
     "check:pack": "node scripts/check-pack.ts",
@@ -46,7 +51,20 @@
     "emulator:up": "docker compose up -d",
     "emulator:down": "docker compose down",
     "emulator:bootstrap": "node scripts/emulator-bootstrap.ts",
-    "emulator:smoke": "node scripts/emulator-smoke.ts"
+    "emulator:smoke": "node scripts/emulator-smoke.ts",
+    "prepare": "git config core.hooksPath .githooks"
+  },
+  "devDependencies": {
+    "@arethetypeswrong/cli": "^0.18.5",
+    "@google-cloud/spanner": "^8.10.0",
+    "@types/node": "^24.0.0",
+    "drizzle-orm": "1.0.0-beta.22",
+    "lint-staged": "^17.0.8",
+    "oxfmt": "^0.57.0",
+    "oxlint": "^1.72.0",
+    "testcontainers": "^11.0.0",
+    "typescript": "^5.8.0",
+    "vitest": "^3.2.0"
   },
   "peerDependencies": {
     "@google-cloud/spanner": ">=7.0.0",
@@ -56,17 +74,6 @@
     "@google-cloud/spanner": {
       "optional": true
     }
-  },
-  "devDependencies": {
-    "@arethetypeswrong/cli": "^0.18.5",
-    "@google-cloud/spanner": "^8.10.0",
-    "@types/node": "^24.0.0",
-    "drizzle-orm": "1.0.0-beta.22",
-    "eslint": "^9.30.0",
-    "testcontainers": "^11.0.0",
-    "typescript": "^5.8.0",
-    "typescript-eslint": "^8.35.0",
-    "vitest": "^3.2.0"
   },
   "engines": {
     "node": ">=20"

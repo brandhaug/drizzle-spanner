@@ -1,8 +1,8 @@
 {
   "name": "example-basic-crud",
   "private": true,
-  "type": "module",
   "description": "drizzle-spanner example: schema, kit migrate, CRUD and a read-write transaction against the emulator",
+  "type": "module",
   "scripts": {
     "start": "node src/bootstrap.ts && drizzle-spanner-kit migrate && node src/main.ts"
   },

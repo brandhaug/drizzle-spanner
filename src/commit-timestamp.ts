@@ -1,5 +1,5 @@
-import type { SQL } from 'drizzle-orm/sql';
-import { sql } from 'drizzle-orm/sql';
+import type { SQL } from 'drizzle-orm/sql'
+import { sql } from 'drizzle-orm/sql'
 
 /**
  * Write-site sentinel for commit-timestamp columns: use in `values()` and
@@ -9,5 +9,5 @@ import { sql } from 'drizzle-orm/sql';
  * transaction.
  */
 export function commitTimestamp(): SQL<Date> {
-  return sql<Date>`PENDING_COMMIT_TIMESTAMP()`;
+  return sql<Date>`PENDING_COMMIT_TIMESTAMP()`
 }

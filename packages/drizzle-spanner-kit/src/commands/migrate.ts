@@ -1,9 +1,9 @@
-import { drizzle } from 'drizzle-spanner';
-import type { SpannerMigrationResult } from 'drizzle-spanner/migrator';
-import { migrate as migrateDatabase } from 'drizzle-spanner/migrator';
-import type { ResolvedSpannerKitConfig } from '../config.js';
-import { requireDatabase } from '../config.js';
-import { connectDatabase } from '../connect.js';
+import { drizzle } from 'drizzle-spanner'
+import type { SpannerMigrationResult } from 'drizzle-spanner/migrator'
+import { migrate as migrateDatabase } from 'drizzle-spanner/migrator'
+import type { ResolvedSpannerKitConfig } from '../config.js'
+import { requireDatabase } from '../config.js'
+import { connectDatabase } from '../connect.js'
 
 /**
  * `migrate`: applies pending migration folders from the out dir through the
@@ -11,14 +11,14 @@ import { connectDatabase } from '../connect.js';
  * recorded in `drizzle_migrations`, idempotent by hash.
  */
 export async function migrate(
-  config: Pick<ResolvedSpannerKitConfig, 'out' | 'database'>,
+  config: Pick<ResolvedSpannerKitConfig, 'out' | 'database'>
 ): Promise<SpannerMigrationResult> {
-  const databaseConfig = requireDatabase(config, 'migrate');
-  const connection = await connectDatabase(databaseConfig);
+  const databaseConfig = requireDatabase(config, 'migrate')
+  const connection = await connectDatabase(databaseConfig)
   try {
-    const db = drizzle(connection.database);
-    return await migrateDatabase(db, { migrationsFolder: config.out });
+    const db = drizzle(connection.database)
+    return await migrateDatabase(db, { migrationsFolder: config.out })
   } finally {
-    await connection.close();
+    await connection.close()
   }
 }

@@ -1,20 +1,20 @@
-import type { AnyRelations, EmptyRelations } from 'drizzle-orm/relations';
-import type { DrizzleConfig } from 'drizzle-orm/utils';
-import type { Logger } from 'drizzle-orm/logger';
-import { DefaultLogger } from 'drizzle-orm/logger';
-import type { SpannerDriverDatabase } from './db.js';
-import { createDatabaseSession, createMockSession, SpannerDatabase } from './db.js';
-import { SpannerDialect } from './dialect.js';
+import type { AnyRelations, EmptyRelations } from 'drizzle-orm/relations'
+import type { DrizzleConfig } from 'drizzle-orm/utils'
+import type { Logger } from 'drizzle-orm/logger'
+import { DefaultLogger } from 'drizzle-orm/logger'
+import type { SpannerDriverDatabase } from './db.js'
+import { createDatabaseSession, createMockSession, SpannerDatabase } from './db.js'
+import { SpannerDialect } from './dialect.js'
 
 export type SpannerDrizzleConfig<TRelations extends AnyRelations = AnyRelations> = Pick<
   DrizzleConfig<Record<string, unknown>, TRelations>,
   'logger' | 'casing' | 'relations' | 'cache'
->;
+>
 
 function resolveLogger(logger: SpannerDrizzleConfig['logger']): Logger | undefined {
-  if (logger === true) return new DefaultLogger();
-  if (logger === false || logger === undefined) return undefined;
-  return logger;
+  if (logger === true) return new DefaultLogger()
+  if (logger === false || logger === undefined) return undefined
+  return logger
 }
 
 /**
@@ -24,25 +24,30 @@ function resolveLogger(logger: SpannerDrizzleConfig['logger']): Logger | undefin
  */
 export function drizzle<TRelations extends AnyRelations = EmptyRelations>(
   client: SpannerDriverDatabase,
-  config: SpannerDrizzleConfig<TRelations> = {},
+  config: SpannerDrizzleConfig<TRelations> = {}
 ): SpannerDatabase<TRelations> {
-  const dialect = new SpannerDialect({ casing: config.casing });
+  const dialect = new SpannerDialect({ casing: config.casing })
   const session = createDatabaseSession(client, dialect, {
-    logger: resolveLogger(config.logger),
-  });
+    logger: resolveLogger(config.logger)
+  })
   return new SpannerDatabase<TRelations>(dialect, session, client, {
     relations: config.relations,
-    cache: config.cache,
-  });
+    cache: config.cache
+  })
 }
 
 /** A database with no client attached — SQL generation only; execution throws. */
 drizzle.mock = <TRelations extends AnyRelations = EmptyRelations>(
-  config: SpannerDrizzleConfig<TRelations> = {},
+  config: SpannerDrizzleConfig<TRelations> = {}
 ): SpannerDatabase<TRelations> => {
-  const dialect = new SpannerDialect({ casing: config.casing });
-  return new SpannerDatabase<TRelations>(dialect, createMockSession(dialect), undefined, {
-    relations: config.relations,
-    cache: config.cache,
-  });
-};
+  const dialect = new SpannerDialect({ casing: config.casing })
+  return new SpannerDatabase<TRelations>(
+    dialect,
+    createMockSession(dialect),
+    undefined,
+    {
+      relations: config.relations,
+      cache: config.cache
+    }
+  )
+}

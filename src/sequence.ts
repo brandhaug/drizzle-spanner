@@ -1,6 +1,6 @@
-import { entityKind } from 'drizzle-orm/entity';
-import type { SQL } from 'drizzle-orm/sql';
-import { sql } from 'drizzle-orm/sql';
+import { entityKind } from 'drizzle-orm/entity'
+import type { SQL } from 'drizzle-orm/sql'
+import { sql } from 'drizzle-orm/sql'
 
 /**
  * A named Spanner sequence (bit-reversed positive, the only kind Spanner
@@ -9,17 +9,17 @@ import { sql } from 'drizzle-orm/sql';
  * drizzle-spanner-kit.
  */
 export class SpannerSequence {
-  static readonly [entityKind]: string = 'SpannerSequence';
+  static readonly [entityKind]: string = 'SpannerSequence'
 
   constructor(readonly name: string) {}
 
   /** `GET_NEXT_SEQUENCE_VALUE(SEQUENCE name)`. */
   nextValue(): SQL<bigint> {
-    return sql`GET_NEXT_SEQUENCE_VALUE(SEQUENCE ${sql.identifier(this.name)})`;
+    return sql`GET_NEXT_SEQUENCE_VALUE(SEQUENCE ${sql.identifier(this.name)})`
   }
 }
 
 /** Declares a Spanner sequence by name for use with `.default(seq.nextValue())`. */
 export function sequence(name: string): SpannerSequence {
-  return new SpannerSequence(name);
+  return new SpannerSequence(name)
 }

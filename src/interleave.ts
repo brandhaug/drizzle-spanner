@@ -1,10 +1,10 @@
-import { entityKind } from 'drizzle-orm/entity';
-import type { ForeignKeyAction } from './foreign-keys.js';
-import type { PrimaryKeyBuilder } from './primary-keys.js';
-import type { SpannerTable, SpannerTableWithColumns, TableConfig } from './table.js';
+import { entityKind } from 'drizzle-orm/entity'
+import type { ForeignKeyAction } from './foreign-keys.js'
+import type { PrimaryKeyBuilder } from './primary-keys.js'
+import type { SpannerTable, SpannerTableWithColumns, TableConfig } from './table.js'
 
 export interface InterleaveConfig {
-  onDelete?: ForeignKeyAction;
+  onDelete?: ForeignKeyAction
 }
 
 /**
@@ -16,17 +16,17 @@ export interface InterleaveConfig {
 export type TypeVisiblePkData<T extends TableConfig> = {
   [K in keyof T['columns'] as T['columns'][K]['_']['isPrimaryKey'] extends true
     ? K
-    : never]: T['columns'][K]['_']['data'];
-};
+    : never]: T['columns'][K]['_']['data']
+}
 
 /**
  * Stands in for a primary-key order the type layer cannot read. It is accepted
  * wherever a parent PK order is expected, which turns the compile-time order
  * check off and leaves that case to the runtime check in `spannerTable`.
  */
-export type UnknownPkOrder = readonly ['~unknown primary-key order'];
+export type UnknownPkOrder = readonly ['~unknown primary-key order']
 
-type IsUnion<T, TAll = T> = T extends TAll ? ([TAll] extends [T] ? false : true) : never;
+type IsUnion<T, TAll = T> = T extends TAll ? ([TAll] extends [T] ? false : true) : never
 
 /**
  * The parent primary key in key order, as far as the types can see it: a
@@ -37,7 +37,7 @@ type IsUnion<T, TAll = T> = T extends TAll ? ([TAll] extends [T] ? false : true)
  */
 export type TypeVisiblePkOrder<T extends TableConfig> = SingleKeyTuple<
   keyof TypeVisiblePkData<T> & string
->;
+>
 
 type SingleKeyTuple<TKey extends string> = [TKey] extends [never]
   ? UnknownPkOrder
@@ -45,15 +45,15 @@ type SingleKeyTuple<TKey extends string> = [TKey] extends [never]
     ? UnknownPkOrder
     : IsUnion<TKey> extends true
       ? UnknownPkOrder
-      : [TKey];
+      : [TKey]
 
 /** Every non-empty prefix of a key order, as a union. */
 type PkPrefixes<TNames extends readonly string[]> = TNames extends readonly [
   ...infer THead extends readonly string[],
-  string,
+  string
 ]
   ? TNames | PkPrefixes<THead>
-  : never;
+  : never
 
 /**
  * Parent key orders a child's extra-config entries admit: the child primary
@@ -74,13 +74,13 @@ export type AdmissiblePkOrder<TEntries> =
       : [PkPrefixes<TNames>] extends [never]
         ? readonly string[]
         : PkPrefixes<TNames> | UnknownPkOrder
-    : readonly string[];
+    : readonly string[]
 
 export class InterleaveBuilder<
   in TChildColumnsData = any,
-  out TParentPkOrder extends readonly string[] = readonly string[],
+  out TParentPkOrder extends readonly string[] = readonly string[]
 > {
-  static readonly [entityKind]: string = 'SpannerInterleaveBuilder';
+  static readonly [entityKind]: string = 'SpannerInterleaveBuilder'
 
   /**
    * Compile-time PK-prefix check. The slot is contravariant: assigning this
@@ -88,7 +88,7 @@ export class InterleaveBuilder<
    * to extend the parent's type-visible primary-key data map — i.e. the child
    * must declare every parent PK column with a matching type.
    */
-  declare protected $pkPrefixCheck: (childColumnsData: TChildColumnsData) => void;
+  declare protected $pkPrefixCheck: (childColumnsData: TChildColumnsData) => void
 
   /**
    * Compile-time PK-order check, phantom like the one above. The extra-config
@@ -97,26 +97,26 @@ export class InterleaveBuilder<
    * the key — fails to assign. Either side degrading to `UnknownPkOrder`
    * (see `TypeVisiblePkOrder` and `AdmissiblePkOrder`) turns the check off.
    */
-  declare protected $parentPkOrder: TParentPkOrder;
+  declare protected $parentPkOrder: TParentPkOrder
 
   constructor(
     readonly parent: SpannerTable,
-    readonly config: InterleaveConfig,
+    readonly config: InterleaveConfig
   ) {}
 
   /** @internal */
   build(table: SpannerTable): Interleave {
-    return new Interleave(table, this.parent, this.config.onDelete ?? 'noAction');
+    return new Interleave(table, this.parent, this.config.onDelete ?? 'noAction')
   }
 }
 
 export class Interleave {
-  static readonly [entityKind]: string = 'SpannerInterleave';
+  static readonly [entityKind]: string = 'SpannerInterleave'
 
   constructor(
     readonly table: SpannerTable,
     readonly parent: SpannerTable,
-    readonly onDelete: ForeignKeyAction,
+    readonly onDelete: ForeignKeyAction
   ) {}
 }
 
@@ -131,7 +131,7 @@ export class Interleave {
  */
 export function interleaveInParent<T extends TableConfig>(
   parent: SpannerTableWithColumns<T> | SpannerTable<T>,
-  config: InterleaveConfig = {},
+  config: InterleaveConfig = {}
 ): InterleaveBuilder<TypeVisiblePkData<T>, TypeVisiblePkOrder<T>> {
-  return new InterleaveBuilder(parent as SpannerTable, config);
+  return new InterleaveBuilder(parent as SpannerTable, config)
 }

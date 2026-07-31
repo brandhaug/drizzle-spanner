@@ -24,5 +24,11 @@
       "drizzle-spanner-kit": ["./packages/drizzle-spanner-kit/src/index.ts"]
     }
   },
-  "include": ["src", "tests", "scripts", "packages/drizzle-spanner-kit/src", "packages/drizzle-spanner-kit/tests"]
+  "include": [
+    "src",
+    "tests",
+    "scripts",
+    "packages/drizzle-spanner-kit/src",
+    "packages/drizzle-spanner-kit/tests"
+  ]
 }

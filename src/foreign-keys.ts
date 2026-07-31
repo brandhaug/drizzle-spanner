@@ -1,51 +1,51 @@
-import { entityKind } from 'drizzle-orm/entity';
-import type { SpannerColumn, SpannerExtraConfigColumn } from './columns/common.js';
-import type { SpannerTable } from './table.js';
+import { entityKind } from 'drizzle-orm/entity'
+import type { SpannerColumn, SpannerExtraConfigColumn } from './columns/common.js'
+import type { SpannerTable } from './table.js'
 
 /** Spanner foreign keys have `ON DELETE` only — `ON UPDATE` actions do not exist. */
-export type ForeignKeyAction = 'cascade' | 'noAction';
+export type ForeignKeyAction = 'cascade' | 'noAction'
 
 export interface ForeignKeyConfig {
-  name?: string;
+  name?: string
   /** Referencing columns of the table this entry is declared on. */
-  columns: SpannerExtraConfigColumn[];
+  columns: SpannerExtraConfigColumn[]
   /** Referenced columns; all must belong to one table. */
-  foreignColumns: SpannerColumn<any>[];
+  foreignColumns: SpannerColumn<any>[]
 }
 
 export class ForeignKeyBuilder {
-  static readonly [entityKind]: string = 'SpannerForeignKeyBuilder';
+  static readonly [entityKind]: string = 'SpannerForeignKeyBuilder'
 
   /** @internal */
   readonly config: {
-    name: string | undefined;
-    columns: SpannerExtraConfigColumn[];
-    foreignColumns: SpannerColumn<any>[];
-    foreignTable: SpannerTable;
-    onDelete: ForeignKeyAction;
-  };
+    name: string | undefined
+    columns: SpannerExtraConfigColumn[]
+    foreignColumns: SpannerColumn<any>[]
+    foreignTable: SpannerTable
+    onDelete: ForeignKeyAction
+  }
 
   constructor(config: ForeignKeyConfig) {
-    const foreignTable = config.foreignColumns[0]?.table;
+    const foreignTable = config.foreignColumns[0]?.table
     if (!foreignTable) {
-      throw new Error('foreignKey: foreignColumns must name at least one column');
+      throw new Error('foreignKey: foreignColumns must name at least one column')
     }
     if (config.foreignColumns.some((column) => column.table !== foreignTable)) {
-      throw new Error('foreignKey: foreignColumns must all belong to one table');
+      throw new Error('foreignKey: foreignColumns must all belong to one table')
     }
     this.config = {
       name: config.name,
       columns: config.columns,
       foreignColumns: config.foreignColumns,
       foreignTable,
-      onDelete: 'noAction',
-    };
+      onDelete: 'noAction'
+    }
   }
 
   /** `ON DELETE { CASCADE | NO ACTION }`; `NO ACTION` is Spanner's default. */
   onDelete(action: ForeignKeyAction): this {
-    this.config.onDelete = action;
-    return this;
+    this.config.onDelete = action
+    return this
   }
 }
 
@@ -55,5 +55,5 @@ export class ForeignKeyBuilder {
  * `ON UPDATE` actions and cannot reference commit-timestamp columns.
  */
 export function foreignKey(config: ForeignKeyConfig): ForeignKeyBuilder {
-  return new ForeignKeyBuilder(config);
+  return new ForeignKeyBuilder(config)
 }

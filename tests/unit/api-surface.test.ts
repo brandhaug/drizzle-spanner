@@ -1,7 +1,7 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it } from 'vitest'
 
-import * as root from '../../src/index.js';
-import * as internal from '../../src/internal.js';
+import * as root from '../../src/index.js'
+import * as internal from '../../src/internal.js'
 
 // The hardening audit's contract: everything exported from the package root
 // is intentional public API. Wiring helpers the adapter and the kit share
@@ -24,8 +24,8 @@ const INTERNAL_HELPERS = [
   'unwrapDriverWrapper',
   'unwrapFloat',
   'whereToPrimaryKey',
-  'wrapSpannerError',
-];
+  'wrapSpannerError'
+]
 
 const PUBLIC_EXPORTS = [
   'CheckBuilder',
@@ -120,17 +120,17 @@ const PUBLIC_EXPORTS = [
   'string',
   'timestamp',
   'tokenlist',
-  'uniqueIndex',
-];
+  'uniqueIndex'
+]
 
 describe('drizzle-spanner public API surface', () => {
   it('the package root exports exactly the audited public names', () => {
-    expect(Object.keys(root).sort()).toEqual(PUBLIC_EXPORTS);
-  });
+    expect(Object.keys(root).sort()).toEqual(PUBLIC_EXPORTS)
+  })
 
   it('internal helpers are available from drizzle-spanner/internal', () => {
     for (const name of INTERNAL_HELPERS) {
-      expect(internal, name).toHaveProperty(name);
+      expect(internal, name).toHaveProperty(name)
     }
-  });
-});
+  })
+})

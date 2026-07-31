@@ -1,6 +1,6 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it } from 'vitest'
 
-import * as root from '../../src/index.js';
+import * as root from '../../src/index.js'
 
 // The kit's public API is the config helpers, the four commands for
 // programmatic use, and the typed refusal. DDL/snapshot/introspection
@@ -12,11 +12,11 @@ const PUBLIC_EXPORTS = [
   'loadConfig',
   'migrate',
   'pull',
-  'push',
-];
+  'push'
+]
 
 describe('drizzle-spanner-kit public API surface', () => {
   it('the package root exports exactly the audited public names', () => {
-    expect(Object.keys(root).sort()).toEqual(PUBLIC_EXPORTS);
-  });
-});
+    expect(Object.keys(root).sort()).toEqual(PUBLIC_EXPORTS)
+  })
+})

@@ -1,6 +1,6 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it } from 'vitest'
 
-import { findPackViolations } from '../../scripts/check-pack.js';
+import { findPackViolations } from '../../scripts/check-pack.js'
 
 // The published tarball may contain dist/ plus the standard metadata files
 // and nothing else (spec: package layout — `files` whitelist). CI runs
@@ -15,10 +15,10 @@ describe('findPackViolations', () => {
         'CHANGELOG.md',
         'dist/index.js',
         'dist/index.d.ts',
-        'dist/columns/string.js',
-      ]),
-    ).toEqual([]);
-  });
+        'dist/columns/string.js'
+      ])
+    ).toEqual([])
+  })
 
   it('flags anything outside dist and the metadata whitelist', () => {
     expect(
@@ -27,14 +27,14 @@ describe('findPackViolations', () => {
         'dist/index.js',
         'src/index.ts',
         'tsconfig.json',
-        '.env',
-      ]),
-    ).toEqual(['src/index.ts', 'tsconfig.json', '.env']);
-  });
+        '.env'
+      ])
+    ).toEqual(['src/index.ts', 'tsconfig.json', '.env'])
+  })
 
   it('flags a tarball with no dist output at all', () => {
     expect(findPackViolations(['package.json', 'README.md'])).toEqual([
-      'no dist/ files in the tarball',
-    ]);
-  });
-});
+      'no dist/ files in the tarball'
+    ])
+  })
+})
