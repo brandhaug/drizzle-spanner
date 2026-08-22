@@ -96,9 +96,8 @@ export function getPrimaryKeyColumns(table: SpannerTable): SpannerColumn<any>[] 
       if (is(entry, PrimaryKeyBuilder)) {
         // Composite keys capture SpannerExtraConfigColumn facades; map back
         // to the real columns by name.
-        return entry.columns.map(
-          (column) =>
-            Object.values(columns).find((candidate) => candidate.name === column.name)!
+        return entry.columns.map((column) =>
+          Object.values(columns).find((candidate) => candidate.name === column.name)!
         )
       }
     }
