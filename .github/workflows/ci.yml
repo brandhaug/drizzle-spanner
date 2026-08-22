@@ -34,8 +34,10 @@ jobs:
       - run: bun run lint
       - run: bun run format:check
       - run: bun run typecheck
-      - bun test tests/unit packages/drizzle-spanner-kit/tests/unit
+      - run: bun run test
       - run: bun run build
+      # Refresh the file: snapshot of drizzle-spanner now that dist/ exists.
+      - run: bun install
       - run: bun run --cwd packages/drizzle-spanner-kit build
       - name: README tested-versions table is in sync
         run: bun scripts/sync-tested-versions.ts --check
@@ -50,6 +52,9 @@ jobs:
           bun-version: 1.4.0
       - run: bun install --frozen-lockfile
       - run: bun run build
+      # Refresh the file: snapshot of drizzle-spanner now that dist/ exists,
+      # so the kit can resolve its types.
+      - run: bun install
       - run: bun run --cwd packages/drizzle-spanner-kit build
       - run: bun run check:types
       - run: bun run check:pack
@@ -72,11 +77,21 @@ jobs:
         drizzle-orm: ${{ fromJSON(needs.versions.outputs.drizzle-orm) }}
     steps:
       - uses: actions/checkout@v4
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 1.4.0
+      # The root package uses Bun catalogs, so npm cannot install it.
+      - run: bun install --frozen-lockfile
       - uses: actions/setup-node@v4
         with:
           node-version: ${{ matrix.node }}
-      - run: npm install
-      - run: npm install --no-save drizzle-orm@${{ matrix.drizzle-orm }}
+      - run: bun install --frozen-lockfile
+      - run: bun run build
+      # Refresh the file: snapshot of drizzle-spanner now that dist/ exists.
+      - run: bun install
+      - run: bun run --cwd packages/drizzle-spanner-kit build
+      - run: bun remove drizzle-orm
+      - run: bun add -d drizzle-orm@${{ matrix.drizzle-orm }}
       - run: npm test
       - run: npm run test:integration
 
@@ -92,10 +107,15 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: lts/*
-      # Root install only provides workspace builds; no root lockfile anymore.
-      - run: npm install
-      - run: npm run build
-      - run: npm run build -w drizzle-spanner-kit
+      # Root install only provides workspace builds; catalogs need Bun.
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 1.4.0
+      - run: bun install --frozen-lockfile
+      - run: bun run build
+      # Refresh the file: snapshot of drizzle-spanner now that dist/ exists.
+      - run: bun install
+      - run: bun run --cwd packages/drizzle-spanner-kit build
       - name: Start Spanner emulator
         run: |
           docker run -d --name spanner-emulator -p 9010:9010 \
