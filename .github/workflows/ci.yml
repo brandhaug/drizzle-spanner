@@ -87,9 +87,9 @@ jobs:
           node-version: ${{ matrix.node }}
       - run: bun install --frozen-lockfile
       - run: bun run build
-      - run: bun run --cwd packages/drizzle-spanner-kit build
       # Refresh the file: snapshot of drizzle-spanner now that dist/ exists.
       - run: bun install
+      - run: bun run --cwd packages/drizzle-spanner-kit build
       - run: bun remove drizzle-orm
       - run: bun add -d drizzle-orm@${{ matrix.drizzle-orm }}
       - run: npm test
