@@ -43,10 +43,10 @@
     "format:check": "oxfmt --check",
     "check": "npm run typecheck && npm run lint && npm run format:check && npm test",
     "check:fix": "npm run lint:fix && npm run format",
-    "test": "vitest run tests/unit packages/drizzle-spanner-kit/tests/unit",
+    "test": "bun test tests/unit packages/drizzle-spanner-kit/tests/unit",
     "check:types": "attw --pack . --profile esm-only && attw --pack packages/drizzle-spanner-kit --profile esm-only",
     "check:pack": "node scripts/check-pack.ts",
-    "test:integration": "vitest run tests/integration packages/drizzle-spanner-kit/tests/integration --fileParallelism=false",
+    "test:integration": "bun test tests/integration packages/drizzle-spanner-kit/tests/integration --timeout 180000",
     "test:integration:bun": "bun test tests/integration packages/drizzle-spanner-kit/tests/integration --timeout 180000",
     "emulator:up": "docker compose up -d",
     "emulator:down": "docker compose down",
@@ -57,14 +57,14 @@
   "devDependencies": {
     "@arethetypeswrong/cli": "catalog:",
     "@google-cloud/spanner": "catalog:",
+    "@types/bun": "1.4.0",
     "@types/node": "catalog:",
     "drizzle-orm": "catalog:",
     "lint-staged": "catalog:",
     "oxfmt": "catalog:",
     "oxlint": "catalog:",
     "testcontainers": "catalog:",
-    "typescript": "catalog:",
-    "vitest": "catalog:"
+    "typescript": "catalog:"
   },
   "peerDependencies": {
     "@google-cloud/spanner": ">=7.0.0",
@@ -92,7 +92,6 @@
     "oxfmt": "0.64.0",
     "oxlint": "1.79.0",
     "testcontainers": "12.1.0",
-    "typescript": "7.0.2",
-    "vitest": "4.1.11"
+    "typescript": "7.0.2"
   }
 }

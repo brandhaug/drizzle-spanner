@@ -21,9 +21,9 @@ npm run build -w drizzle-spanner-kit
 
 | Command                        | What it runs                                                        |
 | ------------------------------ | ------------------------------------------------------------------- |
-| `npm test`                     | Unit tests for both packages (SQL generation, no database)          |
-| `npm run test:integration`     | Emulator integration tests via testcontainers (needs Docker)        |
-| `npm run test:integration:bun` | The integration suite under Bun against an already-running emulator |
+| `npm test`                     | Unit tests for both packages via `bun test` (SQL generation, no DB) |
+| `npm run test:integration`     | Emulator integration tests (needs a running emulator; see below)    |
+| `npm run test:integration:bun` | Alias of `test:integration`                                         |
 | `npm run lint`                 | oxlint over the workspace (`npm run lint:fix` applies fixes)        |
 | `npm run format`               | oxfmt over the workspace (`npm run format:check` in CI)             |
 | `npm run check`                | typecheck + lint + format check + unit tests                        |
@@ -31,10 +31,10 @@ npm run build -w drizzle-spanner-kit
 | `npm run check:types`          | `arethetypeswrong` against the packed tarballs                      |
 | `npm run check:pack`           | `npm pack` contents match the dist-only whitelist                   |
 
-Integration tests start one emulator container per test worker
-(testcontainers manages the lifecycle; emulator state is in-memory, so
-isolation is free). For an interactive dev loop against a long-lived
-emulator:
+All tests run under `bun test`. Integration tests expect a running emulator
+(`bun test` runs every file in one process, so it cannot manage per-file
+testcontainers) and `SPANNER_EMULATOR_HOST=localhost:9010`. For an
+interactive dev loop:
 
 ```bash
 npm run emulator:up      # docker compose: emulator on localhost:9010
@@ -42,8 +42,7 @@ npm run test:integration # picks up the running emulator
 npm run emulator:down
 ```
 
-Bun cannot manage per-file testcontainers in one process, so the Bun suite
-expects a running emulator and `SPANNER_EMULATOR_HOST=localhost:9010`. See
+See
 [docs/emulator.md](docs/emulator.md) for what the emulator cannot do; those
 paths run nightly against real Spanner (`.github/workflows/nightly-spanner.yml`).
 

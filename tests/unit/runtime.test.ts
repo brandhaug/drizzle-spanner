@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it } from 'bun:test'
 import { sql } from 'drizzle-orm/sql'
 import { and, eq, gt } from 'drizzle-orm/sql/expressions'
 import {
@@ -20,6 +20,22 @@ import type {
   SpannerDriverTransaction,
   SpannerSqlRequest
 } from '../../src/index.js'
+
+// bun:test has no .rejects.toSatisfy(); assert the rejection with a predicate.
+async function rejectsMatching<T>(
+  promise: Promise<T>,
+  predicate: (error: unknown) => boolean
+): Promise<void> {
+  const error = await promise.then(
+    () => {
+      throw new Error('expected promise to reject, but it resolved')
+    },
+    (cause: unknown) => cause
+  )
+  if (!predicate(error)) {
+    throw new Error(`rejected value did not match predicate: ${String(error)}`)
+  }
+}
 
 const singers = spannerTable('singers', {
   id: string('id', { length: 36 }).primaryKey(),
@@ -526,14 +542,13 @@ describe('bufferedMutations transactions', () => {
   it('rejects orIgnore() in a bufferedMutations transaction with a typed error', async () => {
     const fake = fakeMutationDatabase()
     const db = drizzle(fake.database)
-    await expect(
+    await rejectsMatching(
       db.transaction(
         async (tx) => {
           await tx.insert(singers).values({ id: 'a', name: 'Ada' }).orIgnore()
         },
         { mode: 'bufferedMutations' }
-      )
-    ).rejects.toSatisfy(
+      ),
       (error: unknown) =>
         error instanceof SpannerInvalidArgumentError && /orIgnore/.test(error.message)
     )

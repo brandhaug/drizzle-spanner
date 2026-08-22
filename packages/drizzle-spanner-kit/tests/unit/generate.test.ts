@@ -1,7 +1,8 @@
 import { mkdtemp, readdir, readFile, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
-import { describe, expect, it } from 'vitest'
+import { fileURLToPath } from 'node:url'
+import { describe, expect, it } from 'bun:test'
 import { generate } from '../../src/index.js'
 import { parseSnapshot } from '../../src/snapshot.js'
 
@@ -29,6 +30,22 @@ async function setup() {
   const schemaPath = join(dir, 'schema.ts')
   const out = join(dir, 'drizzle')
   await writeFile(schemaPath, SCHEMA_V1)
+  // The generated schema imports 'drizzle-spanner'. Outside the repo there is
+  // no node_modules for it to resolve through, so map the specifier to the
+  // package source with a per-directory tsconfig (Bun honors tsconfig paths
+  // when importing the schema module; vitest used a resolve.alias instead).
+  const srcUrl = fileURLToPath(new URL('../../../../src/index.ts', import.meta.url))
+  await writeFile(
+    join(dir, 'tsconfig.json'),
+    JSON.stringify({
+      compilerOptions: {
+        paths: {
+          'drizzle-spanner': [srcUrl],
+          'drizzle-spanner/migrator': [srcUrl.replace('index.ts', 'migrator.ts')]
+        }
+      }
+    })
+  )
   return { dir, schemaPath, out }
 }
 

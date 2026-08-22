@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it } from 'bun:test'
 import { sql } from 'drizzle-orm/sql'
 import {
   check,
@@ -15,6 +15,22 @@ import {
 import { DiffRefusedError, diffSnapshots } from '../../src/differ.js'
 import { serializeSchema } from '../../src/serializer.js'
 import type { SpannerEntity } from '../../src/snapshot.js'
+
+// bun:test has no .rejects.toSatisfy(); assert the rejection with a predicate.
+async function rejectsMatching<T>(
+  promise: Promise<T>,
+  predicate: (error: unknown) => boolean
+): Promise<void> {
+  const error = await promise.then(
+    () => {
+      throw new Error('expected promise to reject, but it resolved')
+    },
+    (cause: unknown) => cause
+  )
+  if (!predicate(error)) {
+    throw new Error(`rejected value did not match predicate: ${String(error)}`)
+  }
+}
 
 function ddlOf(schemaExports: Record<string, unknown>): SpannerEntity[] {
   return serializeSchema(schemaExports)
@@ -259,11 +275,10 @@ describe('diffSnapshots: renames', () => {
       id: string('id', { length: 36 }).primaryKey().defaultGenerateUuid(),
       fullName: string('full_name', { length: 'max' }).notNull()
     })
-    await expect(
+    await rejectsMatching(
       diffSnapshots(before, ddlOf({ singers: renamed }), {
         resolveRename: async () => 'full_name'
-      })
-    ).rejects.toSatisfy(
+      }),
       (error: unknown) =>
         error instanceof DiffRefusedError &&
         error.diagnostics.some(
@@ -293,7 +308,8 @@ describe('diffSnapshots: renames', () => {
       id: string('id', { length: 36 }).primaryKey().defaultGenerateUuid(),
       fullName: string('full_name', { length: 'max' }).notNull()
     })
-    await expect(diffSnapshots(before, ddlOf({ singers: renamed }))).rejects.toSatisfy(
+    await rejectsMatching(
+      diffSnapshots(before, ddlOf({ singers: renamed })),
       (error: unknown) =>
         error instanceof DiffRefusedError &&
         error.diagnostics.some((diagnostic) => diagnostic.kind === 'ambiguous-rename')
@@ -316,9 +332,8 @@ describe('diffSnapshots: refuse-and-explain', () => {
       },
       (self) => [primaryKey({ columns: [self.id, self.v] })]
     )
-    await expect(
-      diffSnapshots(ddlOf({ t: before }), ddlOf({ t: after }))
-    ).rejects.toSatisfy(
+    await rejectsMatching(
+      diffSnapshots(ddlOf({ t: before }), ddlOf({ t: after })),
       (error: unknown) =>
         error instanceof DiffRefusedError &&
         error.diagnostics.some(
@@ -351,9 +366,8 @@ describe('diffSnapshots: refuse-and-explain', () => {
       },
       (self) => [primaryKey({ columns: [self.id, self.cid] })]
     )
-    await expect(
-      diffSnapshots(ddlOf({ parent, c: before }), ddlOf({ parent, c: after }))
-    ).rejects.toSatisfy(
+    await rejectsMatching(
+      diffSnapshots(ddlOf({ parent, c: before }), ddlOf({ parent, c: after })),
       (error: unknown) =>
         error instanceof DiffRefusedError &&
         error.diagnostics.some((diagnostic) => diagnostic.kind === 'interleave-change')
@@ -369,9 +383,8 @@ describe('diffSnapshots: refuse-and-explain', () => {
       id: string('id', { length: 36 }).primaryKey(),
       v: string('v', { length: 'max' })
     })
-    await expect(
-      diffSnapshots(ddlOf({ t: before }), ddlOf({ t: after }))
-    ).rejects.toSatisfy(
+    await rejectsMatching(
+      diffSnapshots(ddlOf({ t: before }), ddlOf({ t: after })),
       (error: unknown) =>
         error instanceof DiffRefusedError &&
         error.diagnostics.some(
@@ -391,9 +404,8 @@ describe('diffSnapshots: refuse-and-explain', () => {
       id: string('id', { length: 36 }).primaryKey(),
       g: int64('g').generatedAlwaysAs(sql`2 + 2`)
     })
-    await expect(
-      diffSnapshots(ddlOf({ t: before }), ddlOf({ t: after }))
-    ).rejects.toSatisfy(
+    await rejectsMatching(
+      diffSnapshots(ddlOf({ t: before }), ddlOf({ t: after })),
       (error: unknown) =>
         error instanceof DiffRefusedError &&
         error.diagnostics.some(

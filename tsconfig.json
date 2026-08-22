@@ -16,7 +16,7 @@
     "esModuleInterop": true,
     "forceConsistentCasingInFileNames": true,
     "verbatimModuleSyntax": true,
-    "types": ["node"],
+    "types": ["node", "bun"],
     "paths": {
       "drizzle-spanner": ["./src/index.ts"],
       "drizzle-spanner/migrator": ["./src/migrator.ts"],

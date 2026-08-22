@@ -1,4 +1,4 @@
-import { afterAll, beforeAll, describe, expect, it } from 'vitest'
+import { afterAll, beforeAll, describe, expect, it } from 'bun:test'
 import { and, eq, isNull } from 'drizzle-orm/sql/expressions'
 import {
   bool,

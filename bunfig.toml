@@ -1,3 +1,8 @@
 [install]
 exact = true
 peer = false
+
+[test]
+# Mirrors the former vitest.config.ts testTimeout (hookTimeout has no
+# bun:test equivalent; integration scripts pass --timeout 180000 instead).
+timeout = 120000

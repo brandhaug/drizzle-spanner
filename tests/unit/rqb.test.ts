@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it } from 'bun:test'
 import { defineRelations } from 'drizzle-orm/relations'
 import {
   drizzle,
@@ -230,11 +230,13 @@ describe('relational queries: decoding', () => {
   it('findFirst returns the first row or undefined', async () => {
     const empty = fakeRqbDatabase([])
     const dbEmpty = drizzle(empty.database, { relations })
-    await expect(dbEmpty.query.singers.findFirst()).resolves.toBeUndefined()
+    // findFirst() returns a thenable query builder, not a native Promise,
+    // so await it directly (bun:test .resolvers requires a real Promise).
+    expect(await dbEmpty.query.singers.findFirst()).toBeUndefined()
 
     const one = fakeRqbDatabase([{ id: 's1', name: 'Ada' }])
     const dbOne = drizzle(one.database, { relations })
-    await expect(dbOne.query.singers.findFirst()).resolves.toEqual({
+    expect(await dbOne.query.singers.findFirst()).toEqual({
       id: 's1',
       name: 'Ada'
     })

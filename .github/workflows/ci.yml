@@ -14,13 +14,11 @@ jobs:
     runs-on: ubuntu-latest
     outputs:
       drizzle-orm: ${{ steps.read.outputs.drizzle-orm }}
-      node: ${{ steps.read.outputs.node }}
     steps:
       - uses: actions/checkout@v4
       - id: read
         run: |
           echo "drizzle-orm=$(jq -c '."drizzle-orm"' .github/tested-versions.json)" >> "$GITHUB_OUTPUT"
-          echo "node=$(jq -c '.node' .github/tested-versions.json)" >> "$GITHUB_OUTPUT"
 
   check:
     name: Lint, typecheck, unit tests, build
@@ -64,27 +62,22 @@ jobs:
         run: npm publish --dry-run
         working-directory: packages/drizzle-spanner-kit
 
-  # Node LTS set crossed with every supported drizzle-orm beta: a breaking
-  # beta must fail here, not in a user application.
-  integration-node:
-    name: Integration (Node ${{ matrix.node }}, drizzle-orm ${{ matrix.drizzle-orm }})
+  # Every supported drizzle-orm beta crossed with the shared emulator: a
+  # breaking beta must fail here, not in a user application. The suite itself
+  # always runs under Bun (`bun test`); the matrix varies drizzle-orm.
+  integration-drizzle-orm:
+    name: Integration (drizzle-orm ${{ matrix.drizzle-orm }})
     needs: versions
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
       matrix:
-        node: ${{ fromJSON(needs.versions.outputs.node) }}
         drizzle-orm: ${{ fromJSON(needs.versions.outputs.drizzle-orm) }}
     steps:
       - uses: actions/checkout@v4
       - uses: oven-sh/setup-bun@v2
         with:
           bun-version: 1.4.0
-      # The root package uses Bun catalogs, so npm cannot install it.
-      - run: bun install --frozen-lockfile
-      - uses: actions/setup-node@v4
-        with:
-          node-version: ${{ matrix.node }}
       - run: bun install --frozen-lockfile
       - run: bun run build
       # Refresh the file: snapshot of drizzle-spanner now that dist/ exists.
@@ -92,8 +85,16 @@ jobs:
       - run: bun run --cwd packages/drizzle-spanner-kit build
       - run: bun remove drizzle-orm
       - run: bun add -d drizzle-orm@${{ matrix.drizzle-orm }}
-      - run: npm test
-      - run: npm run test:integration
+      # bun test runs all files in one process, so it cannot manage a
+      # testcontainers container per file; start one shared emulator.
+      - name: Start Spanner emulator
+        run: |
+          docker run -d --name spanner-emulator -p 9010:9010 \
+            gcr.io/cloud-spanner-emulator/emulator:latest
+          until docker logs spanner-emulator 2>&1 | grep -qi 'gRPC server listening'; do sleep 1; done
+      - run: bun run test:integration
+        env:
+          SPANNER_EMULATOR_HOST: localhost:9010
 
   examples:
     name: Examples (${{ matrix.example }})

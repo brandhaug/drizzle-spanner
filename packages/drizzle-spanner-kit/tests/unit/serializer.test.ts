@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it } from 'bun:test'
 import { sql } from 'drizzle-orm/sql'
 import {
   bool,
