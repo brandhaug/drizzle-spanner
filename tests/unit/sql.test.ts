@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it } from 'bun:test'
 import { eq, gt } from 'drizzle-orm/sql/expressions'
 import { sql } from 'drizzle-orm/sql'
 import {
@@ -196,6 +196,7 @@ describe('parameter type hints', () => {
         .values({ name: 'Ada', plays: null, updatedAt: new Date() })
         .getSQL()
     )
-    expect(query.typings).toEqual(['string', 'int64', 'timestamp'])
+    // bun:test types toEqual<T> off the received value, so widen explicitly.
+    expect(query.typings).toEqual<string[]>(['string', 'int64', 'timestamp'])
   })
 })

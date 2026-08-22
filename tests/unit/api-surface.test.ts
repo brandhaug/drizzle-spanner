@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it } from 'bun:test'
 
 import * as root from '../../src/index.js'
 import * as internal from '../../src/internal.js'

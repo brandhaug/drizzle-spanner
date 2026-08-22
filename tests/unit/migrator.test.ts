@@ -2,11 +2,27 @@ import { mkdir, mkdtemp, writeFile } from 'node:fs/promises'
 import { createHash } from 'node:crypto'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it } from 'bun:test'
 import { drizzle } from '../../src/index.js'
 import { SpannerDdlError } from '../../src/index.js'
 import { migrate } from '../../src/migrator.js'
 import type { SpannerDriverRow, SpannerSqlRequest } from '../../src/index.js'
+
+// bun:test has no .rejects.toSatisfy(); assert the rejection with a predicate.
+async function rejectsMatching<T>(
+  promise: Promise<T>,
+  predicate: (error: unknown) => boolean
+): Promise<void> {
+  const error = await promise.then(
+    () => {
+      throw new Error('expected promise to reject, but it resolved')
+    },
+    (cause: unknown) => cause
+  )
+  if (!predicate(error)) {
+    throw new Error(`rejected value did not match predicate: ${String(error)}`)
+  }
+}
 
 const MIGRATION_1 =
   'CREATE TABLE `a` (\n  `id` STRING(36) NOT NULL\n) PRIMARY KEY (`id`);\n'
@@ -163,7 +179,8 @@ describe('migrate (runtime)', () => {
       failDdlAtStatement: 1
     })
     const db = drizzle(fake.database as never)
-    await expect(migrate(db, { migrationsFolder: out })).rejects.toSatisfy(
+    await rejectsMatching(
+      migrate(db, { migrationsFolder: out }),
       (error: unknown) =>
         error instanceof SpannerDdlError &&
         error.statementIndex === 1 &&

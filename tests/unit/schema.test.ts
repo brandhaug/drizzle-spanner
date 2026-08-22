@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it } from 'bun:test'
 import { getTableName } from 'drizzle-orm/table'
 import { getTableColumns } from 'drizzle-orm/utils'
 import { int64, spannerTable, string } from '../../src/index.js'

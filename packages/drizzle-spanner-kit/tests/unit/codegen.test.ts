@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it } from 'bun:test'
 import { renderSchemaModule } from '../../src/codegen.js'
 import type { SpannerEntity } from '../../src/snapshot.js'
 
