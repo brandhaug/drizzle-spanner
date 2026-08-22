@@ -27,34 +27,32 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: oven-sh/setup-bun@v2
         with:
-          node-version: lts/*
-          cache: npm
-      - run: npm ci
-      - run: npm run lint
-      - run: npm run format:check
-      - run: npm run typecheck
-      - run: npm test
-      - run: npm run build
-      - run: npm run build -w drizzle-spanner-kit
+          bun-version: 1.4.0
+      - run: bun install --frozen-lockfile
+      - run: bun run lint
+      - run: bun run format:check
+      - run: bun run typecheck
+      - bun test tests/unit packages/drizzle-spanner-kit/tests/unit
+      - run: bun run build
+      - run: bun run --cwd packages/drizzle-spanner-kit build
       - name: README tested-versions table is in sync
-        run: node scripts/sync-tested-versions.ts --check
+        run: bun scripts/sync-tested-versions.ts --check
 
   package-hygiene:
     name: Types resolution and pack contents
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: oven-sh/setup-bun@v2
         with:
-          node-version: lts/*
-          cache: npm
-      - run: npm ci
-      - run: npm run build
-      - run: npm run build -w drizzle-spanner-kit
-      - run: npm run check:types
-      - run: npm run check:pack
+          bun-version: 1.4.0
+      - run: bun install --frozen-lockfile
+      - run: bun run build
+      - run: bun run --cwd packages/drizzle-spanner-kit build
+      - run: bun run check:types
+      - run: bun run check:pack
       - name: Dry-run publish drizzle-spanner
         run: npm publish --dry-run
       - name: Dry-run publish drizzle-spanner-kit
@@ -77,8 +75,7 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: ${{ matrix.node }}
-          cache: npm
-      - run: npm ci
+      - run: npm install
       - run: npm install --no-save drizzle-orm@${{ matrix.drizzle-orm }}
       - run: npm test
       - run: npm run test:integration
@@ -95,8 +92,8 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: lts/*
-          cache: npm
-      - run: npm ci
+      # Root install only provides workspace builds; no root lockfile anymore.
+      - run: npm install
       - run: npm run build
       - run: npm run build -w drizzle-spanner-kit
       - name: Start Spanner emulator
@@ -116,14 +113,10 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
-        with:
-          node-version: lts/*
-          cache: npm
       - uses: oven-sh/setup-bun@v2
         with:
-          bun-version: latest
-      - run: npm ci
+          bun-version: 1.4.0
+      - run: bun install --frozen-lockfile
       # Bun cannot manage the testcontainers lifecycle per file in one
       # process, so start one shared emulator for the whole run.
       - name: Start Spanner emulator
@@ -131,6 +124,6 @@ jobs:
           docker run -d --name spanner-emulator -p 9010:9010 \
             gcr.io/cloud-spanner-emulator/emulator:latest
           until docker logs spanner-emulator 2>&1 | grep -qi 'gRPC server listening'; do sleep 1; done
-      - run: npm run test:integration:bun
+      - run: bun run test:integration:bun
         env:
           SPANNER_EMULATOR_HOST: localhost:9010
