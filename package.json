@@ -55,16 +55,16 @@
     "prepare": "git config core.hooksPath .githooks"
   },
   "devDependencies": {
-    "@arethetypeswrong/cli": "^0.18.5",
-    "@google-cloud/spanner": "^8.10.0",
-    "@types/node": "^24.0.0",
-    "drizzle-orm": "1.0.0-beta.22",
-    "lint-staged": "^17.0.8",
-    "oxfmt": "^0.57.0",
-    "oxlint": "^1.72.0",
-    "testcontainers": "^11.0.0",
-    "typescript": "^5.8.0",
-    "vitest": "^3.2.0"
+    "@arethetypeswrong/cli": "catalog:",
+    "@google-cloud/spanner": "catalog:",
+    "@types/node": "catalog:",
+    "drizzle-orm": "catalog:",
+    "lint-staged": "catalog:",
+    "oxfmt": "catalog:",
+    "oxlint": "catalog:",
+    "testcontainers": "catalog:",
+    "typescript": "catalog:",
+    "vitest": "catalog:"
   },
   "peerDependencies": {
     "@google-cloud/spanner": ">=7.0.0",
@@ -75,7 +75,24 @@
       "optional": true
     }
   },
+  "overrides": {
+    "drizzle-spanner": "file:."
+  },
   "engines": {
+    "bun": ">=1.4.0",
     "node": ">=20"
+  },
+  "packageManager": "bun@1.4.0",
+  "catalog": {
+    "@arethetypeswrong/cli": "0.18.5",
+    "@google-cloud/spanner": "8.10.0",
+    "@types/node": "24.13.3",
+    "drizzle-orm": "1.0.0-beta.22",
+    "lint-staged": "17.2.0",
+    "oxfmt": "0.57.0",
+    "oxlint": "1.76.0",
+    "testcontainers": "11.14.0",
+    "typescript": "5.9.3",
+    "vitest": "3.2.7"
   }
 }
