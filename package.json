@@ -92,7 +92,7 @@
     "oxfmt": "0.64.0",
     "oxlint": "1.79.0",
     "testcontainers": "12.1.0",
-    "typescript": "5.9.3",
+    "typescript": "7.0.2",
     "vitest": "3.2.7"
   }
 }
