@@ -86,9 +86,9 @@
   "catalog": {
     "@arethetypeswrong/cli": "0.18.5",
     "@google-cloud/spanner": "8.10.0",
-    "@types/node": "24.13.3",
+    "@types/node": "26.2.0",
     "drizzle-orm": "1.0.0-beta.22",
-    "lint-staged": "17.2.0",
+    "lint-staged": "17.3.0",
     "oxfmt": "0.64.0",
     "oxlint": "1.76.0",
     "testcontainers": "11.14.0",
