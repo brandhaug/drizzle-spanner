@@ -34,7 +34,7 @@ jobs:
       - run: bun run lint
       - run: bun run format:check
       - run: bun run typecheck
-      - bun test tests/unit packages/drizzle-spanner-kit/tests/unit
+      - run: bun test tests/unit packages/drizzle-spanner-kit/tests/unit
       - run: bun run build
       - run: bun run --cwd packages/drizzle-spanner-kit build
       - name: README tested-versions table is in sync

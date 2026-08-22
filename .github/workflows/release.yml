@@ -23,7 +23,7 @@ jobs:
         run: bun scripts/release-check.ts "${GITHUB_REF_NAME}"
       - run: bun run lint
       - run: bun run typecheck
-      - bun run test
+      - run: bun run test
       - run: bun run build
       - run: bun run --cwd packages/drizzle-spanner-kit build
       - run: npm run check:types
