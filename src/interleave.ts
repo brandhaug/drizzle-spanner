@@ -14,9 +14,11 @@ export interface InterleaveConfig {
  * runtime by `spannerTable` instead.
  */
 export type TypeVisiblePkData<T extends TableConfig> = {
-  [K in keyof T['columns'] as T['columns'][K]['_']['isPrimaryKey'] extends true
-    ? K
-    : never]: T['columns'][K]['_']['data']
+  [
+    K in keyof T['columns'] as T['columns'][K]['_']['isPrimaryKey'] extends true
+      ? K
+      : never
+  ]: T['columns'][K]['_']['data']
 }
 
 /**
