@@ -85,7 +85,7 @@
   "packageManager": "bun@1.4.0",
   "catalog": {
     "@arethetypeswrong/cli": "0.18.5",
-    "@google-cloud/spanner": "8.10.0",
+    "@google-cloud/spanner": "8.11.0",
     "@types/node": "26.2.0",
     "drizzle-orm": "1.0.0-beta.22",
     "lint-staged": "17.3.0",
