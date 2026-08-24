@@ -1,6 +1,4 @@
-import type { Casing } from 'drizzle-orm/utils'
 import { aliasedTable } from 'drizzle-orm/alias'
-import { CasingCache } from 'drizzle-orm/casing'
 import { entityKind, is } from 'drizzle-orm/entity'
 import { DrizzleError } from 'drizzle-orm/errors'
 import type {
@@ -16,25 +14,15 @@ import {
   relationsOrderToSQL,
   relationToSQL
 } from 'drizzle-orm/relations'
-import type {
-  DriverValueEncoder,
-  Query,
-  QueryTypingsValue,
-  QueryWithTypings,
-  SQLChunk
-} from 'drizzle-orm/sql'
+import type { DriverValueEncoder, Query, SQLChunk } from 'drizzle-orm/sql'
 import { Column } from 'drizzle-orm/column'
 import { and } from 'drizzle-orm/sql/expressions'
-import { Param, SQL, sql } from 'drizzle-orm/sql'
+import { Param, Placeholder, SQL, sql } from 'drizzle-orm/sql'
 import type { SelectedFieldsOrdered } from './orm-internal.js'
 import { orderSelectedFields } from './orm-internal.js'
 import { SpannerColumn } from './columns/common.js'
 import type { SpannerTable } from './table.js'
 import { TableColumns } from './symbols.js'
-
-export interface SpannerDialectConfig {
-  casing?: Casing
-}
 
 export interface SpannerSelectConfig {
   table: SpannerTable | SQL
@@ -68,28 +56,24 @@ export interface SpannerDeleteConfig {
 }
 
 /**
- * `QueryWithTypings` plus the column name behind each positional parameter,
- * so error hints can name the column a failing parameter binds.
+ * `Query` plus Spanner-specific parameter metadata gathered while compiling:
+ * the type hint for each positional parameter and the column name behind it,
+ * so the session can build driver `types` entries and error hints can name the
+ * column a failing parameter binds.
  */
-export interface SpannerQueryWithTypings extends QueryWithTypings {
+export interface SpannerQueryWithTypings extends Query {
+  typings?: string[]
   paramColumns?: (string | undefined)[]
 }
 
 export class SpannerDialect {
   static readonly [entityKind]: string = 'SpannerDialect'
 
-  /** @internal */
-  readonly casing: CasingCache
-
-  constructor(config?: SpannerDialectConfig) {
-    this.casing = new CasingCache(config?.casing)
-  }
-
   escapeName(name: string): string {
     return `\`${name}\``
   }
 
-  escapeParam(num: number): string {
+  escapeParam(num: number, _value: unknown): string {
     return `@p${num}`
   }
 
@@ -98,39 +82,86 @@ export class SpannerDialect {
   }
 
   /**
-   * The type hint each column emits rides through drizzle's `typings` channel;
-   * the upstream `QueryTypingsValue` union is closed at the type level but
-   * unvalidated at runtime (spike finding). The session decodes the hints into
-   * driver `types` entries.
+   * The type hint each column emits; since rc.4 drizzle no longer carries a
+   * `typings` channel on `Query`, so hints are collected by walking the SQL
+   * tree in parameter-emission order and ride on `SpannerQueryWithTypings`.
    */
-  prepareTyping = (
-    encoder: DriverValueEncoder<unknown, unknown>
-  ): QueryTypingsValue => {
+  prepareTyping = (encoder: DriverValueEncoder<unknown, unknown>): string => {
     if (is(encoder, SpannerColumn)) {
-      return encoder.typeHint() as QueryTypingsValue
+      return encoder.typeHint()
     }
     return 'none'
+  }
+
+  /**
+   * Walks the SQL tree in the same pre-order `SQL.toQuery` emits parameters,
+   * recording each parameter's type hint and source column.
+   */
+  private collectParamInfo(
+    sqlInput: SQL,
+    typings: string[],
+    paramColumns: (string | undefined)[]
+  ): void {
+    const walk = (chunk: unknown): void => {
+      if (chunk === undefined) return
+      if (Array.isArray(chunk)) {
+        chunk.forEach(walk)
+        return
+      }
+      if (chunk instanceof Param) {
+        if (is(chunk.value, SQL)) {
+          // Params wrapping SQL expand into the inner statement's params.
+          walk(chunk.value)
+          return
+        }
+        if (is(chunk.encoder, SpannerColumn)) {
+          typings.push(this.prepareTyping(chunk.encoder))
+          paramColumns.push(chunk.encoder.name)
+        } else {
+          typings.push('none')
+          paramColumns.push(undefined)
+        }
+        return
+      }
+      if (is(chunk, Placeholder)) {
+        typings.push('none')
+        paramColumns.push(undefined)
+        return
+      }
+      if (is(chunk, SQL)) {
+        chunk.queryChunks.forEach(walk)
+        return
+      }
+      if (
+        typeof chunk === 'string' ||
+        typeof chunk === 'number' ||
+        typeof chunk === 'boolean' ||
+        typeof chunk === 'bigint' ||
+        chunk === null
+      ) {
+        // Raw values in the sql tag become positional params.
+        typings.push('none')
+        paramColumns.push(undefined)
+      }
+      // Everything else (Name, Column, Table, SQL.Aliased, …) emits no params.
+    }
+    sqlInput.queryChunks.forEach(walk)
   }
 
   sqlToQuery(
     sqlInput: SQL,
     invokeSource?: 'indexes' | undefined
   ): SpannerQueryWithTypings {
-    // prepareTyping fires once per parameter in order, so this doubles as the
-    // param-index → column-name record used by error hints.
-    const paramColumns: (string | undefined)[] = []
     const query = sqlInput.toQuery({
-      casing: this.casing,
       escapeName: this.escapeName,
       escapeParam: this.escapeParam,
       escapeString: this.escapeString,
-      prepareTyping: (encoder) => {
-        paramColumns.push(is(encoder, SpannerColumn) ? encoder.name : undefined)
-        return this.prepareTyping(encoder)
-      },
       invokeSource
     })
-    return { ...query, paramColumns }
+    const typings: string[] = []
+    const paramColumns: (string | undefined)[] = []
+    this.collectParamInfo(sqlInput, typings, paramColumns)
+    return { ...query, typings, paramColumns }
   }
 
   private buildSelection(fields: SelectedFieldsOrdered): SQL {
@@ -179,9 +210,7 @@ export class SpannerDialect {
     const { table, values, returning, conflictAction } = config
     const columns = table[TableColumns]
     const colEntries = Object.entries(columns)
-    const insertOrder = colEntries.map(([, column]) =>
-      sql.identifier(this.casing.getColumnCasing(column))
-    )
+    const insertOrder = colEntries.map(([, column]) => sql.identifier(column.name))
 
     const valuesSqlList: (SQLChunk[] | SQL)[] = []
     for (const [valueIndex, value] of values.entries()) {
@@ -220,7 +249,7 @@ export class SpannerDialect {
       columnNames.flatMap((columnName, i) => {
         const column = tableColumns[columnName]!
         const value = set[columnName]!
-        const assignment = sql`${sql.identifier(this.casing.getColumnCasing(column))} = ${value}`
+        const assignment = sql`${sql.identifier(column.name)} = ${value}`
         return i < setLength - 1 ? [assignment, sql.raw(', ')] : [assignment]
       })
     )
@@ -244,7 +273,7 @@ export class SpannerDialect {
 
   private buildRqbColumn(table: SpannerTable, column: unknown, key: string): SQL {
     if (is(column, Column)) {
-      return sql`${table}.${sql.identifier(this.casing.getColumnCasing(column))} as ${sql.identifier(key)}`
+      return sql`${table}.${sql.identifier(column.name)} as ${sql.identifier(key)}`
     }
     throw new DrizzleError({
       message: `Field "${key}" is not a column; the relational query builder selects table columns (use extras for SQL expressions)`
@@ -310,13 +339,7 @@ export class SpannerDialect {
     const limit = isSingle ? 1 : params?.limit
     const offset = params?.offset
     const filter = params?.where
-      ? relationsFilterToSQL(
-          table,
-          params.where,
-          tableConfig.relations,
-          schema,
-          this.casing
-        )
+      ? relationsFilterToSQL(table, params.where, tableConfig.relations, schema)
       : undefined
     const where =
       filter && relationWhere ? and(filter, relationWhere) : (filter ?? relationWhere)
@@ -347,13 +370,7 @@ export class SpannerDialect {
       const throughTable = relation.throughTable
         ? (aliasedTable(relation.throughTable, `tr${currentDepth}`) as SpannerTable)
         : undefined
-      const built = relationToSQL(
-        this.casing,
-        relation,
-        table,
-        targetTable,
-        throughTable
-      )
+      const built = relationToSQL(relation, table, targetTable, throughTable)
       const innerThroughJoin = throughTable
         ? sql` inner join ${getTableAsAliasSQL(throughTable)} on ${built.joinCondition}`
         : undefined

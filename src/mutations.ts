@@ -63,12 +63,7 @@ export function toMutationRow(
   const row: Record<string, unknown> = {}
   for (const [fieldName, value] of Object.entries(values)) {
     const column = columns[fieldName]!
-    row[dialect.casing.getColumnCasing(column)] = mutationValue(
-      dialect,
-      table,
-      fieldName,
-      value
-    )
+    row[column.name] = mutationValue(dialect, table, fieldName, value)
   }
   return row
 }

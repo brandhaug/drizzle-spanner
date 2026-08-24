@@ -15,7 +15,7 @@ dialect. It ships as two packages: `drizzle-spanner` (the ORM adapter) and
 Install the adapter next to `drizzle-orm` and the Spanner driver:
 
 ```bash
-npm install drizzle-spanner drizzle-orm@1.0.0-beta.22 @google-cloud/spanner
+npm install drizzle-spanner drizzle-orm.0.0-rc.4 @google-cloud/spanner
 ```
 
 `@google-cloud/spanner` is an optional peer dependency: the adapter takes the
@@ -29,9 +29,9 @@ CI runs the integration suite against each entry in this matrix; a breaking
 
 <!-- tested-versions:start -->
 
-| drizzle-orm     | Runtimes              |
-| --------------- | --------------------- |
-| `1.0.0-beta.22` | Node 22, Node 24, Bun |
+| drizzle-orm  | Runtimes              |
+| ------------ | --------------------- |
+| `1.0.0-rc.4` | Node 22, Node 24, Bun |
 
 <!-- tested-versions:end -->
 

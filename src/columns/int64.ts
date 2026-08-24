@@ -59,7 +59,7 @@ export class SpannerInt64Number extends SpannerColumn<
     return 'int64'
   }
 
-  override mapFromDriverValue(value: unknown): number | null {
+  override mapFromDriverValue = (value: unknown): number | null => {
     if (value === null) return null
     // The driver returns INT64 cells as `Int` wrappers `{ value: '42' }`.
     const raw = String(unwrapDriverWrapper(value))
@@ -106,12 +106,12 @@ export class SpannerInt64BigInt extends SpannerColumn<
     return 'int64'
   }
 
-  override mapFromDriverValue(value: unknown): bigint | null {
+  override mapFromDriverValue = (value: unknown): bigint | null => {
     if (value === null) return null
     return BigInt(String(unwrapDriverWrapper(value)))
   }
 
-  override mapToDriverValue(value: unknown): string {
+  override mapToDriverValue = (value: unknown): string => {
     // The driver has no native bigint support; a decimal string with the
     // int64 type hint carries the full range.
     return (value as bigint).toString()

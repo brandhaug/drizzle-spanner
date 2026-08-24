@@ -129,7 +129,7 @@ export abstract class SpannerFloatColumn<
 > extends SpannerColumn<T> {
   static override readonly [entityKind]: string = 'SpannerFloatColumn'
 
-  override mapFromDriverValue(value: unknown): number | null {
+  override mapFromDriverValue = (value: unknown): number | null => {
     if (value === null) return null
     return unwrapFloat(value)
   }
@@ -220,14 +220,14 @@ export class SpannerArray extends SpannerColumn<ColumnBaseConfig<'array'>> {
     return arrayTypeHint(this.baseColumn.typeHint())
   }
 
-  override mapFromDriverValue(value: unknown): unknown {
+  override mapFromDriverValue = (value: unknown): unknown => {
     if (value === null) return null
     return (value as unknown[]).map((element) =>
       this.baseColumn.mapFromDriverValue(element)
     )
   }
 
-  override mapToDriverValue(value: unknown): unknown {
+  override mapToDriverValue = (value: unknown): unknown => {
     if (value === null) return null
     return (value as unknown[]).map((element) =>
       element === null ? null : this.baseColumn.mapToDriverValue(element)

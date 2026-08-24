@@ -47,12 +47,12 @@ export class SpannerNumericString extends SpannerColumn<
     return 'numeric'
   }
 
-  override mapFromDriverValue(value: unknown): string | null {
+  override mapFromDriverValue = (value: unknown): string | null => {
     if (value === null) return null
     return unwrapNumeric(value)
   }
 
-  override mapToDriverValue(value: unknown): string {
+  override mapToDriverValue = (value: unknown): string => {
     return String(value)
   }
 }
@@ -88,12 +88,12 @@ export class SpannerNumericNumber extends SpannerColumn<
     return 'numeric'
   }
 
-  override mapFromDriverValue(value: unknown): number | null {
+  override mapFromDriverValue = (value: unknown): number | null => {
     if (value === null) return null
     return Number(unwrapNumeric(value))
   }
 
-  override mapToDriverValue(value: unknown): string {
+  override mapToDriverValue = (value: unknown): string => {
     return String(value)
   }
 }

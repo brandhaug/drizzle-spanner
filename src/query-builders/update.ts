@@ -72,7 +72,7 @@ export class SpannerUpdate<
     // An update mutation row is the full key plus the changed columns.
     const row = toMutationRow(this.dialect, table, set)
     for (const [i, column] of key.columns.entries()) {
-      const cased = this.dialect.casing.getColumnCasing(column)
+      const cased = column.name
       if (cased in row) {
         throw new SpannerInvalidArgumentError({
           message: `Cannot set primary-key column "${column.name}" in a bufferedMutations update: mutations address rows by key`
