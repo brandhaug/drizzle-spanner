@@ -8,7 +8,7 @@ import { SpannerDialect } from './dialect.js'
 
 export type SpannerDrizzleConfig<TRelations extends AnyRelations = AnyRelations> = Pick<
   DrizzleConfig<Record<string, unknown>, TRelations>,
-  'logger' | 'casing' | 'relations' | 'cache'
+  'logger' | 'relations' | 'cache'
 >
 
 function resolveLogger(logger: SpannerDrizzleConfig['logger']): Logger | undefined {
@@ -26,7 +26,7 @@ export function drizzle<TRelations extends AnyRelations = EmptyRelations>(
   client: SpannerDriverDatabase,
   config: SpannerDrizzleConfig<TRelations> = {}
 ): SpannerDatabase<TRelations> {
-  const dialect = new SpannerDialect({ casing: config.casing })
+  const dialect = new SpannerDialect()
   const session = createDatabaseSession(client, dialect, {
     logger: resolveLogger(config.logger)
   })
@@ -40,7 +40,7 @@ export function drizzle<TRelations extends AnyRelations = EmptyRelations>(
 drizzle.mock = <TRelations extends AnyRelations = EmptyRelations>(
   config: SpannerDrizzleConfig<TRelations> = {}
 ): SpannerDatabase<TRelations> => {
-  const dialect = new SpannerDialect({ casing: config.casing })
+  const dialect = new SpannerDialect()
   return new SpannerDatabase<TRelations>(
     dialect,
     createMockSession(dialect),

@@ -23,7 +23,7 @@ owns every dialect class and extends only exported drizzle-orm base modules.
 
 - **Packages:** `drizzle-spanner` (ORM adapter) and `drizzle-spanner-kit`
   (migration CLI), in one repository.
-- **Peer dependencies:** `"drizzle-orm": ">=1.0.0-beta.22 <1.0.0"`, and
+- **Peer dependencies:** `"drizzle-orm": ">=1.0.0-rc.4 <1.0.0"`, and
   `@google-cloud/spanner` as an **optional** peer — the runtime takes the
   driver's `Database` structurally and never hard-imports the package, so
   `drizzle.mock()` and SQL-generation use need no driver install — with a

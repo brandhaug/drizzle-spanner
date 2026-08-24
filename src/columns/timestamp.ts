@@ -53,14 +53,14 @@ export class SpannerTimestamp extends SpannerColumn<
     return 'timestamp'
   }
 
-  override mapFromDriverValue(value: unknown): Date | null {
+  override mapFromDriverValue = (value: unknown): Date | null => {
     if (value === null) return null
     // The driver decodes TIMESTAMP to PreciseDate (extends Date); re-wrap to
     // a plain Date so equality against user-constructed dates behaves.
     return value instanceof Date ? new Date(value.getTime()) : new Date(String(value))
   }
 
-  override mapToDriverValue(value: unknown): Date {
+  override mapToDriverValue = (value: unknown): Date => {
     return value as Date
   }
 }

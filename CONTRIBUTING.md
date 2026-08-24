@@ -69,7 +69,7 @@ file, and the README's tested-versions table is generated from it
 (`node scripts/sync-tested-versions.ts`; CI fails on drift).
 
 When drizzle releases a new beta in the supported range
-(`>=1.0.0-beta.22 <1.0.0`):
+(`>=1.0.0-rc.4 <1.0.0`):
 
 1. Add the version to the `drizzle-orm` array in
    `.github/tested-versions.json`.

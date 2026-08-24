@@ -152,11 +152,12 @@ export class SpannerRelationalQuery<TResult>
     const query = this.buildQuery()
     return this.session
       .prepareRelationalQuery<TResult>(this.dialect.sqlToQuery(query.sql), (rows) => {
-        const mapped = rows.map((row) => {
-          normalizeRelationalRow(row, query.selection)
-          return mapRelationalRow(row, query.selection)
-        })
-        return (this.mode === 'first' ? mapped[0] : mapped) as TResult
+        // Unwrap to-one ARRAY(...) values to single structs before mapping.
+        for (const row of rows) normalizeRelationalRow(row, query.selection)
+        const mapped = mapRelationalRow(rows, false, query.selection)
+        return (
+          this.mode === 'first' ? (mapped as Record<string, unknown>[])[0] : mapped
+        ) as TResult
       })
       .execute()
   }
