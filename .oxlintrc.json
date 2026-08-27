@@ -1,13 +1,419 @@
 {
-  "plugins": ["typescript", "oxc"],
+  "$schema": "./node_modules/oxlint/configuration_schema.json",
+  "plugins": ["typescript", "unicorn", "oxc", "import", "promise"],
+  "jsPlugins": [
+    {
+      "name": "anti-slop",
+      // ultracite bundles the anti-slop plugin (upstream is copy-the-source,
+      // not published to npm). plugin.mjs is not in ultracite's exports map,
+      // so the specifier has to be a path into node_modules.
+      "specifier": "./node_modules/ultracite/config/oxlint/anti-slop/plugin.mjs"
+    }
+  ],
+  "options": {
+    // Type-aware rules run through oxlint-tsgolint (devDependency). This is
+    // equivalent to the `--type-aware` flag the npm scripts pass, but makes
+    // a bare `oxlint` invocation type-aware too.
+    "typeAware": true,
+    // A disable directive that suppresses nothing is a lie about the code it
+    // sits on. Denying them keeps stale suppressions from accumulating now
+    // that oxlint owns the rule set. When a rule here is turned off or
+    // renamed, its directives have to go in the same change.
+    "reportUnusedDisableDirectives": "deny"
+  },
+  "categories": {
+    "correctness": "error",
+    "suspicious": "error",
+    "perf": "error"
+  },
   "env": {
     "node": true,
-    "es2022": true
+    "builtin": true,
+    "es2024": true
   },
-  "ignorePatterns": ["node_modules/**", "dist/**", "**/*.d.ts"],
+  "ignorePatterns": [
+    "node_modules/**",
+    "dist/**",
+    "**/*.d.ts",
+    "agent/**",
+    ".agents/**",
+    ".claude/**"
+  ],
   "rules": {
+    // ESLint core. `--type-aware` (package.json `lint` script) routes the
+    // `typescript` plugin through oxlint-tsgolint, so the type-aware rules
+    // below are real checks, not decoration.
+    "eqeqeq": "error",
+    "no-eq-null": "error",
+    "radix": "error",
+    "prefer-const": "error",
+    "no-var": "error",
+    "prefer-template": "error",
+    "prefer-destructuring": ["error", { "array": false }],
+    "object-shorthand": "error",
+    "curly": ["error", "multi-line"],
+    "default-case-last": "error",
+    "no-case-declarations": "error",
+    "no-param-reassign": "error",
+    "no-else-return": ["error", { "allowElseIf": false }],
+    "default-param-last": "error",
+    // Unused function args are named `_arg` on purpose (test mocks, unused
+    // interface implementations); the underscore prefix is the repo's
+    // "intentionally unused" marker.
+    "no-unused-vars": ["error", { "argsIgnorePattern": "^_" }],
+    "array-callback-return": "error",
+    "no-promise-executor-return": "error",
+    "no-useless-concat": "error",
+    "no-self-compare": "error",
+    "no-template-curly-in-string": "error",
+    "no-unneeded-ternary": "error",
+    "no-useless-rename": "error",
+    "no-lone-blocks": "error",
+    "no-sequences": "error",
+    "prefer-exponentiation-operator": "error",
+    "prefer-object-spread": "error",
+    "preserve-caught-error": "error",
+    "block-scoped-var": "error",
+    "guard-for-in": "error",
+    "no-constructor-return": "error",
+    "no-empty": "error",
+    "no-fallthrough": "error",
+    "no-labels": "error",
+    "no-loop-func": "error",
+    "no-new-wrappers": "error",
+    "no-object-constructor": "error",
+    "no-prototype-builtins": "error",
+    "no-regex-spaces": "error",
+    "no-return-assign": "error",
+    "no-shadow": "error",
+    "no-unmodified-loop-condition": "error",
+    "no-unreachable-loop": "error",
+    "prefer-object-has-own": "error",
+    "prefer-regex-literals": "error",
+    "no-lonely-if": "error",
+    "no-nested-ternary": "error",
+    // This is a library, not an app: console output belongs to the consuming
+    // application. The driver surfaces diagnostics through drizzle-orm's
+    // Logger interface, so nothing in src/ should print — but nothing does,
+    // and the rule stays off to match the canonical baseline (the emulator
+    // bootstrap/smoke scripts in scripts/ legitimately print).
+    "no-console": "off",
+    // Underscore-prefixed identifiers are the unused-argument convention
+    // (see no-unused-vars above); this rule would fight it.
+    "no-underscore-dangle": "off",
+    // DDL/SQL execution in this dialect is inherently sequential: batches of
+    // statements run in order against one session, and bootstrap-style
+    // scripts check state between awaits. Sequential awaits inside loops are
+    // the deliberate shape, so the rule would just be disabled at every real
+    // call site.
+    "no-await-in-loop": "off",
+
+    // typescript-eslint port (tsgolint). Rules marked type-aware run only
+    // under `--type-aware`.
+    "@typescript-eslint/ban-ts-comment": ["error", { "minimumDescriptionLength": 10 }],
+    "no-array-constructor": "error",
+    "@typescript-eslint/no-duplicate-enum-values": "error",
+    "@typescript-eslint/no-dynamic-delete": "error",
+    "@typescript-eslint/no-empty-object-type": "error",
+    // Kept off deliberately (baseline spells this "error"): the ~22 `any`
+    // sites in src/ are generic wildcards — `Column<any>`, data-type
+    // placeholders, DrizzleTypeError-style holes — mirroring drizzle-orm's
+    // own idiom, where dialect-agnostic internals must accept every column
+    // type the dialect layer can produce. Narrowing them to `unknown` would
+    // push casts into every consumer for no added safety.
     "typescript/no-explicit-any": "off",
-    "typescript/no-unused-vars": ["error", { "argsIgnorePattern": "^_" }]
+    "@typescript-eslint/no-extra-non-null-assertion": "error",
+    "@typescript-eslint/no-extraneous-class": "error",
+    "@typescript-eslint/no-misused-new": "error",
+    "@typescript-eslint/no-namespace": "error",
+    "@typescript-eslint/no-non-null-asserted-nullish-coalescing": "error",
+    "@typescript-eslint/no-non-null-asserted-optional-chain": "error",
+    "@typescript-eslint/no-non-null-assertion": "warn",
+    // Downgraded to warn (baseline keeps it at error): the ~55 `as` sites in
+    // src/ are generic wildcards — `this as IsIdentity<...>` builder flows,
+    // `Column<any>`-adjacent result mapping, drizzle-orm metadata records —
+    // mirroring drizzle-orm's own idiom, where the host ORM's unexported
+    // generic machinery cannot be named. Narrowing every cast into a type
+    // guard would add noise without adding safety. Revisit if the drizzle
+    // surface stabilizes.
+    "@typescript-eslint/no-unsafe-type-assertion": "warn",
+    // Off: drizzle-orm's builder/dialect layer uses single-use type
+    // parameters deliberately (`mapResultRow<TResult>`, `TRuntimeConfig`
+    // appearing once in `declare config`), and callers specify them
+    // explicitly because inference is impossible there. The rule's
+    // alternative — return `unknown` and cast at call sites — is worse.
+    "@typescript-eslint/no-unnecessary-type-parameters": "off",
+    // Off: the columns layer stringifies driver values at the boundary with
+    // `String(unknown)` (nulls are excluded first). The rule's suggestions
+    // (pick a property / JSON.stringify) do not apply to opaque driver
+    // output that is required to be a scalar.
+    "@typescript-eslint/no-base-to-string": "off",
+    "@typescript-eslint/no-require-imports": "error",
+    "@typescript-eslint/no-this-alias": "error",
+    // Type-aware: reports branches whose condition is statically known.
+    // `allowConstantLoopConditions` permits the `while (true)` retry loops
+    // around emulator/session readiness, which are the idiomatic form for
+    // poll-until-ready.
+    "@typescript-eslint/no-unnecessary-condition": [
+      "error",
+      { "allowConstantLoopConditions": true }
+    ],
+    "@typescript-eslint/no-unnecessary-type-constraint": "error",
+    "@typescript-eslint/no-unsafe-declaration-merging": "error",
+    "@typescript-eslint/no-unsafe-function-type": "error",
+    "no-unused-expressions": "error",
+    "no-useless-constructor": "error",
+    "@typescript-eslint/no-wrapper-object-types": "error",
+    "@typescript-eslint/prefer-as-const": "error",
+    "@typescript-eslint/prefer-literal-enum-member": "error",
+    "@typescript-eslint/prefer-namespace-keyword": "error",
+    "@typescript-eslint/require-await": "error",
+    "@typescript-eslint/triple-slash-reference": "error",
+    "@typescript-eslint/adjacent-overload-signatures": "error",
+    "@typescript-eslint/ban-tslint-comment": "error",
+    "@typescript-eslint/consistent-generic-constructors": "error",
+    "@typescript-eslint/consistent-indexed-object-style": ["error", "record"],
+    // The repo spells object shapes as `interface` where drizzle-orm's own
+    // types are interfaces it implements/merges, and `type` elsewhere; no
+    // single form is enforced (baseline pins `type`, but that fights the
+    // drizzle-orm StructuralType/declaration-merging idiom this dialect
+    // mirrors).
+    "@typescript-eslint/consistent-type-definitions": "off",
+    // Type-only imports are erasable and keep the emitted JS free of
+    // unused import side effects. The repo already leans inline (`import {
+    // type X }`), so inline is the enforced style.
+    "@typescript-eslint/consistent-type-imports": [
+      "error",
+      {
+        "prefer": "type-imports",
+        "fixStyle": "inline-type-imports",
+        // `import()` type annotations are forbidden by default; disabled
+        // because the kit loads @google-cloud/spanner lazily at the driver
+        // boundary (`typeof import('@google-cloud/spanner')`) and the module
+        // namespace has no named type to import instead.
+        "disallowTypeAnnotations": false
+      }
+    ],
+    "@typescript-eslint/no-confusing-non-null-assertion": "error",
+    "no-empty-function": "error",
+    "@typescript-eslint/prefer-enum-initializers": "error",
+    "@typescript-eslint/prefer-for-of": "error",
+    "@typescript-eslint/prefer-function-type": "error",
+    "@typescript-eslint/prefer-optional-chain": "error",
+    "@typescript-eslint/prefer-ts-expect-error": "error",
+    "@typescript-eslint/no-invalid-void-type": "error",
+    "@typescript-eslint/no-floating-promises": "error",
+    "@typescript-eslint/no-misused-promises": "error",
+    "@typescript-eslint/await-thenable": "error",
+    "@typescript-eslint/no-misused-spread": "error",
+    "@typescript-eslint/no-for-in-array": "error",
+    "@typescript-eslint/no-array-delete": "error",
+    "@typescript-eslint/no-mixed-enums": "error",
+    "@typescript-eslint/no-duplicate-type-constituents": "error",
+    "@typescript-eslint/no-unsafe-enum-comparison": "error",
+    "@typescript-eslint/unbound-method": "error",
+    "@typescript-eslint/return-await": "error",
+    "@typescript-eslint/switch-exhaustiveness-check": "error",
+    "@typescript-eslint/restrict-plus-operands": "error",
+    "@typescript-eslint/require-array-sort-compare": "error",
+    "@typescript-eslint/no-unnecessary-boolean-literal-compare": "error",
+    "@typescript-eslint/use-unknown-in-catch-callback-variable": "error",
+    "@typescript-eslint/no-unnecessary-template-expression": "error",
+    // Type-aware: flags deprecated API usage. The dependency surface is
+    // small (drizzle-orm, @google-cloud/spanner, node builtins), so new
+    // deprecations surface here instead of at runtime.
+    "@typescript-eslint/no-deprecated": "error",
+    // no-unnecessary-type-assertion stays off: under oxlint-tsgolint 7.x it
+    // still reports false positives on necessary casts, and `oxlint --fix`
+    // in the pre-commit hook would silently strip a needed cast.
+    // Re-evaluate on the next tsgolint upgrade.
+    "@typescript-eslint/no-unnecessary-type-assertion": "off",
+    // consistent-return is off: guard-clause functions that `return` early
+    // and fall through to the implicit `undefined` are the repo's normal
+    // shape, and the rule would demand explicit `return undefined` where the
+    // fall-through is already the intent.
+    "@typescript-eslint/consistent-return": "off",
+    "@typescript-eslint/no-confusing-void-expression": [
+      "error",
+      { "ignoreArrowShorthand": true }
+    ],
+
+    // unicorn (server-side subset; no DOM rules apply to this repo).
+    "unicorn/catch-error-name": "error",
+    "unicorn/filename-case": "error",
+    "unicorn/new-for-builtins": "error",
+    "unicorn/no-abusive-eslint-disable": "error",
+    "unicorn/no-empty-file": "error",
+    "unicorn/no-negated-condition": "error",
+    "unicorn/no-new-array": "error",
+    "unicorn/no-typeof-undefined": "error",
+    "unicorn/no-useless-promise-resolve-reject": "error",
+    "unicorn/no-useless-spread": "error",
+    "unicorn/no-useless-switch-case": "error",
+    // `return undefined` in guard clauses is kept (see consistent-return);
+    // only argument-position and arrow-body `undefined` are policed.
+    "unicorn/no-useless-undefined": [
+      "error",
+      { "checkArguments": false, "checkArrowFunctionBody": false }
+    ],
+    "unicorn/no-zero-fractions": "error",
+    "unicorn/numeric-separators-style": "error",
+    "unicorn/prefer-array-find": "error",
+    "unicorn/prefer-array-flat-map": "error",
+    "unicorn/prefer-array-some": "error",
+    "unicorn/prefer-date-now": "error",
+    "unicorn/prefer-logical-operator-over-ternary": "error",
+    // Off: it misfires on the columns' `mapToDriverValue` adapters — it
+    // flags a method whose whole body is `return String(value)` as "call
+    // String directly", but the method exists to satisfy the Column
+    // interface, not as a wrapper to inline.
+    "unicorn/prefer-native-coercion-functions": "off",
+    // `fs` becomes `node:fs`, `path` becomes `node:path`, ... which is the
+    // unambiguous import form under Node >= 20 and the ESM output this repo
+    // publishes.
+    "unicorn/prefer-node-protocol": "error",
+    "unicorn/prefer-number-properties": "error",
+    "unicorn/prefer-object-from-entries": "error",
+    "unicorn/prefer-regexp-test": "error",
+    "unicorn/prefer-set-has": "error",
+    "unicorn/prefer-spread": "error",
+    "unicorn/prefer-string-replace-all": "error",
+    "unicorn/prefer-string-slice": "error",
+    "unicorn/require-array-join-separator": "error",
+    "unicorn/switch-case-braces": "error",
+    "unicorn/text-encoding-identifier-case": "error",
+    "unicorn/consistent-empty-array-spread": "error",
+    "unicorn/error-message": "error",
+    "unicorn/no-array-sort": "error",
+    "unicorn/no-await-expression-member": "error",
+    "unicorn/no-confusing-array-with": "error",
+    "unicorn/no-instanceof-array": "error",
+    "unicorn/no-length-as-slice-end": "error",
+    "unicorn/no-negation-in-equality-check": "error",
+    "unicorn/no-object-as-default-parameter": "error",
+    "unicorn/no-unnecessary-array-splice-count": "error",
+    "unicorn/no-unnecessary-await": "error",
+    "unicorn/no-unnecessary-slice-end": "error",
+    "unicorn/no-unreadable-array-destructuring": "error",
+    "unicorn/no-useless-length-check": "error",
+    "unicorn/prefer-math-min-max": "error",
+    "unicorn/prefer-set-size": "error",
+    "unicorn/prefer-type-error": "error",
+    "unicorn/throw-new-error": "error",
+    // no-instanceof-builtins stays off. The repo's error-handling idiom is
+    // `error instanceof Error ? error.message : String(error)` at every
+    // catch site; probing the thrown value this way is deliberate, and the
+    // rule's helper-based alternative adds no robustness here.
+    "unicorn/no-instanceof-builtins": "off",
+    // consistent-function-scoping is relaxed only in tests via override;
+    // test helpers live next to the cases they serve.
+    "unicorn/consistent-function-scoping": "error",
+
+    // import
+    // Matches the `inline-type-imports` fixStyle on consistent-type-imports
+    // above, so both halves of the type-import style are enforced.
+    "import/consistent-type-specifier-style": ["error", "prefer-inline"],
+    "import/no-duplicates": "error",
+    "import/no-empty-named-blocks": "error",
+    "import/no-mutable-exports": "error",
+    "import/no-named-as-default": "error",
+    "import/no-self-import": "error",
+
+    // oxc
+    "oxc/approx-constant": "error",
+    "oxc/bad-array-method-on-arguments": "error",
+    "oxc/bad-bitwise-operator": "error",
+    "oxc/bad-char-at-comparison": "error",
+    "oxc/bad-comparison-sequence": "error",
+    "oxc/bad-match-all-arg": "error",
+    "oxc/bad-min-max-func": "error",
+    "oxc/bad-object-literal-comparison": "error",
+    "oxc/bad-replace-all-arg": "error",
+    "oxc/branches-sharing-code": "error",
+    "oxc/const-comparisons": "error",
+    "oxc/double-comparisons": "error",
+    "oxc/erasing-op": "error",
+    "oxc/misrefactored-assign-op": "error",
+    "oxc/missing-throw": "error",
+    "oxc/no-accumulating-spread": "error",
+    "oxc/number-arg-out-of-range": "error",
+    "oxc/only-used-in-recursion": "error",
+    "oxc/uninvoked-array-callback": "error",
+
+    // promise
+    "promise/always-return": "error",
+    "promise/no-callback-in-promise": "error",
+    "promise/no-multiple-resolved": "error",
+    "promise/no-nesting": "error",
+    "promise/no-new-statics": "error",
+    "promise/no-promise-in-callback": "error",
+    "promise/no-return-wrap": "error",
+    "promise/param-names": "error",
+    "promise/prefer-catch": "error",
+    "promise/spec-only": "error",
+    "promise/valid-params": "error",
+
+    // anti-slop (upstream dmmulroy/anti-slop, vendored by ultracite). Full
+    // set at error except the boundary-discipline rules below.
+    // anti-slop (upstream dmmulroy/anti-slop, vendored by ultracite). Full
+    // set at error except the rules below, which conflict with deliberate
+    // idioms in this repo.
+    // Off: `as unknown as X` is how the dialect crosses drizzle-orm's brand
+    // layers (e.g. stamping `[ExtraConfigBuilder]` and building
+    // `SpannerTableWithColumns`), mirroring drizzle-orm's own source. The
+    // rule's alternative — restructuring the generics — is not available
+    // because the host types are unexported.
+    "anti-slop/no-chained-type-assertions": "off",
+    // On, but treat its autofix with suspicion. It rewrites
+    // `...(x === undefined ? {} : { k: x })` into a bare `k: x`, which turns
+    // "key absent" into "key present, value undefined": a behaviour change
+    // and a type error under exactOptionalPropertyTypes. oxlint applies
+    // plugin fixes even at `warn`, and `oxlint --fix` runs in the pre-commit
+    // hook, so if this ever fires, fix the site by hand and check the diff
+    // rather than accepting the fixer's.
+    "anti-slop/no-conditional-empty-object-spread": "error",
+    // Off: the codegen keeps explicit lookup tables (`Record<string,
+    // string>` of Spanner type names) and named return contracts on exported
+    // helpers on purpose — the explicit annotation IS the contract for a
+    // published library, and inference would leak internal shapes into the
+    // public surface.
+    "anti-slop/no-known-value-widening": "off",
+    "anti-slop/no-module-mocking": "error",
+    // Off: drizzle-orm's builder API is idiomatic options objects —
+    // SpannerColumnBuilder, config bags passed through the kit's codegen. A
+    // single-parameter-object signature is the library's public contract
+    // shape, not slop.
+    "anti-slop/no-object-parameters": "off",
+    "anti-slop/no-reflect-apply": "error",
+    "anti-slop/no-reflect-get": "error",
+    // no-runtime-typeof stays off. It presumes every boundary parses through
+    // a schema/parser, so a `typeof` check on `unknown` reads as a failure to
+    // establish a contract. This repo is plain TypeScript with no schema
+    // library: hand-rolled guards on external input (driver options,
+    // emulator script output, parsed config files) are the boundary parsing,
+    // and `typeof` checks are how that contract is enforced.
+    "anti-slop/no-runtime-typeof": "off",
+    "anti-slop/no-shape-in-symbol-names": "error",
+    // no-unknown-parameters stays off for the same reason: catch parameters
+    // are `unknown` by spec and guard/validator parameters exist precisely to
+    // receive unparsed input before it becomes a domain value.
+    "anti-slop/no-unknown-parameters": "off",
+    // Off: the dialect passes drizzle-orm column data and driver responses
+    // through as `unknown` on purpose — the values belong to the host ORM's
+    // type system, and pretending the dialect knows their shape would be the
+    // lie, not the annotation.
+    "anti-slop/no-unknown-returns": "off",
+    "anti-slop/no-unknown-type-aliases": "error",
+    // Off: dialect internals legitimately use index-signature records when
+    // translating drizzle-orm's metadata into Spanner DDL — the shapes come
+    // from the host ORM, not from a domain dictionary this repo controls.
+    "anti-slop/no-unsafe-dictionary-type": "off",
+    "anti-slop/no-widen-then-assert": "error",
+    // Off: the dialect bridges two type systems (drizzle-orm generics and
+    // @google-cloud/spanner's), and narrow targeted casts are how those
+    // seams are crossed. Requiring a safety comment at each of the dozens of
+    // bridge points adds noise without changing what the casts do.
+    "anti-slop/require-safety-comment-for-type-assertion": "off"
   },
   "overrides": [
     {
@@ -61,6 +467,33 @@
             ]
           }
         ]
+      }
+    },
+    {
+      // Test files. These rules genuinely do not apply to test code:
+      // - consistent-function-scoping: helpers belong beside the cases they
+      //   serve, not hoisted to module scope.
+      // - require-await: async mocks satisfy Promise-typed interfaces
+      //   without awaiting.
+      // - no-empty-function: no-op mocks implement interface stubs with
+      //   empty bodies on purpose.
+      // - await-thenable / no-confusing-void-expression: `await
+      //   expect(promise).rejects...` is the bun:test rejection idiom;
+      //   tsgolint does not see the matcher chain as Promise-like.
+      // - no-unnecessary-condition: `harness?.cleanup()` in afterAll is
+      //   deliberately defensive (harness is assigned in beforeAll but
+      //   cleanup must not throw if setup failed); the types say non-null.
+      // - no-unsafe-type-assertion: fixture casts into brand types when
+      //   constructing partial tables/columns.
+      "files": ["tests/**", "packages/*/tests/**", "**/*.test.ts"],
+      "rules": {
+        "unicorn/consistent-function-scoping": "off",
+        "@typescript-eslint/require-await": "off",
+        "no-empty-function": "off",
+        "typescript/await-thenable": "off",
+        "typescript/no-confusing-void-expression": "off",
+        "typescript/no-unnecessary-condition": "off",
+        "typescript/no-unsafe-type-assertion": "off"
       }
     }
   ]
