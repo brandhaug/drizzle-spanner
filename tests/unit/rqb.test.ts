@@ -8,7 +8,7 @@ import {
   string,
   timestamp
 } from '../../src/index.js'
-import type { SpannerDriverDatabase, SpannerDriverRow } from '../../src/index.js'
+import { type SpannerDriverDatabase, type SpannerDriverRow } from '../../src/index.js'
 
 const singers = spannerTable('singers', {
   id: string('id', { length: 36 }).primaryKey(),

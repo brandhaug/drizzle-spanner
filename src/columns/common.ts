@@ -1,19 +1,19 @@
-import type {
-  ColumnBuilderBase,
-  ColumnBuilderBaseConfig,
-  ColumnBuilderRuntimeConfig,
-  ColumnType,
-  GeneratedColumnConfig,
-  HasGenerated,
-  MakeColumnConfig
+import {
+  type ColumnBuilderBase,
+  type ColumnBuilderBaseConfig,
+  type ColumnBuilderRuntimeConfig,
+  type ColumnType,
+  type GeneratedColumnConfig,
+  type HasGenerated,
+  type MakeColumnConfig
 } from 'drizzle-orm/column-builder'
 import { ColumnBuilder } from 'drizzle-orm/column-builder'
-import type { ColumnBaseConfig } from 'drizzle-orm/column'
+import { type ColumnBaseConfig } from 'drizzle-orm/column'
 import { Column } from 'drizzle-orm/column'
 import { entityKind } from 'drizzle-orm/entity'
-import type { SQL } from 'drizzle-orm/sql'
-import type { SpannerTable } from '../table.js'
-import type { SpannerTypeHint } from '../type-hints.js'
+import { type SQL } from 'drizzle-orm/sql'
+import { type SpannerTable } from '../table.js'
+import { type SpannerTypeHint } from '../type-hints.js'
 import { arrayTypeHint } from '../type-hints.js'
 
 /** The driver wraps INT64/NUMERIC/COUNT cells in `{ value: '42' }` objects. */
@@ -149,10 +149,6 @@ export class SpannerExtraConfigColumn<TName extends string = string> extends Col
   declare protected $name: TName
 
   indexConfig: { order: 'asc' | 'desc' } = { order: 'asc' }
-
-  constructor(table: SpannerTable, config: ColumnBuilderRuntimeConfig<unknown>) {
-    super(table, config)
-  }
 
   getSQLType(): string {
     return this.columnType

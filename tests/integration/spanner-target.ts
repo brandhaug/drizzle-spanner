@@ -1,8 +1,8 @@
 import { randomUUID } from 'node:crypto'
 import { GenericContainer, Wait } from 'testcontainers'
-import type { StartedTestContainer } from 'testcontainers'
+import { type StartedTestContainer } from 'testcontainers'
 import { Spanner } from '@google-cloud/spanner'
-import type { Instance } from '@google-cloud/spanner'
+import { type Instance } from '@google-cloud/spanner'
 
 const EMULATOR_IMAGE = 'gcr.io/cloud-spanner-emulator/emulator:latest'
 
@@ -58,7 +58,7 @@ export async function startSpannerTestTarget(
       project,
       instanceName: realInstance,
       async stop() {
-        spanner.close()
+        await spanner.close()
       }
     }
   }
@@ -95,7 +95,7 @@ export async function startSpannerTestTarget(
     instanceName,
     emulatorHost: host,
     async stop() {
-      spanner.close()
+      await spanner.close()
       await container?.stop()
     }
   }

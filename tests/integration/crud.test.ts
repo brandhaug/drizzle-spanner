@@ -2,7 +2,7 @@ import { afterAll, beforeAll, describe, expect, it } from 'bun:test'
 import { eq, gt } from 'drizzle-orm/sql/expressions'
 import { sql } from 'drizzle-orm/sql'
 import { int64, spannerTable, string, timestamp } from '../../src/index.js'
-import type { EmulatorHarness } from './harness.js'
+import { type EmulatorHarness } from './harness.js'
 import { startEmulator } from './harness.js'
 
 const singers = spannerTable('singers', {

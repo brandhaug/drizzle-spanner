@@ -1,10 +1,10 @@
 import { aliasedTable } from 'drizzle-orm/alias'
 import { entityKind, is } from 'drizzle-orm/entity'
 import { DrizzleError } from 'drizzle-orm/errors'
-import type {
-  AnyRelations,
-  BuildRelationalQueryResult,
-  TableRelationalConfig
+import {
+  type AnyRelations,
+  type BuildRelationalQueryResult,
+  type TableRelationalConfig
 } from 'drizzle-orm/relations'
 import {
   getTableAsAliasSQL,
@@ -14,14 +14,14 @@ import {
   relationsOrderToSQL,
   relationToSQL
 } from 'drizzle-orm/relations'
-import type { DriverValueEncoder, Query, SQLChunk } from 'drizzle-orm/sql'
+import { type DriverValueEncoder, type Query, type SQLChunk } from 'drizzle-orm/sql'
 import { Column } from 'drizzle-orm/column'
 import { and } from 'drizzle-orm/sql/expressions'
 import { Param, Placeholder, SQL, sql } from 'drizzle-orm/sql'
-import type { SelectedFieldsOrdered } from './orm-internal.js'
+import { type SelectedFieldsOrdered } from './orm-internal.js'
 import { orderSelectedFields } from './orm-internal.js'
 import { SpannerColumn } from './columns/common.js'
-import type { SpannerTable } from './table.js'
+import { type SpannerTable } from './table.js'
 import { TableColumns } from './symbols.js'
 
 export interface SpannerSelectConfig {
@@ -78,7 +78,7 @@ export class SpannerDialect {
   }
 
   escapeString(str: string): string {
-    return `'${str.replace(/'/g, "\\'")}'`
+    return `'${str.replaceAll("'", "\\'")}'`
   }
 
   /**
@@ -148,14 +148,12 @@ export class SpannerDialect {
     sqlInput.queryChunks.forEach(walk)
   }
 
-  sqlToQuery(
-    sqlInput: SQL,
-    invokeSource?: 'indexes' | undefined
-  ): SpannerQueryWithTypings {
+  sqlToQuery(sqlInput: SQL, invokeSource?: 'indexes'): SpannerQueryWithTypings {
     const query = sqlInput.toQuery({
-      escapeName: this.escapeName,
-      escapeParam: this.escapeParam,
-      escapeString: this.escapeString,
+      // Bound explicitly: toQuery receives these as plain callbacks.
+      escapeName: this.escapeName.bind(this),
+      escapeParam: this.escapeParam.bind(this),
+      escapeString: this.escapeString.bind(this),
       invokeSource
     })
     const typings: string[] = []

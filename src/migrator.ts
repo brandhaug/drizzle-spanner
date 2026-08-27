@@ -1,9 +1,9 @@
-import type { MigrationConfig } from 'drizzle-orm/migrator'
-import type { AnyRelations } from 'drizzle-orm/relations'
+import { type MigrationConfig } from 'drizzle-orm/migrator'
+import { type AnyRelations } from 'drizzle-orm/relations'
 import { readMigrationFiles } from 'drizzle-orm/migrator'
-import type { SpannerDatabase, SpannerDriverDatabase } from './db.js'
+import { type SpannerDatabase, type SpannerDriverDatabase } from './db.js'
 import { SpannerDdlError } from './errors.js'
-import type { SpannerDriverRow } from './session.js'
+import { type SpannerDriverRow } from './session.js'
 import { driverRowToObject } from './session.js'
 
 export interface SpannerMigrationConfig {
@@ -30,7 +30,7 @@ function escapeIdentifier(name: string): string {
 }
 
 function escapeString(value: string): string {
-  return `'${value.replace(/'/g, "\\'")}'`
+  return `'${value.replaceAll("'", "\\'")}'`
 }
 
 /** readMigrationFiles keeps raw chunk text; updateSchema wants bare statements. */
@@ -135,7 +135,7 @@ export async function migrate(
     )
   }
   if (typeof client.updateSchema !== 'function') {
-    throw new Error(
+    throw new TypeError(
       'migrate: the attached client has no updateSchema (pass the driver Database)'
     )
   }

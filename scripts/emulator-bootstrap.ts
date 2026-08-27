@@ -47,11 +47,11 @@ async function main() {
   }
 
   await database.close()
-  spanner.close()
+  await spanner.close()
   console.log('Bootstrap complete.')
 }
 
-main().catch((err) => {
-  console.error('Bootstrap failed:', err)
+void main().catch((error: unknown) => {
+  console.error('Bootstrap failed:', error)
   process.exit(1)
 })

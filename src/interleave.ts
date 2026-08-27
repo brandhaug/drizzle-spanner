@@ -1,7 +1,11 @@
 import { entityKind } from 'drizzle-orm/entity'
-import type { ForeignKeyAction } from './foreign-keys.js'
-import type { PrimaryKeyBuilder } from './primary-keys.js'
-import type { SpannerTable, SpannerTableWithColumns, TableConfig } from './table.js'
+import { type ForeignKeyAction } from './foreign-keys.js'
+import { type PrimaryKeyBuilder } from './primary-keys.js'
+import {
+  type SpannerTable,
+  type SpannerTableWithColumns,
+  type TableConfig
+} from './table.js'
 
 export interface InterleaveConfig {
   onDelete?: ForeignKeyAction

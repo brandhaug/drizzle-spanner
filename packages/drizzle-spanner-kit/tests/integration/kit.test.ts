@@ -4,7 +4,7 @@ import { join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { afterAll, beforeAll, describe, expect, it } from 'bun:test'
 import { generate, migrate, pull, push } from '../../src/index.js'
-import type { KitEmulatorHarness } from './harness.js'
+import { type KitEmulatorHarness } from './harness.js'
 import { startKitEmulator } from './harness.js'
 
 // Fixture modules must live inside the repo so their `drizzle-spanner`

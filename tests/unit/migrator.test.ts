@@ -3,24 +3,23 @@ import { createHash } from 'node:crypto'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { describe, expect, it } from 'bun:test'
-import { drizzle } from '../../src/index.js'
-import { SpannerDdlError } from '../../src/index.js'
+import { drizzle, SpannerDdlError } from '../../src/index.js'
 import { migrate } from '../../src/migrator.js'
-import type { SpannerDriverRow, SpannerSqlRequest } from '../../src/index.js'
+import { type SpannerDriverRow, type SpannerSqlRequest } from '../../src/index.js'
 
 // bun:test has no .rejects.toSatisfy(); assert the rejection with a predicate.
 async function rejectsMatching<T>(
   promise: Promise<T>,
   predicate: (error: unknown) => boolean
 ): Promise<void> {
-  const error = await promise.then(
+  const rejection = await promise.then(
     () => {
       throw new Error('expected promise to reject, but it resolved')
     },
-    (cause: unknown) => cause
+    (error: unknown) => error
   )
-  if (!predicate(error)) {
-    throw new Error(`rejected value did not match predicate: ${String(error)}`)
+  if (!predicate(rejection)) {
+    throw new Error(`rejected value did not match predicate: ${String(rejection)}`)
   }
 }
 
@@ -110,12 +109,15 @@ function fakeDdlDatabase(options: FakeOptions = {}) {
               const error = Object.assign(new Error('DDL statement failed'), {
                 code: 9,
                 metadata: {
-                  commitTimestamps: new Array(options.failDdlAtStatement).fill('ts')
+                  commitTimestamps: Array.from(
+                    { length: options.failDdlAtStatement },
+                    () => 'ts'
+                  )
                 }
               })
               throw error
             }
-            return undefined
+            return
           }
         }
       ]

@@ -1,5 +1,5 @@
 import { randomUUID } from 'node:crypto'
-import type { ForeignKeyAction } from 'drizzle-spanner'
+import { type ForeignKeyAction } from 'drizzle-spanner'
 
 /** The runtime's `ON DELETE` action union, re-exported as the kit's single source. */
 export type { ForeignKeyAction }
@@ -147,7 +147,7 @@ export function parseSnapshot(raw: string, source: string): SpannerSnapshot {
     )
   }
   if (typeof snapshot.id !== 'string' || !Array.isArray(snapshot.ddl)) {
-    throw new Error(`drizzle-spanner-kit: ${source} is missing id or ddl`)
+    throw new TypeError(`drizzle-spanner-kit: ${source} is missing id or ddl`)
   }
   for (const entity of snapshot.ddl) {
     const entityType = (entity as { entityType?: unknown }).entityType

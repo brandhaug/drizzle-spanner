@@ -1,9 +1,9 @@
 import { is } from 'drizzle-orm/entity'
 import { Param, SQL, StringChunk } from 'drizzle-orm/sql'
 import { SpannerColumn } from './columns/common.js'
-import type { SpannerDialect } from './dialect.js'
+import { type SpannerDialect } from './dialect.js'
 import { SpannerInvalidArgumentError } from './errors.js'
-import type { SpannerTable } from './table.js'
+import { type SpannerTable } from './table.js'
 import { getPrimaryKeyColumns } from './table.js'
 import { TableColumns, TableName } from './symbols.js'
 

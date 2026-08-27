@@ -218,7 +218,7 @@ describe('serializeSchema: tables, keys and interleaving', () => {
       { email: string('email', { length: 320 }).primaryKey() },
       (self) => [uniqueIndex('idx_u_email').on(self.email)]
     )
-    const [entity] = serializeSchema({ t }).filter((e) => e.entityType === 'indexes')
+    const entity = serializeSchema({ t }).find((e) => e.entityType === 'indexes')
     expect(entity).toMatchObject({ unique: true, nullFiltered: false })
   })
 })

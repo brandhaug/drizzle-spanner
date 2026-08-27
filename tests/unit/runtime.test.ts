@@ -13,12 +13,12 @@ import {
   string,
   timestamp
 } from '../../src/index.js'
-import type { SpannerDatabase } from '../../src/index.js'
-import type {
-  SpannerDriverDatabase,
-  SpannerDriverRow,
-  SpannerDriverTransaction,
-  SpannerSqlRequest
+import {
+  type SpannerDatabase,
+  type SpannerDriverDatabase,
+  type SpannerDriverRow,
+  type SpannerDriverTransaction,
+  type SpannerSqlRequest
 } from '../../src/index.js'
 
 // bun:test has no .rejects.toSatisfy(); assert the rejection with a predicate.
@@ -26,14 +26,14 @@ async function rejectsMatching<T>(
   promise: Promise<T>,
   predicate: (error: unknown) => boolean
 ): Promise<void> {
-  const error = await promise.then(
+  const rejection = await promise.then(
     () => {
       throw new Error('expected promise to reject, but it resolved')
     },
-    (cause: unknown) => cause
+    (error: unknown) => error
   )
-  if (!predicate(error)) {
-    throw new Error(`rejected value did not match predicate: ${String(error)}`)
+  if (!predicate(rejection)) {
+    throw new Error(`rejected value did not match predicate: ${String(rejection)}`)
   }
 }
 
@@ -60,10 +60,10 @@ function fakeRetryingDatabase(retryCap = 25) {
       return [[]]
     },
     async commit() {
-      return undefined
+      return
     },
     async rollback() {
-      return undefined
+      return
     },
     insert() {},
     update() {},
@@ -315,10 +315,10 @@ describe('single-use stale reads (withStaleness)', () => {
             return [rows] as [SpannerDriverRow[]]
           },
           async commit() {
-            return undefined
+            return
           },
           async rollback() {
-            return undefined
+            return
           },
           insert() {},
           update() {},
@@ -452,11 +452,11 @@ describe('bufferedMutations transactions', () => {
       },
       async commit() {
         commits += 1
-        return undefined
+        return
       },
       async rollback() {
         rollbacks += 1
-        return undefined
+        return
       },
       insert(table: string, rows: Record<string, unknown>[]) {
         mutations.push({ kind: 'insert', table, payload: rows })

@@ -1,8 +1,7 @@
 import { entityKind, is } from 'drizzle-orm/entity'
 import { SQL } from 'drizzle-orm/sql'
-import { SpannerExtraConfigColumn } from './columns/common.js'
-import type { SpannerColumn } from './columns/common.js'
-import type { SpannerTable } from './table.js'
+import { type SpannerColumn, type SpannerExtraConfigColumn } from './columns/common.js'
+import { type SpannerTable } from './table.js'
 
 export class IndexedColumn {
   static readonly [entityKind]: string = 'SpannerIndexedColumn'

@@ -26,7 +26,7 @@ async function main() {
   console.log('Query result:', JSON.stringify(result))
 
   await database.close()
-  spanner.close()
+  await spanner.close()
 
   if (result.length === 1 && result[0].one === 1) {
     console.log('SMOKE TEST PASSED')
@@ -36,7 +36,7 @@ async function main() {
   }
 }
 
-main().catch((err) => {
-  console.error('SMOKE TEST FAILED:', err)
+void main().catch((error: unknown) => {
+  console.error('SMOKE TEST FAILED:', error)
   process.exit(1)
 })

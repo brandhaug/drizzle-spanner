@@ -6,7 +6,7 @@ import { pull } from './commands/pull.js'
 import { push } from './commands/push.js'
 import { loadConfig } from './config.js'
 import { DiffRefusedError } from './differ.js'
-import type { RenameCandidate } from './differ.js'
+import { type RenameCandidate } from './differ.js'
 
 const HELP = `drizzle-spanner-kit <command> [options]
 
@@ -55,9 +55,11 @@ function printPlan(statements: string[]): void {
 }
 
 /** `--yes`: still print the plan (spec: push always prints it) before applying. */
-async function acceptPlan(statements: string[]): Promise<boolean> {
+function acceptPlan(statements: string[]): Promise<boolean> {
   printPlan(statements)
-  return true
+  // Non-async on purpose: matches confirmPlan's Promise-typed interface
+  // without pretending to await anything.
+  return Promise.resolve(true)
 }
 
 async function confirmPlan(statements: string[]): Promise<boolean> {
@@ -91,7 +93,7 @@ export async function main(argv: string[] = process.argv.slice(2)): Promise<numb
     return command ? 0 : 1
   }
   const config = await loadConfig(values.config ?? './drizzle-spanner.config.ts')
-  const interactive = process.stdin.isTTY === true && values['no-interactive'] !== true
+  const interactive = process.stdin.isTTY && values['no-interactive'] !== true
 
   try {
     switch (command) {
@@ -125,7 +127,9 @@ export async function main(argv: string[] = process.argv.slice(2)): Promise<numb
         return 0
       }
       case 'push': {
-        const confirm = values.yes ? acceptPlan : interactive ? confirmPlan : undefined
+        let confirm: ((statements: string[]) => Promise<boolean>) | undefined
+        if (values.yes) confirm = acceptPlan
+        else if (interactive) confirm = confirmPlan
         const result = await push(config, {
           confirm,
           resolveRename: interactive ? promptRename : undefined,
@@ -141,9 +145,10 @@ export async function main(argv: string[] = process.argv.slice(2)): Promise<numb
         }
         return 0
       }
-      default:
+      default: {
         console.error(`Unknown command: ${command}\n\n${HELP}`)
         return 1
+      }
     }
   } catch (error) {
     if (error instanceof DiffRefusedError) {

@@ -1,7 +1,7 @@
 import { drizzle } from 'drizzle-spanner'
-import type { SpannerMigrationResult } from 'drizzle-spanner/migrator'
+import { type SpannerMigrationResult } from 'drizzle-spanner/migrator'
 import { migrate as migrateDatabase } from 'drizzle-spanner/migrator'
-import type { ResolvedSpannerKitConfig } from '../config.js'
+import { type ResolvedSpannerKitConfig } from '../config.js'
 import { requireDatabase } from '../config.js'
 import { connectDatabase } from '../connect.js'
 

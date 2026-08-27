@@ -8,8 +8,8 @@ import {
   string,
   timestamp
 } from '../../src/index.js'
-import type { SpannerDatabase } from '../../src/index.js'
-import type { EmulatorHarness } from './harness.js'
+import { type SpannerDatabase } from '../../src/index.js'
+import { type EmulatorHarness } from './harness.js'
 import { startEmulator } from './harness.js'
 
 const singers = spannerTable('singers', {
@@ -74,7 +74,9 @@ describe('read-only transactions', () => {
     // would place the bound just before the commit — read 1ms after it, and
     // give the second insert clear distance past that bound.
     const at = new Date(first!.updatedAt!.getTime() + 1)
-    await new Promise((resolve) => setTimeout(resolve, 25))
+    await new Promise((resolve) => {
+      setTimeout(resolve, 25)
+    })
     await db.insert(singers).values({ id: 'rt-2', name: 'Grace' })
 
     const seen = await db.transaction(
@@ -121,7 +123,9 @@ describe('single-use bounded reads (withStaleness)', () => {
       .values({ id: 'su-2', name: 'Ada', updatedAt: commitTimestamp() })
     const [first] = await db.select().from(singers).where(eq(singers.id, 'su-2'))
     const at = new Date(first!.updatedAt!.getTime() + 1)
-    await new Promise((resolve) => setTimeout(resolve, 25))
+    await new Promise((resolve) => {
+      setTimeout(resolve, 25)
+    })
     await db.insert(singers).values({ id: 'su-3', name: 'Grace' })
 
     const rows = await db

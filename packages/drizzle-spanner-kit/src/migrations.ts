@@ -1,6 +1,6 @@
 import { mkdir, readdir, readFile, writeFile } from 'node:fs/promises'
 import { join } from 'node:path'
-import type { SpannerSnapshot } from './snapshot.js'
+import { type SpannerSnapshot } from './snapshot.js'
 import { parseSnapshot } from './snapshot.js'
 
 /** `<out>/<YYYYMMDDHHMMSS>_<name>/` with migration.sql + snapshot.json. */
@@ -33,7 +33,7 @@ async function listMigrationFolders(out: string): Promise<MigrationFolder[]> {
       timestamp: match![1]!,
       name: match![2]!
     }))
-    .sort((a, b) => a.id.localeCompare(b.id))
+    .toSorted((a, b) => a.id.localeCompare(b.id))
 }
 
 async function readSnapshot(migration: MigrationFolder): Promise<SpannerSnapshot> {
@@ -48,11 +48,14 @@ export async function readLatestSnapshot(out: string): Promise<SpannerSnapshot |
   return latest ? readSnapshot(latest) : null
 }
 
+// Hoisted to module scope: used only by formatTimestamp, but a per-call
+// arrow would trip consistent-function-scoping.
+const pad2 = (value: number): string => String(value).padStart(2, '0')
+
 export function formatTimestamp(date: Date): string {
-  const pad = (value: number): string => String(value).padStart(2, '0')
   return (
-    `${date.getUTCFullYear()}${pad(date.getUTCMonth() + 1)}${pad(date.getUTCDate())}` +
-    `${pad(date.getUTCHours())}${pad(date.getUTCMinutes())}${pad(date.getUTCSeconds())}`
+    `${date.getUTCFullYear()}${pad2(date.getUTCMonth() + 1)}${pad2(date.getUTCDate())}` +
+    `${pad2(date.getUTCHours())}${pad2(date.getUTCMinutes())}${pad2(date.getUTCSeconds())}`
   )
 }
 

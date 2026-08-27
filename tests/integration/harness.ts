@@ -1,7 +1,7 @@
 import { randomUUID } from 'node:crypto'
-import type { Database } from '@google-cloud/spanner'
+import { type Database } from '@google-cloud/spanner'
 import { drizzle } from '../../src/index.js'
-import type { SpannerDatabase, SpannerDriverDatabase } from '../../src/index.js'
+import { type SpannerDatabase, type SpannerDriverDatabase } from '../../src/index.js'
 import { startSpannerTestTarget } from './spanner-target.js'
 
 export interface EmulatorHarness {

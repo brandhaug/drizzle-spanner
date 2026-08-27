@@ -14,21 +14,21 @@ import {
 } from 'drizzle-spanner'
 import { DiffRefusedError, diffSnapshots } from '../../src/differ.js'
 import { serializeSchema } from '../../src/serializer.js'
-import type { SpannerEntity } from '../../src/snapshot.js'
+import { type SpannerEntity } from '../../src/snapshot.js'
 
 // bun:test has no .rejects.toSatisfy(); assert the rejection with a predicate.
 async function rejectsMatching<T>(
   promise: Promise<T>,
   predicate: (error: unknown) => boolean
 ): Promise<void> {
-  const error = await promise.then(
+  const rejection = await promise.then(
     () => {
       throw new Error('expected promise to reject, but it resolved')
     },
-    (cause: unknown) => cause
+    (error: unknown) => error
   )
-  if (!predicate(error)) {
-    throw new Error(`rejected value did not match predicate: ${String(error)}`)
+  if (!predicate(rejection)) {
+    throw new Error(`rejected value did not match predicate: ${String(rejection)}`)
   }
 }
 

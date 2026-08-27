@@ -1,5 +1,5 @@
-import type { ResolvedSpannerKitConfig } from '../config.js'
-import type { RenameResolver, ResolvedRename } from '../differ.js'
+import { type ResolvedSpannerKitConfig } from '../config.js'
+import { type RenameResolver, type ResolvedRename } from '../differ.js'
 import { diffSnapshots } from '../differ.js'
 import { loadSchemaExports } from '../loader.js'
 import {

@@ -131,7 +131,7 @@ export function wrapSpannerError(
   query?: SpannerErrorQueryContext
 ): unknown {
   if (error instanceof SpannerError) return error
-  const grpcError = error as { code?: unknown; message?: unknown }
+  const grpcError = error as { code?: unknown; message?: unknown } | null | undefined
   if (typeof grpcError?.code !== 'number') return error
   const message =
     typeof grpcError.message === 'string' ? grpcError.message : 'Spanner error'
@@ -143,25 +143,31 @@ export function wrapSpannerError(
   }
 
   switch (grpcError.code) {
-    case GrpcStatus.ABORTED:
+    case GrpcStatus.ABORTED: {
       return new SpannerAbortedError(options)
-    case GrpcStatus.ALREADY_EXISTS:
+    }
+    case GrpcStatus.ALREADY_EXISTS: {
       return new SpannerConstraintError(options)
-    case GrpcStatus.FAILED_PRECONDITION:
+    }
+    case GrpcStatus.FAILED_PRECONDITION: {
       return CONSTRAINT_MESSAGE.test(message)
         ? new SpannerConstraintError(options)
         : new SpannerInvalidArgumentError(options)
-    case GrpcStatus.INVALID_ARGUMENT:
+    }
+    case GrpcStatus.INVALID_ARGUMENT: {
       return new SpannerInvalidArgumentError({
         ...options,
         message: /parameter/i.test(message)
           ? `${message} (hint: ${parameterHint(message, query)})`
           : message
       })
+    }
     case GrpcStatus.UNAVAILABLE:
-    case GrpcStatus.DEADLINE_EXCEEDED:
+    case GrpcStatus.DEADLINE_EXCEEDED: {
       return new SpannerUnavailableError(options)
-    default:
+    }
+    default: {
       return error
+    }
   }
 }

@@ -72,4 +72,4 @@ console.log('stale read at', afterCommit.toISOString(), 'saw', staleRows[0]!.nam
 
 console.log('interleaved-rqb example passed')
 await database.close()
-spanner.close()
+await spanner.close()

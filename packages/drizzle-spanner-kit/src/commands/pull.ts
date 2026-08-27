@@ -1,7 +1,7 @@
 import { mkdir, writeFile } from 'node:fs/promises'
 import { dirname, join } from 'node:path'
 import { renderSchemaModule } from '../codegen.js'
-import type { ResolvedSpannerKitConfig } from '../config.js'
+import { type ResolvedSpannerKitConfig } from '../config.js'
 import { requireDatabase } from '../config.js'
 import { connectDatabase } from '../connect.js'
 import { diffSnapshots } from '../differ.js'

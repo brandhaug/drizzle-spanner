@@ -1,26 +1,26 @@
 import { entityKind, is } from 'drizzle-orm/entity'
 import { QueryPromise } from 'drizzle-orm/query-promise'
-import type { Query, SQLWrapper } from 'drizzle-orm/sql'
+import { type Query, type SQLWrapper } from 'drizzle-orm/sql'
 import { Param, SQL } from 'drizzle-orm/sql'
-import type { SpannerDialect } from '../dialect.js'
-import type { SelectedFieldsOrdered } from '../orm-internal.js'
+import { type SpannerDialect } from '../dialect.js'
+import { type SelectedFieldsOrdered } from '../orm-internal.js'
 import { orderSelectedFields } from '../orm-internal.js'
 import { SpannerInvalidArgumentError } from '../errors.js'
-import type { SpannerMutationSink } from '../mutations.js'
+import { type SpannerMutationSink } from '../mutations.js'
 import {
   MUTATION_MODE_READ_MESSAGE,
   MUTATION_MODE_RETURNING_MESSAGE
 } from '../mutations.js'
-import type {
-  SpannerPreparedQuery,
-  SpannerQueryMetadata,
-  SpannerSession
+import {
+  type SpannerPreparedQuery,
+  type SpannerQueryMetadata,
+  type SpannerSession
 } from '../session.js'
 import { NO_CLIENT_MESSAGE } from '../session.js'
-import type { SpannerTimestampBounds } from '../staleness.js'
-import type { SpannerColumns, SpannerTable } from '../table.js'
+import { type SpannerTimestampBounds } from '../staleness.js'
+import { type SpannerColumns, type SpannerTable } from '../table.js'
 import { TableColumns } from '../symbols.js'
-import type { SpannerSelectedFields } from './select.js'
+import { type SpannerSelectedFields } from './select.js'
 
 /** Wraps plain values in `Param` bound to their table column; SQL passes through. */
 export function mapRowToParams(

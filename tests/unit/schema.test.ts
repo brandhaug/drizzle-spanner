@@ -1,10 +1,9 @@
 import { describe, expect, it } from 'bun:test'
 import { getTableName } from 'drizzle-orm/table'
-import { getTableColumns } from 'drizzle-orm/utils'
-import { int64, spannerTable, string } from '../../src/index.js'
-import { SpannerPrecisionError } from '../../src/index.js'
+import { getColumns } from 'drizzle-orm/utils'
+import { int64, spannerTable, string, SpannerPrecisionError } from '../../src/index.js'
 import { IndexedColumn } from '../../src/indexes.js'
-import type { IndexBuilder } from '../../src/indexes.js'
+import { type IndexBuilder } from '../../src/indexes.js'
 
 describe('spannerTable', () => {
   it('builds a table with named columns', () => {
@@ -14,7 +13,7 @@ describe('spannerTable', () => {
     })
 
     expect(getTableName(singers)).toBe('singers')
-    const columns = getTableColumns(singers)
+    const columns = getColumns(singers)
     expect(Object.keys(columns)).toEqual(['id', 'name'])
     expect(singers.id.name).toBe('id')
     expect(singers.id.primary).toBe(true)
@@ -62,13 +61,13 @@ describe('int64', () => {
   it('bigint mode decodes to bigint across the full INT64 range', () => {
     const t = spannerTable('t', { n: int64('n', { mode: 'bigint' }) })
     expect(t.n.mapFromDriverValue({ value: '9223372036854775807' })).toBe(
-      9223372036854775807n
+      9_223_372_036_854_775_807n
     )
   })
 
   it('bigint mode encodes bigint as a string for the driver', () => {
     const t = spannerTable('t', { n: int64('n', { mode: 'bigint' }) })
-    expect(t.n.mapToDriverValue(9223372036854775807n)).toBe('9223372036854775807')
+    expect(t.n.mapToDriverValue(9_223_372_036_854_775_807n)).toBe('9223372036854775807')
   })
 })
 
@@ -156,8 +155,8 @@ describe('remaining column types', () => {
   })
 
   it('array maps element values through the base column', async () => {
-    const { int64 } = await import('../../src/index.js')
-    const t = spannerTable('t', { ns: int64('ns').array() })
+    const { int64: int64Column } = await import('../../src/index.js')
+    const t = spannerTable('t', { ns: int64Column('ns').array() })
     expect(t.ns.mapFromDriverValue([{ value: '1' }, { value: '2' }, null])).toEqual([
       1,
       2,

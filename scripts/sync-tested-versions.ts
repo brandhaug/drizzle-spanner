@@ -51,13 +51,9 @@ export function replaceTestedVersions(readme: string, table: string): string {
       `README is missing the ${START_MARKER} / ${END_MARKER} tested-versions markers`
     )
   }
-  return (
-    readme.slice(0, start + START_MARKER.length) +
-    '\n' +
-    table +
-    '\n' +
-    readme.slice(end)
-  )
+  return `${readme.slice(0, start + START_MARKER.length)}\n${table}\n${readme.slice(
+    end
+  )}`
 }
 
 function main(check: boolean): void {

@@ -1,6 +1,6 @@
 import { entityKind } from 'drizzle-orm/entity'
-import type { SpannerColumn, SpannerExtraConfigColumn } from './columns/common.js'
-import type { SpannerTable } from './table.js'
+import { type SpannerColumn, type SpannerExtraConfigColumn } from './columns/common.js'
+import { type SpannerTable } from './table.js'
 
 /** Spanner foreign keys have `ON DELETE` only — `ON UPDATE` actions do not exist. */
 export type ForeignKeyAction = 'cascade' | 'noAction'

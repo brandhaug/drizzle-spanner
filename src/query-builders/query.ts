@@ -1,20 +1,23 @@
 import { Column } from 'drizzle-orm/column'
 import { entityKind, is } from 'drizzle-orm/entity'
 import { QueryPromise } from 'drizzle-orm/query-promise'
-import type {
-  AnyRelations,
-  BuildQueryResult,
-  BuildRelationalQueryResult,
-  DBQueryConfig,
-  TableRelationalConfig,
-  TablesRelationalConfig
+import {
+  type AnyRelations,
+  type BuildQueryResult,
+  type BuildRelationalQueryResult,
+  type DBQueryConfig,
+  type TableRelationalConfig,
+  type TablesRelationalConfig
 } from 'drizzle-orm/relations'
 import { mapRelationalRow } from 'drizzle-orm/relations'
-import type { Query, SQL, SQLWrapper } from 'drizzle-orm/sql'
-import type { KnownKeysOnly } from 'drizzle-orm/utils'
-import type { SpannerDialect, SpannerRelationalQueryConfigEntry } from '../dialect.js'
-import type { SpannerSession } from '../session.js'
-import type { SpannerTable } from '../table.js'
+import { type Query, type SQL, type SQLWrapper } from 'drizzle-orm/sql'
+import { type KnownKeysOnly } from 'drizzle-orm/utils'
+import {
+  type SpannerDialect,
+  type SpannerRelationalQueryConfigEntry
+} from '../dialect.js'
+import { type SpannerSession } from '../session.js'
+import { type SpannerTable } from '../table.js'
 
 /**
  * The driver's number wrappers (`Int`, `Float`, `Float32`, `Numeric`).
@@ -24,7 +27,7 @@ import type { SpannerTable } from '../table.js'
  */
 function isWrappedNumber(value: unknown): value is { valueOf(): number } {
   if (value === null || typeof value !== 'object' || !('value' in value)) return false
-  const name = (value as object).constructor?.name
+  const name = (value as { constructor?: { name?: string } }).constructor?.name
   return name === 'Int' || name === 'Float' || name === 'Float32' || name === 'Numeric'
 }
 
@@ -51,7 +54,7 @@ function normalizeRelationalRow(
         continue
       }
       const single = Array.isArray(value)
-        ? ((value[0] as Record<string, unknown>) ?? null)
+        ? ((value[0] as Record<string, unknown> | undefined) ?? null)
         : null
       row[item.key] = single
       if (single) normalizeRelationalRow(single, item.selection)
