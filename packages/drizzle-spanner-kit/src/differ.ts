@@ -187,8 +187,6 @@ function renameTableInIndex(
   for (const [name, entity] of index.indexes) {
     if (entity.table === oldName) index.indexes.set(name, { ...entity, table: newName })
   }
-  // Snapshot copies: entries are deleted and re-set below, and iterating a
-  // live Map while adding keys would visit the new entries.
   const fkEntries = [...index.fks]
   for (const [key, entity] of fkEntries) {
     if (entity.table === oldName || entity.foreignTable === oldName) {

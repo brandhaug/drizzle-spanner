@@ -13,6 +13,11 @@ import {
   spannerTable,
   string
 } from '../../src/index.js'
+import {
+  type SpannerDriverDatabase,
+  type SpannerDriverTransaction,
+  type SpannerSqlRequest
+} from '../../src/index.js'
 
 // Captures a promise's rejection reason. Catch-clause params are `unknown`
 // by spec; `.catch((error) => error)` would trip use-unknown-in-catch-callback
@@ -25,11 +30,6 @@ async function rejectionOf(promise: Promise<unknown>): Promise<unknown> {
   }
   throw new Error('expected promise to reject, but it resolved')
 }
-import {
-  type SpannerDriverDatabase,
-  type SpannerDriverTransaction,
-  type SpannerSqlRequest
-} from '../../src/index.js'
 
 const singers = spannerTable('singers', {
   id: string('id', { length: 36 }).primaryKey(),
@@ -351,12 +351,9 @@ describe('error taxonomy', () => {
     if (!(failure instanceof SpannerError)) throw new Error('expected SpannerError')
     expect(failure.message).not.toContain(secret)
     expect(failure.query!.sql).not.toContain(secret)
-    const sanitized = {
-      message: failure.message,
-      code: failure.code,
-      query: failure.query,
-      stack: undefined
-    }
+    const sanitized = Object.fromEntries(
+      Object.entries(failure).map(([k, v]) => [k, k === 'stack' ? undefined : v])
+    )
     expect(JSON.stringify(sanitized)).not.toContain(secret)
   })
 })

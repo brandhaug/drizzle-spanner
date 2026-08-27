@@ -43,7 +43,7 @@ This table is generated from
 
 | Runtime       | Status                                                                                      |
 | ------------- | ------------------------------------------------------------------------------------------- |
-| Node          | First-class. `engines` requires >= 20; CI tests the current LTS set.                        |
+| Node          | First-class. `engines` requires >= 22; CI tests the current LTS set.                        |
 | Bun           | Supported; the integration suite runs under Bun in CI (gRPC over `node:http2`).             |
 | Edge runtimes | **Unsupported.** `@google-cloud/spanner` requires gRPC, which edge runtimes do not provide. |
 
