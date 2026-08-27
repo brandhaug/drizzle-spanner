@@ -29,5 +29,5 @@ if (!databaseExists) {
 }
 
 await database.close()
-spanner.close()
+await spanner.close()
 console.log(`Emulator ready: ${PROJECT}/${INSTANCE}/${DATABASE}`)

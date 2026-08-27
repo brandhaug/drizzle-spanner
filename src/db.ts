@@ -1,35 +1,38 @@
 import { entityKind } from 'drizzle-orm/entity'
 import { TransactionRollbackError } from 'drizzle-orm/errors'
-import type { AnyRelations, EmptyRelations } from 'drizzle-orm/relations'
-import type { SQL } from 'drizzle-orm/sql'
-import type { SpannerDialect } from './dialect.js'
+import { type AnyRelations, type EmptyRelations } from 'drizzle-orm/relations'
+import { type SQL } from 'drizzle-orm/sql'
+import { type SpannerDialect } from './dialect.js'
 import {
   GrpcStatus,
   SpannerAbortedError,
   SpannerInvalidArgumentError,
   wrapSpannerError
 } from './errors.js'
-import type { SpannerMultiUseStaleness, SpannerTimestampBounds } from './staleness.js'
+import {
+  type SpannerMultiUseStaleness,
+  type SpannerTimestampBounds
+} from './staleness.js'
 import { toTimestampBounds } from './staleness.js'
-import type {
-  SpannerDriverRow,
-  SpannerQueryRunner,
-  SpannerSqlRequest
+import {
+  type SpannerDriverRow,
+  type SpannerQueryRunner,
+  type SpannerSqlRequest
 } from './session.js'
 import { NO_CLIENT_MESSAGE, SpannerSession } from './session.js'
-import type { SpannerMutationSink } from './mutations.js'
+import { type SpannerMutationSink } from './mutations.js'
 import { MUTATION_MODE_READ_MESSAGE } from './mutations.js'
 import { unwrapDriverWrapper } from './columns/common.js'
 import { SpannerDelete } from './query-builders/delete.js'
 import { SpannerInsertBuilder } from './query-builders/insert.js'
 import { SpannerRelationalQueryBuilder } from './query-builders/query.js'
-import type {
-  SpannerSelectedFields,
-  SpannerTransactionSelectBuilder
+import {
+  type SpannerSelectedFields,
+  type SpannerTransactionSelectBuilder
 } from './query-builders/select.js'
 import { SpannerSelectBuilder } from './query-builders/select.js'
 import { SpannerUpdateBuilder } from './query-builders/update.js'
-import type { AnySpannerTable, SpannerTable } from './table.js'
+import { type AnySpannerTable, type SpannerTable } from './table.js'
 
 /**
  * Structural view of the `@google-cloud/spanner` surfaces this adapter uses.
@@ -442,7 +445,7 @@ export class SpannerDatabase<
         })
       }
       // The driver's DeadlineError means ABORTED retries ran out of time.
-      if ((error as { name?: string })?.name === 'DeadlineError') {
+      if ((error as { name?: string } | null | undefined)?.name === 'DeadlineError') {
         throw new SpannerAbortedError({
           message: 'Read-write transaction aborted and retries were exhausted',
           code: GrpcStatus.ABORTED,

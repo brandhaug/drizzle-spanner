@@ -1,12 +1,12 @@
-import type {
-  CheckEntity,
-  ColumnEntity,
-  ForeignKeyEntity,
-  IndexEntity,
-  PrimaryKeyEntity,
-  SequenceEntity,
-  SpannerEntity,
-  TableEntity
+import {
+  type CheckEntity,
+  type ColumnEntity,
+  type ForeignKeyEntity,
+  type IndexEntity,
+  type PrimaryKeyEntity,
+  type SequenceEntity,
+  type SpannerEntity,
+  type TableEntity
 } from './snapshot.js'
 
 /** A snapshot's flat entity list bucketed per entity type. */
@@ -32,27 +32,34 @@ export function bucketEntities(entities: SpannerEntity[]): EntityBuckets {
   }
   for (const entity of entities) {
     switch (entity.entityType) {
-      case 'tables':
+      case 'tables': {
         buckets.tables.push(entity)
         break
-      case 'columns':
+      }
+      case 'columns': {
         buckets.columns.push(entity)
         break
-      case 'pks':
+      }
+      case 'pks': {
         buckets.pks.push(entity)
         break
-      case 'indexes':
+      }
+      case 'indexes': {
         buckets.indexes.push(entity)
         break
-      case 'fks':
+      }
+      case 'fks': {
         buckets.fks.push(entity)
         break
-      case 'checks':
+      }
+      case 'checks': {
         buckets.checks.push(entity)
         break
-      case 'sequences':
+      }
+      case 'sequences': {
         buckets.sequences.push(entity)
         break
+      }
     }
   }
   return buckets
@@ -72,8 +79,9 @@ export function orderTablesParentsFirst(
     visiting.add(table.name)
     const dependencies: string[] = []
     if (table.interleave) dependencies.push(table.interleave.parent)
-    for (const fk of fksByTable.get(table.name) ?? [])
+    for (const fk of fksByTable.get(table.name) ?? []) {
       dependencies.push(fk.foreignTable)
+    }
     for (const dependency of dependencies) {
       const parent = remaining.get(dependency)
       if (parent && parent !== table) visit(parent)

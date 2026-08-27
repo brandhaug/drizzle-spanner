@@ -8,15 +8,28 @@ import {
   SpannerAbortedError,
   SpannerConstraintError,
   SpannerInvalidArgumentError,
+  SpannerError,
   SpannerUnavailableError,
   spannerTable,
   string
 } from '../../src/index.js'
-import type {
-  SpannerDriverDatabase,
-  SpannerDriverTransaction,
-  SpannerSqlRequest
+import {
+  type SpannerDriverDatabase,
+  type SpannerDriverTransaction,
+  type SpannerSqlRequest
 } from '../../src/index.js'
+
+// Captures a promise's rejection reason. Catch-clause params are `unknown`
+// by spec; `.catch((error) => error)` would trip use-unknown-in-catch-callback
+// without preserving a usable type.
+async function rejectionOf(promise: Promise<unknown>): Promise<unknown> {
+  try {
+    await promise
+  } catch (error) {
+    return error
+  }
+  throw new Error('expected promise to reject, but it resolved')
+}
 
 const singers = spannerTable('singers', {
   id: string('id', { length: 36 }).primaryKey(),
@@ -41,11 +54,11 @@ function fakeDatabase(rows: { name: string; value: unknown }[][] = []) {
     },
     async commit() {
       commits += 1
-      return undefined
+      return
     },
     async rollback() {
       rollbacks += 1
-      return undefined
+      return
     },
     insert() {},
     update() {},
@@ -148,7 +161,7 @@ describe('db.transaction', () => {
     let attempts = 0
     const fake = fakeDatabase()
     const database: SpannerDriverDatabase = {
-      run: fake.database.run,
+      run: fake.database.run.bind(fake.database),
       // Simulates the driver's AsyncTransactionRunner: retry runFn on ABORTED.
       async runTransactionAsync<T>(
         optionsOrRunFn:
@@ -158,37 +171,41 @@ describe('db.transaction', () => {
       ): Promise<T> {
         const runFn =
           typeof optionsOrRunFn === 'function' ? optionsOrRunFn : maybeRunFn!
+        // Declared outside the retry loop: the mock is stateless apart from
+        // `attempts`, and a function expression inside the loop would trip
+        // no-loop-func.
+        const driverTx: SpannerDriverTransaction = {
+          async run(request: unknown) {
+            attempts += 1
+            if (attempts === 1) {
+              throw Object.assign(new Error('Transaction aborted'), {
+                code: GrpcStatus.ABORTED
+              })
+            }
+            void request
+            return [[]]
+          },
+          async commit() {
+            return
+          },
+          async rollback() {
+            return
+          },
+          insert() {},
+          update() {},
+          upsert() {},
+          deleteRows() {}
+        }
         for (;;) {
           try {
-            return await runFn({
-              async run(request) {
-                attempts += 1
-                if (attempts === 1) {
-                  throw Object.assign(new Error('Transaction aborted'), {
-                    code: GrpcStatus.ABORTED
-                  })
-                }
-                void request
-                return [[]]
-              },
-              async commit() {
-                return undefined
-              },
-              async rollback() {
-                return undefined
-              },
-              insert() {},
-              update() {},
-              upsert() {},
-              deleteRows() {}
-            })
+            return await runFn(driverTx)
           } catch (error) {
             if ((error as { code?: number }).code === GrpcStatus.ABORTED) continue
             throw error
           }
         }
       },
-      getSnapshot: fake.database.getSnapshot
+      getSnapshot: fake.database.getSnapshot.bind(fake.database)
     }
     const db = drizzle(database)
     await db.transaction(async (tx) => {
@@ -251,16 +268,16 @@ describe('error taxonomy', () => {
         })
       )
     )
-    const failure = await db
-      .select()
-      .from(singers)
-      .where(eq(singers.id, 'x'))
-      .execute()
-      .catch((e) => e)
+    const failure = await rejectionOf(
+      db.select().from(singers).where(eq(singers.id, 'x')).execute()
+    )
     expect(failure).toBeInstanceOf(SpannerConstraintError)
+    if (!(failure instanceof SpannerConstraintError)) {
+      throw new Error('expected SpannerConstraintError')
+    }
     expect(failure.code).toBe(GrpcStatus.ALREADY_EXISTS)
-    expect(failure.query.sql).toContain('select')
-    expect(failure.query.paramNames).toEqual(['p0'])
+    expect(failure.query!.sql).toContain('select')
+    expect(failure.query!.paramNames).toEqual(['p0'])
   })
 
   it('wraps INVALID_ARGUMENT with the untyped-parameter hint', async () => {
@@ -271,12 +288,11 @@ describe('error taxonomy', () => {
         })
       )
     )
-    const failure = await db
-      .select()
-      .from(singers)
-      .execute()
-      .catch((e) => e)
+    const failure = await rejectionOf(db.select().from(singers).execute())
     expect(failure).toBeInstanceOf(SpannerInvalidArgumentError)
+    if (!(failure instanceof SpannerInvalidArgumentError)) {
+      throw new Error('expected SpannerInvalidArgumentError')
+    }
     expect(failure.message).toContain('type hint')
   })
 
@@ -288,13 +304,13 @@ describe('error taxonomy', () => {
         })
       )
     )
-    const failure = await db
-      .select()
-      .from(singers)
-      .where(eq(singers.plays, 1))
-      .execute()
-      .catch((e) => e)
+    const failure = await rejectionOf(
+      db.select().from(singers).where(eq(singers.plays, 1)).execute()
+    )
     expect(failure).toBeInstanceOf(SpannerInvalidArgumentError)
+    if (!(failure instanceof SpannerInvalidArgumentError)) {
+      throw new Error('expected SpannerInvalidArgumentError')
+    }
     expect(failure.message).toContain('parameter @p0 binds column "plays"')
   })
 
@@ -305,12 +321,11 @@ describe('error taxonomy', () => {
     const db = drizzle(
       failingDatabase(Object.assign(new Error('transport failure'), { code }))
     )
-    const failure = await db
-      .select()
-      .from(singers)
-      .execute()
-      .catch((e) => e)
+    const failure = await rejectionOf(db.select().from(singers).execute())
     expect(failure).toBeInstanceOf(SpannerUnavailableError)
+    if (!(failure instanceof SpannerUnavailableError)) {
+      throw new Error('expected SpannerUnavailableError')
+    }
     expect(failure.kind).toBe('unavailable')
     expect(failure.code).toBe(code)
   })
@@ -330,13 +345,15 @@ describe('error taxonomy', () => {
     const db = drizzle(
       failingDatabase(Object.assign(new Error('driver failure'), { code }))
     )
-    const failure = await db
-      .insert(singers)
-      .values({ id: secret, name: secret })
-      .execute()
-      .catch((e) => e)
+    const failure = await rejectionOf(
+      db.insert(singers).values({ id: secret, name: secret }).execute()
+    )
+    if (!(failure instanceof SpannerError)) throw new Error('expected SpannerError')
     expect(failure.message).not.toContain(secret)
-    expect(failure.query.sql).not.toContain(secret)
-    expect(JSON.stringify({ ...failure, stack: undefined })).not.toContain(secret)
+    expect(failure.query!.sql).not.toContain(secret)
+    const sanitized = Object.fromEntries(
+      Object.entries(failure).map(([k, v]) => [k, k === 'stack' ? undefined : v])
+    )
+    expect(JSON.stringify(sanitized)).not.toContain(secret)
   })
 })

@@ -1,15 +1,15 @@
 import { entityKind } from 'drizzle-orm/entity'
-import type { Param, SQL } from 'drizzle-orm/sql'
-import type { InferInsertModel, InferSelectModel } from 'drizzle-orm/table'
-import type { SpannerDialect, SpannerInsertConfig } from '../dialect.js'
+import { type Param, type SQL } from 'drizzle-orm/sql'
+import { type InferInsertModel, type InferSelectModel } from 'drizzle-orm/table'
+import { type SpannerDialect, type SpannerInsertConfig } from '../dialect.js'
 import { SpannerInvalidArgumentError } from '../errors.js'
-import type { SpannerMutationSink } from '../mutations.js'
+import { type SpannerMutationSink } from '../mutations.js'
 import { toMutationRow } from '../mutations.js'
-import type { SpannerSession } from '../session.js'
-import type { AnySpannerTable } from '../table.js'
+import { type SpannerSession } from '../session.js'
+import { type AnySpannerTable } from '../table.js'
 import { TableColumns, TableName } from '../symbols.js'
 import { mapRowToParams, SpannerDmlBase } from './query-base.js'
-import type { SelectResultFields, SpannerSelectedFields } from './select.js'
+import { type SelectResultFields, type SpannerSelectedFields } from './select.js'
 
 export type SpannerInsertValue<TTable extends AnySpannerTable> = {
   [Key in keyof InferInsertModel<TTable>]: InferInsertModel<TTable>[Key] | SQL

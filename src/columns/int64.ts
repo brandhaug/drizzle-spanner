@@ -1,13 +1,13 @@
-import type {
-  ColumnBuilderBaseConfig,
-  HasDefault,
-  IsIdentity
+import {
+  type ColumnBuilderBaseConfig,
+  type HasDefault,
+  type IsIdentity
 } from 'drizzle-orm/column-builder'
-import type { ColumnBaseConfig } from 'drizzle-orm/column'
+import { type ColumnBaseConfig } from 'drizzle-orm/column'
 import { entityKind } from 'drizzle-orm/entity'
 import { SpannerPrecisionError } from '../errors.js'
-import type { SpannerTable } from '../table.js'
-import type { SpannerTypeHint } from '../type-hints.js'
+import { type SpannerTable } from '../table.js'
+import { type SpannerTypeHint } from '../type-hints.js'
 import { SpannerColumn, SpannerColumnBuilder, unwrapDriverWrapper } from './common.js'
 
 export interface SpannerInt64Config<

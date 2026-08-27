@@ -1,6 +1,6 @@
 import { entityKind } from 'drizzle-orm/entity'
-import type { SpannerExtraConfigColumn } from './columns/common.js'
-import type { SpannerTable } from './table.js'
+import { type SpannerExtraConfigColumn } from './columns/common.js'
+import { type SpannerTable } from './table.js'
 
 export type PrimaryKeyColumns = readonly [
   SpannerExtraConfigColumn,

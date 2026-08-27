@@ -17,6 +17,6 @@ const PUBLIC_EXPORTS = [
 
 describe('drizzle-spanner-kit public API surface', () => {
   it('the package root exports exactly the audited public names', () => {
-    expect(Object.keys(root).sort()).toEqual(PUBLIC_EXPORTS)
+    expect(Object.keys(root).toSorted()).toEqual(PUBLIC_EXPORTS)
   })
 })

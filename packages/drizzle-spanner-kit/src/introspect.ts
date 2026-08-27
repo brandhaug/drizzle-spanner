@@ -1,11 +1,11 @@
-import type { KitDriverDatabase } from './connect.js'
-import type {
-  ColumnEntity,
-  ForeignKeyAction,
-  ForeignKeyEntity,
-  IndexEntity,
-  KeyPart,
-  SpannerEntity
+import { type KitDriverDatabase } from './connect.js'
+import {
+  type ColumnEntity,
+  type ForeignKeyAction,
+  type ForeignKeyEntity,
+  type IndexEntity,
+  type KeyPart,
+  type SpannerEntity
 } from './snapshot.js'
 
 const BOOKKEEPING_TABLE = 'drizzle_migrations'

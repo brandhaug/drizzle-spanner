@@ -17,15 +17,15 @@ import {
   renameTableSql
 } from './ddl.js'
 import { bucketEntities, groupByTable, orderTablesParentsFirst } from './entities.js'
-import type {
-  CheckEntity,
-  ColumnEntity,
-  ForeignKeyEntity,
-  IndexEntity,
-  PrimaryKeyEntity,
-  SequenceEntity,
-  SpannerEntity,
-  TableEntity
+import {
+  type CheckEntity,
+  type ColumnEntity,
+  type ForeignKeyEntity,
+  type IndexEntity,
+  type PrimaryKeyEntity,
+  type SequenceEntity,
+  type SpannerEntity,
+  type TableEntity
 } from './snapshot.js'
 
 /** One refused-diff finding: what cannot be altered and the manual path. */
@@ -135,8 +135,9 @@ function indexEntities(ddl: SpannerEntity[]): EntityIndex {
   // Spanner index names are database-global.
   for (const dbIndex of buckets.indexes) index.indexes.set(dbIndex.name, dbIndex)
   for (const fk of buckets.fks) index.fks.set(`${fk.table}.${fk.name}`, fk)
-  for (const check of buckets.checks)
+  for (const check of buckets.checks) {
     index.checks.set(`${check.table}.${check.name}`, check)
+  }
   for (const sequence of buckets.sequences) index.sequences.set(sequence.name, sequence)
   return index
 }
@@ -161,7 +162,7 @@ function renameTableInIndex(
     })
   }
   for (const [name, entity] of index.tables) {
-    if (entity.interleave && entity.interleave.parent === oldName) {
+    if (entity.interleave?.parent === oldName) {
       index.tables.set(name, {
         ...entity,
         interleave: { ...entity.interleave, parent: newName }
@@ -186,7 +187,8 @@ function renameTableInIndex(
   for (const [name, entity] of index.indexes) {
     if (entity.table === oldName) index.indexes.set(name, { ...entity, table: newName })
   }
-  for (const [key, entity] of [...index.fks]) {
+  const fkEntries = [...index.fks]
+  for (const [key, entity] of fkEntries) {
     if (entity.table === oldName || entity.foreignTable === oldName) {
       index.fks.delete(key)
       const renamed = {
@@ -197,7 +199,8 @@ function renameTableInIndex(
       index.fks.set(`${renamed.table}.${renamed.name}`, renamed)
     }
   }
-  for (const [key, entity] of [...index.checks]) {
+  const checkEntries = [...index.checks]
+  for (const [key, entity] of checkEntries) {
     if (entity.table === oldName) {
       index.checks.delete(key)
       index.checks.set(`${newName}.${entity.name}`, { ...entity, table: newName })
@@ -337,8 +340,9 @@ export async function diffSnapshots(
     if (!cur.sequences.has(name)) buckets.dropSequences.push(dropSequenceSql(name))
   }
   for (const [name, sequence] of cur.sequences) {
-    if (!prev.sequences.has(name))
+    if (!prev.sequences.has(name)) {
       buckets.createSequences.push(createSequenceSql(sequence))
+    }
   }
 
   // Dropped tables: their indexes go first, children before parents.
@@ -347,15 +351,16 @@ export async function diffSnapshots(
   )
   const droppedNames = new Set(stillDropped.map((table) => table.name))
   for (const index of prev.indexes.values()) {
-    if (droppedNames.has(index.table))
+    if (droppedNames.has(index.table)) {
       buckets.dropIndexes.push(dropIndexSql(index.name))
+    }
   }
   const fksOfDropped = groupByTable(
     [...prev.fks.values()].filter((fk) => droppedNames.has(fk.table))
   )
   buckets.dropTables.push(
     ...orderTablesParentsFirst(stillDropped, fksOfDropped)
-      .reverse()
+      .toReversed()
       .map((table) => dropTableSql(table.name))
   )
 

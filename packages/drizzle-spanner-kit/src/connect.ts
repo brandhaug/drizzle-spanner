@@ -1,6 +1,6 @@
-import type { SpannerDriverDatabase, SpannerSqlRequest } from 'drizzle-spanner'
-import type { SpannerDriverDatabaseWithDdl } from 'drizzle-spanner/migrator'
-import type { SpannerKitDatabaseConfig } from './config.js'
+import { type SpannerDriverDatabase, type SpannerSqlRequest } from 'drizzle-spanner'
+import { type SpannerDriverDatabaseWithDdl } from 'drizzle-spanner/migrator'
+import { type SpannerKitDatabaseConfig } from './config.js'
 
 /** The published request shape with `params`/`types` optional — kit reads carry none. */
 export type KitSqlRequest = Pick<SpannerSqlRequest, 'sql' | 'json'> &
@@ -48,7 +48,7 @@ export async function connectDatabase(
     database,
     async close() {
       await database.close()
-      spanner.close()
+      await spanner.close()
     }
   }
 }

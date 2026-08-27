@@ -1,5 +1,5 @@
-import type { Column } from 'drizzle-orm/column'
-import type { SQL } from 'drizzle-orm/sql'
+import { type Column } from 'drizzle-orm/column'
+import { type SQL } from 'drizzle-orm/sql'
 import * as utils from 'drizzle-orm/utils'
 
 /**
@@ -18,15 +18,19 @@ export type SelectedFieldsOrdered = SelectedFieldsOrderedItem[]
 type SelectedFields = Record<string, unknown>
 
 interface InternalUtils {
-  orderSelectedFields(
+  // Arrow-property signatures, not method signatures: these are plain
+  // utility functions re-exported unbound (drizzle-orm's utils are
+  // `this`-less), and the method syntax would trip unbound-method on the
+  // re-export below.
+  orderSelectedFields: (
     fields: SelectedFields,
     pathPrefix?: string[]
-  ): SelectedFieldsOrdered
-  mapResultRow<TResult>(
+  ) => SelectedFieldsOrdered
+  mapResultRow: <TResult>(
     columns: SelectedFieldsOrdered,
     row: unknown[],
     joinsNotNullableMap: Record<string, boolean> | undefined
-  ): TResult
+  ) => TResult
 }
 
 const internal = utils as unknown as InternalUtils

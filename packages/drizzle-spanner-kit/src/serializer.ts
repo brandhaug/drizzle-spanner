@@ -1,7 +1,7 @@
 import { is } from 'drizzle-orm/entity'
 import { SQL } from 'drizzle-orm/sql'
 import { getTableName } from 'drizzle-orm/table'
-import { getTableColumns } from 'drizzle-orm/utils'
+import { getColumns } from 'drizzle-orm/utils'
 import {
   CheckBuilder,
   ForeignKeyBuilder,
@@ -15,15 +15,15 @@ import {
   SpannerTimestamp
 } from 'drizzle-spanner'
 import { getTableExtraConfig } from 'drizzle-spanner/internal'
-import type { SpannerColumn, SpannerExtraConfigColumn } from 'drizzle-spanner'
-import type {
-  ColumnEntity,
-  ForeignKeyEntity,
-  IndexEntity,
-  KeyPart,
-  PrimaryKeyEntity,
-  SpannerEntity,
-  TableEntity
+import { type SpannerColumn, type SpannerExtraConfigColumn } from 'drizzle-spanner'
+import {
+  type ColumnEntity,
+  type ForeignKeyEntity,
+  type IndexEntity,
+  type KeyPart,
+  type PrimaryKeyEntity,
+  type SpannerEntity,
+  type TableEntity
 } from './snapshot.js'
 
 const dialect = new SpannerDialect()
@@ -38,7 +38,7 @@ function renderSql(expression: SQL): string {
 
 /** Renders a plain JS default value as a GoogleSQL literal. */
 function renderLiteral(value: unknown): string {
-  if (typeof value === 'string') return `'${value.replace(/'/g, "\\'")}'`
+  if (typeof value === 'string') return `'${value.replaceAll("'", "\\'")}'`
   if (typeof value === 'number' || typeof value === 'bigint') return String(value)
   if (typeof value === 'boolean') return value ? 'TRUE' : 'FALSE'
   if (value instanceof Date) return `TIMESTAMP '${value.toISOString()}'`
@@ -95,7 +95,7 @@ function serializePrimaryKey(
       }
     }
   }
-  const columns = Object.values(getTableColumns(table))
+  const columns = Object.values(getColumns(table))
     .filter((column) => column.primary)
     .map((column): KeyPart => ({ name: column.name, order: 'asc' }))
   if (columns.length === 0) {
@@ -174,7 +174,7 @@ function serializeTable(table: SpannerTable): SpannerEntity[] {
   }
 
   entities.push({ entityType: 'tables', name: tableName, interleave: interleaveConfig })
-  for (const column of Object.values(getTableColumns(table))) {
+  for (const column of Object.values(getColumns(table))) {
     entities.push(serializeColumn(tableName, column))
   }
   entities.push(serializePrimaryKey(tableName, table, extraConfig))

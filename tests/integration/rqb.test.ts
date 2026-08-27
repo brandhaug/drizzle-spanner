@@ -8,7 +8,7 @@ import {
   spannerTable,
   string
 } from '../../src/index.js'
-import type { EmulatorHarness } from './harness.js'
+import { type EmulatorHarness } from './harness.js'
 import { startEmulator } from './harness.js'
 
 // Spanner interleaving requires the child key columns to carry the parent

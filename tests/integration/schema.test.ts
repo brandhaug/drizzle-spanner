@@ -17,7 +17,7 @@ import {
   string,
   timestamp
 } from '../../src/index.js'
-import type { EmulatorHarness } from './harness.js'
+import { type EmulatorHarness } from './harness.js'
 import { startEmulator } from './harness.js'
 
 const everyType = spannerTable('every_type', {
@@ -112,7 +112,7 @@ describe('column type round-trips', () => {
       id: 'row-1',
       text: 'héllo world',
       n: 42,
-      big: 9223372036854775807n,
+      big: 9_223_372_036_854_775_807n,
       f64: 3.5,
       f32: 1.5,
       num: '3.141592653',
@@ -131,7 +131,7 @@ describe('column type round-trips', () => {
       .where(eq(everyType.id, 'row-1'))
     expect(selected!.text).toBe(row.text)
     expect(selected!.n).toBe(42)
-    expect(selected!.big).toBe(9223372036854775807n)
+    expect(selected!.big).toBe(9_223_372_036_854_775_807n)
     expect(selected!.f64).toBe(3.5)
     expect(selected!.f32).toBe(1.5)
     expect(selected!.num).toBe('3.141592653')

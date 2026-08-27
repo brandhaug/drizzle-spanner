@@ -30,7 +30,7 @@ git tag v<version>
 git push origin v<version>
 ```
 
-5. The tag triggers `.github/workflows/release.yml`: release-check, lint,
+5. The tag triggers `.github/workflows/release-dry-run.yml`: release-check, lint,
    typecheck, unit tests, build, `arethetypeswrong`, pack-contents check, and
    a **dry-run** publish of both packages. CI never publishes and holds no
    npm token.

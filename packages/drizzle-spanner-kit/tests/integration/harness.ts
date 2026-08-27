@@ -1,6 +1,6 @@
 import { randomUUID } from 'node:crypto'
-import type { Database } from '@google-cloud/spanner'
-import type { SpannerKitDatabaseConfig } from '../../src/index.js'
+import { type Database } from '@google-cloud/spanner'
+import { type SpannerKitDatabaseConfig } from '../../src/index.js'
 import { startSpannerTestTarget } from '../../../../tests/integration/spanner-target.js'
 
 export interface KitEmulatorHarness {

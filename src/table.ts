@@ -1,22 +1,22 @@
-import type { ColumnBuilderBase } from 'drizzle-orm/column-builder'
+import { type ColumnBuilderBase } from 'drizzle-orm/column-builder'
 import { entityKind, is } from 'drizzle-orm/entity'
-import type {
-  InferTableColumnsModels,
-  TableConfig as TableConfigBase
+import {
+  type InferTableColumnsModels,
+  type TableConfig as TableConfigBase
 } from 'drizzle-orm/table'
 import { Table } from 'drizzle-orm/table'
-import type {
-  BuildSpannerColumns,
-  BuildSpannerExtraConfigColumns,
-  SpannerColumn,
-  SpannerExtraConfigColumn
+import {
+  type BuildSpannerColumns,
+  type BuildSpannerExtraConfigColumns,
+  type SpannerColumn,
+  type SpannerColumnBuilder,
+  type SpannerExtraConfigColumn
 } from './columns/common.js'
-import { SpannerColumnBuilder } from './columns/common.js'
-import type { CheckBuilder } from './checks.js'
-import type { ForeignKeyBuilder } from './foreign-keys.js'
-import type { IndexBuilder } from './indexes.js'
+import { type CheckBuilder } from './checks.js'
+import { type ForeignKeyBuilder } from './foreign-keys.js'
+import { type IndexBuilder } from './indexes.js'
 import { InterleaveBuilder } from './interleave.js'
-import type { AdmissiblePkOrder } from './interleave.js'
+import { type AdmissiblePkOrder } from './interleave.js'
 import { PrimaryKeyBuilder } from './primary-keys.js'
 import {
   ExtraConfigBuilder,
@@ -52,7 +52,7 @@ export class SpannerTable<T extends TableConfig = TableConfig> extends Table<T> 
 export type SpannerTableExtraConfigValue =
   | IndexBuilder
   | PrimaryKeyBuilder
-  | InterleaveBuilder<any>
+  | InterleaveBuilder
   | ForeignKeyBuilder
   | CheckBuilder
 
@@ -81,7 +81,7 @@ export type SpannerTableWithColumns<T extends TableConfig> = SpannerTable<T> &
   T['columns'] &
   InferTableColumnsModels<T['columns']>
 
-export type AnySpannerTable = SpannerTable<TableConfig>
+export type AnySpannerTable = SpannerTable
 
 /**
  * Primary-key columns of a table in key order: a composite

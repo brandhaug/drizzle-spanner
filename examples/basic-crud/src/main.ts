@@ -50,7 +50,8 @@ await db
 const followUpTitle = 'ship milestone 4'
 await db.transaction(async (tx) => {
   const [done] = await tx.select().from(tasks).where(eq(tasks.id, created.id))
-  assert.equal(done?.done, true)
+  assert.ok(done, 'task row not found after commit')
+  assert.equal(done.done, true)
   await tx.insert(tasks).values({ title: followUpTitle, updatedAt: commitTimestamp() })
 })
 
@@ -70,4 +71,4 @@ assert.equal(remaining, 1)
 
 console.log('basic-crud example passed')
 await database.close()
-spanner.close()
+await spanner.close()

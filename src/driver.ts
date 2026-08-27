@@ -1,8 +1,8 @@
-import type { AnyRelations, EmptyRelations } from 'drizzle-orm/relations'
-import type { DrizzleConfig } from 'drizzle-orm/utils'
-import type { Logger } from 'drizzle-orm/logger'
+import { type AnyRelations, type EmptyRelations } from 'drizzle-orm/relations'
+import { type DrizzleConfig } from 'drizzle-orm/utils'
+import { type Logger } from 'drizzle-orm/logger'
 import { DefaultLogger } from 'drizzle-orm/logger'
-import type { SpannerDriverDatabase } from './db.js'
+import { type SpannerDriverDatabase } from './db.js'
 import { createDatabaseSession, createMockSession, SpannerDatabase } from './db.js'
 import { SpannerDialect } from './dialect.js'
 

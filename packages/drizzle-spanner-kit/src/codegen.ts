@@ -1,18 +1,18 @@
-import type {
-  CheckEntity,
-  ColumnEntity,
-  ForeignKeyEntity,
-  IndexEntity,
-  KeyPart,
-  PrimaryKeyEntity,
-  SpannerEntity,
-  TableEntity
+import {
+  type CheckEntity,
+  type ColumnEntity,
+  type ForeignKeyEntity,
+  type IndexEntity,
+  type KeyPart,
+  type PrimaryKeyEntity,
+  type SpannerEntity,
+  type TableEntity
 } from './snapshot.js'
 import { bucketEntities, groupByTable, orderTablesParentsFirst } from './entities.js'
 
 /** `full_name` -> `fullName`; leading digits get a `t` prefix. */
 function camelCase(name: string): string {
-  const camel = name.replace(/[_-]+(\w)/g, (_, char: string) => char.toUpperCase())
+  const camel = name.replaceAll(/[_-]+(\w)/g, (_, char: string) => char.toUpperCase())
   return /^\d/.test(camel) ? `t${camel}` : camel
 }
 
@@ -194,8 +194,7 @@ export function renderSchemaModule(entities: SpannerEntity[]): string {
     const indexes = indexesByTable.get(table.name) ?? []
     const fks = fksByTable.get(table.name) ?? []
     const checks = checksByTable.get(table.name) ?? []
-    const inlinePk =
-      pk !== undefined && pk.columns.length === 1 && pk.columns[0]!.order === 'asc'
+    const inlinePk = pk?.columns.length === 1 && pk.columns[0]!.order === 'asc'
     const inlinePkColumn = inlinePk ? pk.columns[0]!.name : undefined
 
     for (const column of columns) {
@@ -227,30 +226,26 @@ export function renderSchemaModule(entities: SpannerEntity[]): string {
     const variable = tableVariables.get(table.name)!
     if (extra.lines.length === 0) {
       declarations.push(
-        `export const ${variable} = spannerTable('${table.name}', {\n` +
-          columnLines.map((line) => `  ${line}`).join('\n') +
-          '\n});'
+        `export const ${variable} = spannerTable('${table.name}', {\n${columnLines
+          .map((line) => `  ${line}`)
+          .join('\n')}\n});`
       )
     } else {
       declarations.push(
         `export const ${variable} = spannerTable(\n` +
           `  '${table.name}',\n` +
-          '  {\n' +
-          columnLines.map((line) => `    ${line}`).join('\n') +
-          '\n  },\n' +
-          '  (t) => [\n' +
-          extra.lines.map((line) => `    ${line}`).join('\n') +
-          '\n  ],\n' +
-          ');'
+          `  {\n${columnLines.map((line) => `    ${line}`).join('\n')}\n  },\n` +
+          `  (t) => [\n${extra.lines.map((line) => `    ${line}`).join('\n')}\n  ],\n` +
+          `);`
       )
     }
   }
 
-  const importList = [...imports].sort()
-  const header =
-    (needsSql ? "import { sql } from 'drizzle-orm/sql';\n" : '') +
-    'import {\n' +
-    importList.map((name) => `  ${name},`).join('\n') +
-    "\n} from 'drizzle-spanner';\n"
+  const importList = [...imports].toSorted()
+  const header = `${
+    needsSql ? "import { sql } from 'drizzle-orm/sql';\n" : ''
+  }import {\n${importList
+    .map((name) => `  ${name},`)
+    .join('\n')}\n} from 'drizzle-spanner';\n`
   return `${header}\n${declarations.join('\n\n')}\n`
 }

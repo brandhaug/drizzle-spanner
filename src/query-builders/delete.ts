@@ -1,14 +1,14 @@
 import { entityKind } from 'drizzle-orm/entity'
-import type { SQL } from 'drizzle-orm/sql'
-import type { InferSelectModel } from 'drizzle-orm/table'
-import type { SpannerDeleteConfig, SpannerDialect } from '../dialect.js'
-import type { SpannerMutationSink } from '../mutations.js'
+import { type SQL } from 'drizzle-orm/sql'
+import { type InferSelectModel } from 'drizzle-orm/table'
+import { type SpannerDeleteConfig, type SpannerDialect } from '../dialect.js'
+import { type SpannerMutationSink } from '../mutations.js'
 import { whereToPrimaryKey } from '../mutations.js'
-import type { SpannerSession } from '../session.js'
-import type { AnySpannerTable } from '../table.js'
+import { type SpannerSession } from '../session.js'
+import { type AnySpannerTable } from '../table.js'
 import { TableName } from '../symbols.js'
 import { SpannerFilteredDmlBase } from './query-base.js'
-import type { SelectResultFields, SpannerSelectedFields } from './select.js'
+import { type SelectResultFields, type SpannerSelectedFields } from './select.js'
 
 export class SpannerDelete<
   TTable extends AnySpannerTable,

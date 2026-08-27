@@ -37,8 +37,8 @@
   "scripts": {
     "build": "tsc -p tsconfig.build.json",
     "typecheck": "tsc --noEmit",
-    "lint": "oxlint",
-    "lint:fix": "oxlint --fix",
+    "lint": "oxlint --type-aware",
+    "lint:fix": "oxlint --fix --type-aware",
     "format": "oxfmt --write",
     "format:check": "oxfmt --check",
     "check": "npm run typecheck && npm run lint && npm run format:check && npm test",
@@ -63,8 +63,10 @@
     "lint-staged": "catalog:",
     "oxfmt": "catalog:",
     "oxlint": "catalog:",
+    "oxlint-tsgolint": "catalog:",
     "testcontainers": "catalog:",
-    "typescript": "catalog:"
+    "typescript": "catalog:",
+    "ultracite": "catalog:"
   },
   "peerDependencies": {
     "@google-cloud/spanner": ">=7.0.0",
@@ -82,7 +84,7 @@
   },
   "engines": {
     "bun": ">=1.4.0",
-    "node": ">=20"
+    "node": ">=22"
   },
   "packageManager": "bun@1.4.0",
   "catalog": {
@@ -93,7 +95,9 @@
     "lint-staged": "17.3.0",
     "oxfmt": "0.64.0",
     "oxlint": "1.79.0",
+    "oxlint-tsgolint": "7.0.2001",
     "testcontainers": "12.1.0",
-    "typescript": "7.0.2"
+    "typescript": "7.0.2",
+    "ultracite": "7.10.6"
   }
 }

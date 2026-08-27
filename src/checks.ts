@@ -1,5 +1,5 @@
 import { entityKind } from 'drizzle-orm/entity'
-import type { SQL } from 'drizzle-orm/sql'
+import { type SQL } from 'drizzle-orm/sql'
 
 export class CheckBuilder {
   static readonly [entityKind]: string = 'SpannerCheckBuilder'

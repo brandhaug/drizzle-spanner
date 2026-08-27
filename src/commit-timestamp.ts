@@ -1,4 +1,4 @@
-import type { SQL } from 'drizzle-orm/sql'
+import { type SQL } from 'drizzle-orm/sql'
 import { sql } from 'drizzle-orm/sql'
 
 /**
