@@ -14,7 +14,7 @@ export interface SpannerKitDatabaseConfig {
 /** Shape of `drizzle-spanner.config.ts` as the user writes it. */
 export interface SpannerKitConfig {
   /** Schema module path(s) exporting `spannerTable` / `sequence` values. */
-  schema: string | string[]
+  schema: string | Array<string>
   /** Migrations folder; defaults to `./drizzle`. */
   out?: string
   /** Required by `migrate`, `pull` and `push`; `generate` runs without it. */
@@ -23,7 +23,7 @@ export interface SpannerKitConfig {
 
 /** `SpannerKitConfig` after validation, with paths resolved and defaults applied. */
 export interface ResolvedSpannerKitConfig {
-  schema: string[]
+  schema: Array<string>
   out: string
   database?: SpannerKitDatabaseConfig
 }
@@ -34,7 +34,9 @@ export function defineConfig(config: SpannerKitConfig): SpannerKitConfig {
 }
 
 function validateDatabase(database: unknown): SpannerKitDatabaseConfig | undefined {
-  if (database === undefined) return undefined
+  if (database === undefined) {
+    return undefined
+  }
   const candidate = database as Partial<SpannerKitDatabaseConfig>
   for (const key of ['project', 'instance', 'database'] as const) {
     if (typeof candidate[key] !== 'string' || candidate[key].length === 0) {
@@ -74,7 +76,7 @@ export async function loadConfig(
   const schemaInput =
     typeof config.schema === 'string'
       ? [config.schema]
-      : (config.schema as string[] | undefined)
+      : (config.schema as Array<string> | undefined)
   if (!schemaInput || schemaInput.length === 0) {
     throw new Error(
       'drizzle-spanner-kit config: schema must name at least one schema module path'

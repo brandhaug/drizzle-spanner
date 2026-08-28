@@ -35,7 +35,9 @@ export class SpannerJson extends SpannerColumn<ColumnBaseConfig<'object json'>> 
   }
 
   override mapFromDriverValue = (value: unknown): unknown => {
-    if (value === null) return null
+    if (value === null) {
+      return null
+    }
     // The driver parses JSON cells already; strings can appear in raw paths.
     return typeof value === 'string' ? JSON.parse(value) : value
   }

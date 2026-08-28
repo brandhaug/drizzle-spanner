@@ -53,8 +53,12 @@ export class SpannerDateString extends SpannerColumn<ColumnBaseConfig<'string da
   }
 
   override mapFromDriverValue = (value: unknown): string | null => {
-    if (value === null) return null
-    if (value instanceof Date) return toIsoDateString(value)
+    if (value === null) {
+      return null
+    }
+    if (value instanceof Date) {
+      return toIsoDateString(value)
+    }
     return String(value)
   }
 
@@ -93,7 +97,9 @@ export class SpannerDateDate extends SpannerColumn<ColumnBaseConfig<'object date
   }
 
   override mapFromDriverValue = (value: unknown): Date | null => {
-    if (value === null) return null
+    if (value === null) {
+      return null
+    }
     // Re-wrap SpannerDate into a plain Date at UTC midnight.
     return value instanceof Date
       ? new Date(`${toIsoDateString(value)}T00:00:00Z`)

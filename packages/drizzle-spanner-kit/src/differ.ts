@@ -47,9 +47,9 @@ export interface DiffDiagnostic {
  * every diagnostic found so one run surfaces all manual work at once.
  */
 export class DiffRefusedError extends Error {
-  readonly diagnostics: DiffDiagnostic[]
+  readonly diagnostics: Array<DiffDiagnostic>
 
-  constructor(diagnostics: DiffDiagnostic[]) {
+  constructor(diagnostics: Array<DiffDiagnostic>) {
     super(
       `drizzle-spanner-kit refused to generate this diff:\n${diagnostics
         .map((diagnostic) => `- ${diagnostic.message}`)
@@ -66,7 +66,7 @@ export interface RenameCandidate {
   /** Set for column candidates. */
   table?: string
   dropped: string
-  created: string[]
+  created: Array<string>
 }
 
 /**
@@ -95,9 +95,9 @@ export interface ResolvedRename {
 }
 
 export interface DiffResult {
-  statements: string[]
+  statements: Array<string>
   /** Rename journal entries resolved during this diff. */
-  renames: ResolvedRename[]
+  renames: Array<ResolvedRename>
 }
 
 interface EntityIndex {
@@ -110,7 +110,7 @@ interface EntityIndex {
   sequences: Map<string, SequenceEntity>
 }
 
-function indexEntities(ddl: SpannerEntity[]): EntityIndex {
+function indexEntities(ddl: Array<SpannerEntity>): EntityIndex {
   const index: EntityIndex = {
     tables: new Map(),
     columns: new Map(),
@@ -131,14 +131,22 @@ function indexEntities(ddl: SpannerEntity[]): EntityIndex {
     tableColumns.set(column.name, column)
     index.columns.set(column.table, tableColumns)
   }
-  for (const pk of buckets.pks) index.pks.set(pk.table, pk)
+  for (const pk of buckets.pks) {
+    index.pks.set(pk.table, pk)
+  }
   // Spanner index names are database-global.
-  for (const dbIndex of buckets.indexes) index.indexes.set(dbIndex.name, dbIndex)
-  for (const fk of buckets.fks) index.fks.set(`${fk.table}.${fk.name}`, fk)
+  for (const dbIndex of buckets.indexes) {
+    index.indexes.set(dbIndex.name, dbIndex)
+  }
+  for (const fk of buckets.fks) {
+    index.fks.set(`${fk.table}.${fk.name}`, fk)
+  }
   for (const check of buckets.checks) {
     index.checks.set(`${check.table}.${check.name}`, check)
   }
-  for (const sequence of buckets.sequences) index.sequences.set(sequence.name, sequence)
+  for (const sequence of buckets.sequences) {
+    index.sequences.set(sequence.name, sequence)
+  }
   return index
 }
 
@@ -185,7 +193,9 @@ function renameTableInIndex(
     index.pks.set(newName, { ...pk, table: newName })
   }
   for (const [name, entity] of index.indexes) {
-    if (entity.table === oldName) index.indexes.set(name, { ...entity, table: newName })
+    if (entity.table === oldName) {
+      index.indexes.set(name, { ...entity, table: newName })
+    }
   }
   const fkEntries = [...index.fks]
   for (const [key, entity] of fkEntries) {
@@ -218,21 +228,21 @@ function typeChangeAllowed(from: string, to: string): boolean {
 }
 
 interface StatementBuckets {
-  renames: string[]
-  dropIndexes: string[]
-  dropConstraints: string[]
-  dropColumns: string[]
-  dropTables: string[]
-  dropSequences: string[]
-  createSequences: string[]
-  createTables: string[]
-  addColumns: string[]
-  alterColumns: string[]
-  createIndexes: string[]
-  addConstraints: string[]
+  renames: Array<string>
+  dropIndexes: Array<string>
+  dropConstraints: Array<string>
+  dropColumns: Array<string>
+  dropTables: Array<string>
+  dropSequences: Array<string>
+  createSequences: Array<string>
+  createTables: Array<string>
+  addColumns: Array<string>
+  alterColumns: Array<string>
+  createIndexes: Array<string>
+  addConstraints: Array<string>
 }
 
-function flattenBuckets(buckets: StatementBuckets): string[] {
+function flattenBuckets(buckets: StatementBuckets): Array<string> {
   return [
     ...buckets.renames,
     ...buckets.dropIndexes,
@@ -266,14 +276,14 @@ const MANUAL_COLUMN_PATH =
  * DROP+CREATE (spec: irreversible DDL).
  */
 export async function diffSnapshots(
-  prevDdl: SpannerEntity[],
-  curDdl: SpannerEntity[],
+  prevDdl: Array<SpannerEntity>,
+  curDdl: Array<SpannerEntity>,
   options: DiffOptions = {}
 ): Promise<DiffResult> {
   const prev = indexEntities(prevDdl)
   const cur = indexEntities(curDdl)
-  const diagnostics: DiffDiagnostic[] = []
-  const renamesJournal: ResolvedRename[] = []
+  const diagnostics: Array<DiffDiagnostic> = []
+  const renamesJournal: Array<ResolvedRename> = []
   const buckets: StatementBuckets = {
     renames: [],
     dropIndexes: [],
@@ -292,8 +302,12 @@ export async function diffSnapshots(
   const resolveCandidate = async (
     candidate: RenameCandidate
   ): Promise<string | null> => {
-    if (options.resolveRename) return options.resolveRename(candidate)
-    if (options.acceptDrops) return null
+    if (options.resolveRename) {
+      return options.resolveRename(candidate)
+    }
+    if (options.acceptDrops) {
+      return null
+    }
     const scope =
       candidate.kind === 'table'
         ? `table "${candidate.dropped}"`
@@ -316,7 +330,9 @@ export async function diffSnapshots(
     (name) => !prev.tables.has(name)
   )
   for (const dropped of droppedTables) {
-    if (createdTableNames.length === 0) break
+    if (createdTableNames.length === 0) {
+      break
+    }
     const chosen = await resolveCandidate({
       kind: 'table',
       dropped,
@@ -337,7 +353,9 @@ export async function diffSnapshots(
 
   // Sequences.
   for (const [name] of prev.sequences) {
-    if (!cur.sequences.has(name)) buckets.dropSequences.push(dropSequenceSql(name))
+    if (!cur.sequences.has(name)) {
+      buckets.dropSequences.push(dropSequenceSql(name))
+    }
   }
   for (const [name, sequence] of cur.sequences) {
     if (!prev.sequences.has(name)) {
@@ -387,14 +405,18 @@ export async function diffSnapshots(
       )
     )
     for (const index of cur.indexes.values()) {
-      if (index.table === table.name) buckets.createIndexes.push(createIndexSql(index))
+      if (index.table === table.name) {
+        buckets.createIndexes.push(createIndexSql(index))
+      }
     }
   }
 
   // Tables present on both sides.
   for (const [tableName, curTable] of cur.tables) {
     const prevTable = prev.tables.get(tableName)
-    if (!prevTable) continue
+    if (!prevTable) {
+      continue
+    }
 
     if (!equalJson(prevTable.interleave, curTable.interleave)) {
       diagnostics.push({
@@ -441,7 +463,9 @@ export async function diffSnapshots(
           (column) => column.type === dropped.type && !resolvedRenames.has(column.name)
         )
         .map((column) => column.name)
-      if (candidates.length === 0) continue
+      if (candidates.length === 0) {
+        continue
+      }
       const chosen = await resolveCandidate({
         kind: 'column',
         table: tableName,
@@ -472,7 +496,9 @@ export async function diffSnapshots(
 
     for (const [columnName, curColumn] of curColumns) {
       const prevColumn = prevColumns.get(columnName)
-      if (!prevColumn || equalJson(prevColumn, curColumn)) continue
+      if (!prevColumn || equalJson(prevColumn, curColumn)) {
+        continue
+      }
 
       if (
         !equalJson(prevColumn.generated, curColumn.generated) ||
@@ -515,7 +541,9 @@ export async function diffSnapshots(
 
   // Indexes on surviving tables (created-table indexes were emitted above).
   for (const [name, prevIndex] of prev.indexes) {
-    if (droppedNames.has(prevIndex.table)) continue
+    if (droppedNames.has(prevIndex.table)) {
+      continue
+    }
     const curIndex = cur.indexes.get(name)
     if (!curIndex) {
       buckets.dropIndexes.push(dropIndexSql(name))
@@ -532,14 +560,18 @@ export async function diffSnapshots(
 
   // Foreign keys and checks on surviving tables.
   for (const [key, prevFk] of prev.fks) {
-    if (droppedNames.has(prevFk.table)) continue
+    if (droppedNames.has(prevFk.table)) {
+      continue
+    }
     const curFk = cur.fks.get(key)
     if (!curFk || !equalJson(prevFk, curFk)) {
       buckets.dropConstraints.push(dropConstraintSql(prevFk.table, prevFk.name))
     }
   }
   for (const [key, curFk] of cur.fks) {
-    if (createdNames.has(curFk.table)) continue
+    if (createdNames.has(curFk.table)) {
+      continue
+    }
     const prevFk = prev.fks.get(key)
     if (!prevFk || !equalJson(prevFk, curFk)) {
       buckets.addConstraints.push(
@@ -548,14 +580,18 @@ export async function diffSnapshots(
     }
   }
   for (const [key, prevCheck] of prev.checks) {
-    if (droppedNames.has(prevCheck.table)) continue
+    if (droppedNames.has(prevCheck.table)) {
+      continue
+    }
     const curCheck = cur.checks.get(key)
     if (!curCheck || !equalJson(prevCheck, curCheck)) {
       buckets.dropConstraints.push(dropConstraintSql(prevCheck.table, prevCheck.name))
     }
   }
   for (const [key, curCheck] of cur.checks) {
-    if (createdNames.has(curCheck.table)) continue
+    if (createdNames.has(curCheck.table)) {
+      continue
+    }
     const prevCheck = prev.checks.get(key)
     if (!prevCheck || !equalJson(prevCheck, curCheck)) {
       buckets.addConstraints.push(
@@ -564,6 +600,8 @@ export async function diffSnapshots(
     }
   }
 
-  if (diagnostics.length > 0) throw new DiffRefusedError(diagnostics)
+  if (diagnostics.length > 0) {
+    throw new DiffRefusedError(diagnostics)
+  }
   return { statements: flattenBuckets(buckets), renames: renamesJournal }
 }

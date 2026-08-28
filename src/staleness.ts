@@ -40,7 +40,9 @@ export interface SpannerTimestampBounds {
 const DURATION_PATTERN = /^(\d+(?:\.\d+)?)(ms|s)$/
 
 function durationToMs(value: number | string, bound: string): number {
-  if (typeof value === 'number') return value
+  if (typeof value === 'number') {
+    return value
+  }
   const match = DURATION_PATTERN.exec(value.trim())
   if (!match) {
     throw new SpannerInvalidArgumentError({
@@ -69,7 +71,9 @@ function toProtoTimestamp(value: Date | string, bound: string): SpannerProtoTime
  * own `PreciseDate` — a plain `Date` would fall through as a protobuf value.
  */
 export function toTimestampBounds(staleness: SpannerStaleness): SpannerTimestampBounds {
-  if ('strong' in staleness) return { strong: true }
+  if ('strong' in staleness) {
+    return { strong: true }
+  }
   if ('exactStaleness' in staleness) {
     return { exactStaleness: durationToMs(staleness.exactStaleness, 'exactStaleness') }
   }

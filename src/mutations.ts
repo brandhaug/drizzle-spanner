@@ -12,10 +12,10 @@ import { TableColumns, TableName } from './symbols.js'
  * `Transaction`: mutations buffer on it until commit.
  */
 export interface SpannerMutationSink {
-  insert(table: string, rows: Record<string, unknown>[]): void
-  update(table: string, rows: Record<string, unknown>[]): void
-  upsert(table: string, rows: Record<string, unknown>[]): void
-  deleteRows(table: string, keys: unknown[][]): void
+  insert(table: string, rows: Array<Record<string, unknown>>): void
+  update(table: string, rows: Array<Record<string, unknown>>): void
+  upsert(table: string, rows: Array<Record<string, unknown>>): void
+  deleteRows(table: string, keys: Array<Array<unknown>>): void
 }
 
 /** Reads have no mutation form; thrown by every read path in mutation mode. */
@@ -37,7 +37,9 @@ function mutationValue(
   value: Param | SQL
 ): unknown {
   if (is(value, Param)) {
-    if (value.value === null) return null
+    if (value.value === null) {
+      return null
+    }
     const encoder = value.encoder as { mapToDriverValue?: (value: unknown) => unknown }
     return encoder.mapToDriverValue
       ? encoder.mapToDriverValue(value.value)
@@ -103,11 +105,15 @@ function extractEqualities(
     return true
   }
   // Shape 2: nested SQL nodes joined by 'and'.
-  if (chunks.length === 0) return false
+  if (chunks.length === 0) {
+    return false
+  }
   let expectSql = true
   for (const chunk of chunks) {
     if (expectSql) {
-      if (!is(chunk, SQL) || !extractEqualities(chunk, table, into)) return false
+      if (!is(chunk, SQL) || !extractEqualities(chunk, table, into)) {
+        return false
+      }
     } else if (chunkText(chunk) !== 'and') {
       return false
     }
@@ -125,7 +131,7 @@ export function whereToPrimaryKey(
   table: SpannerTable,
   where: SQL | undefined,
   operation: 'update' | 'delete'
-): { columns: SpannerColumn<any>[]; values: unknown[] } {
+): { columns: Array<SpannerColumn<any>>; values: Array<unknown> } {
   const tableName = table[TableName]
   const explain = `${operation} in a bufferedMutations transaction is key-addressed: the WHERE must be an exact equality match on every primary-key column of "${tableName}"`
   const equalities = new Map<SpannerColumn<any>, unknown>()

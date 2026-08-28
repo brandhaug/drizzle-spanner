@@ -52,10 +52,10 @@ export class SpannerUpdate<
   }
 
   /** Compiles to `THEN RETURN` — Spanner's RETURNING. */
-  returning(): SpannerUpdate<TTable, InferSelectModel<TTable>[]>
+  returning(): SpannerUpdate<TTable, Array<InferSelectModel<TTable>>>
   returning<TSelection extends SpannerSelectedFields>(
     fields: TSelection
-  ): SpannerUpdate<TTable, SelectResultFields<TSelection>[]>
+  ): SpannerUpdate<TTable, Array<SelectResultFields<TSelection>>>
   returning(fields?: SpannerSelectedFields): SpannerUpdate<TTable, unknown> {
     return this.setReturning(fields) as SpannerUpdate<TTable, unknown>
   }

@@ -19,7 +19,7 @@ export async function startKitEmulator(): Promise<KitEmulatorHarness> {
   const target = await startSpannerTestTarget('kit-instance')
   const suffix = randomUUID().slice(0, 8)
 
-  const databases: Database[] = []
+  const databases: Array<Database> = []
   return {
     host: target.emulatorHost,
     project: target.project,
@@ -43,8 +43,11 @@ export async function startKitEmulator(): Promise<KitEmulatorHarness> {
     async cleanup() {
       for (const database of databases) {
         // A real instance outlives the run; drop created databases there.
-        if (target.emulatorHost) await database.close()
-        else await database.delete()
+        if (target.emulatorHost) {
+          await database.close()
+        } else {
+          await database.delete()
+        }
       }
       await target.stop()
     }

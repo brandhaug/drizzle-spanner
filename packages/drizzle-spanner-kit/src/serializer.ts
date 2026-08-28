@@ -38,11 +38,21 @@ function renderSql(expression: SQL): string {
 
 /** Renders a plain JS default value as a GoogleSQL literal. */
 function renderLiteral(value: unknown): string {
-  if (typeof value === 'string') return `'${value.replaceAll("'", "\\'")}'`
-  if (typeof value === 'number' || typeof value === 'bigint') return String(value)
-  if (typeof value === 'boolean') return value ? 'TRUE' : 'FALSE'
-  if (value instanceof Date) return `TIMESTAMP '${value.toISOString()}'`
-  if (Array.isArray(value)) return `[${value.map(renderLiteral).join(', ')}]`
+  if (typeof value === 'string') {
+    return `'${value.replaceAll("'", String.raw`\'`)}'`
+  }
+  if (typeof value === 'number' || typeof value === 'bigint') {
+    return String(value)
+  }
+  if (typeof value === 'boolean') {
+    return value ? 'TRUE' : 'FALSE'
+  }
+  if (value instanceof Date) {
+    return `TIMESTAMP '${value.toISOString()}'`
+  }
+  if (Array.isArray(value)) {
+    return `[${value.map(renderLiteral).join(', ')}]`
+  }
   throw new Error(
     `drizzle-spanner-kit: cannot render default value ${String(value)} as a DDL literal`
   )
@@ -54,7 +64,9 @@ function renderDefault(value: unknown): string {
 
 function renderGenerated(column: SpannerColumn<any>): ColumnEntity['generated'] {
   const generated = column.generated
-  if (!generated) return null
+  if (!generated) {
+    return null
+  }
   const asValue = typeof generated.as === 'function' ? generated.as() : generated.as
   return {
     as: is(asValue, SQL) ? renderSql(asValue) : renderLiteral(asValue),
@@ -143,16 +155,16 @@ function serializeForeignKey(
   }
 }
 
-function serializeTable(table: SpannerTable): SpannerEntity[] {
+function serializeTable(table: SpannerTable): Array<SpannerEntity> {
   const tableName = getTableName(table)
   const extraConfig = getTableExtraConfig(table)
 
-  const entities: SpannerEntity[] = []
+  const entities: Array<SpannerEntity> = []
   let interleaveConfig: TableEntity['interleave'] = null
 
-  const indexes: SpannerEntity[] = []
-  const fks: SpannerEntity[] = []
-  const checks: SpannerEntity[] = []
+  const indexes: Array<SpannerEntity> = []
+  const fks: Array<SpannerEntity> = []
+  const checks: Array<SpannerEntity> = []
   for (const entry of extraConfig) {
     if (is(entry, InterleaveBuilder)) {
       interleaveConfig = {
@@ -177,8 +189,12 @@ function serializeTable(table: SpannerTable): SpannerEntity[] {
   for (const column of Object.values(getColumns(table))) {
     entities.push(serializeColumn(tableName, column))
   }
-  entities.push(serializePrimaryKey(tableName, table, extraConfig))
-  entities.push(...indexes, ...fks, ...checks)
+  entities.push(
+    serializePrimaryKey(tableName, table, extraConfig),
+    ...indexes,
+    ...fks,
+    ...checks
+  )
   return entities
 }
 
@@ -188,17 +204,21 @@ function serializeTable(table: SpannerTable): SpannerEntity[] {
  */
 export function serializeSchema(
   schemaExports: Record<string, unknown>
-): SpannerEntity[] {
-  const entities: SpannerEntity[] = []
+): Array<SpannerEntity> {
+  const entities: Array<SpannerEntity> = []
   const seenTables = new Set<unknown>()
   const seenSequences = new Set<string>()
   for (const value of Object.values(schemaExports)) {
     if (is(value, SpannerTable)) {
-      if (seenTables.has(value)) continue
+      if (seenTables.has(value)) {
+        continue
+      }
       seenTables.add(value)
       entities.push(...serializeTable(value))
     } else if (is(value, SpannerSequence)) {
-      if (seenSequences.has(value.name)) continue
+      if (seenSequences.has(value.name)) {
+        continue
+      }
       seenSequences.add(value.name)
       entities.push({
         entityType: 'sequences',

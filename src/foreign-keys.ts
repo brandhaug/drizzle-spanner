@@ -8,9 +8,9 @@ export type ForeignKeyAction = 'cascade' | 'noAction'
 export interface ForeignKeyConfig {
   name?: string
   /** Referencing columns of the table this entry is declared on. */
-  columns: SpannerExtraConfigColumn[]
+  columns: Array<SpannerExtraConfigColumn>
   /** Referenced columns; all must belong to one table. */
-  foreignColumns: SpannerColumn<any>[]
+  foreignColumns: Array<SpannerColumn<any>>
 }
 
 export class ForeignKeyBuilder {
@@ -19,8 +19,8 @@ export class ForeignKeyBuilder {
   /** @internal */
   readonly config: {
     name: string | undefined
-    columns: SpannerExtraConfigColumn[]
-    foreignColumns: SpannerColumn<any>[]
+    columns: Array<SpannerExtraConfigColumn>
+    foreignColumns: Array<SpannerColumn<any>>
     foreignTable: SpannerTable
     onDelete: ForeignKeyAction
   }

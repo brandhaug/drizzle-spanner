@@ -12,7 +12,7 @@ export type KitSqlRequest = Pick<SpannerSqlRequest, 'sql' | 'json'> &
  */
 export type KitDriverDatabase = SpannerDriverDatabase &
   Pick<SpannerDriverDatabaseWithDdl, 'updateSchema'> & {
-    run(request: KitSqlRequest): Promise<[unknown[], ...unknown[]]>
+    run(request: KitSqlRequest): Promise<[Array<unknown>, ...Array<unknown>]>
     close(): Promise<unknown>
   }
 

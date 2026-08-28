@@ -12,9 +12,9 @@ const BOOKKEEPING_TABLE = 'drizzle_migrations'
 
 type Row = Record<string, unknown>
 
-async function query(database: KitDriverDatabase, sql: string): Promise<Row[]> {
+async function query(database: KitDriverDatabase, sql: string): Promise<Array<Row>> {
   const [rows] = await database.run({ sql, json: true })
-  return rows as Row[]
+  return rows as Array<Row>
 }
 
 function text(row: Row, column: string): string {
@@ -43,7 +43,7 @@ function toOnDelete(rule: string | null): ForeignKeyAction {
  */
 export async function introspectDatabase(
   database: KitDriverDatabase
-): Promise<SpannerEntity[]> {
+): Promise<Array<SpannerEntity>> {
   const [
     tables,
     columns,
@@ -95,7 +95,7 @@ export async function introspectDatabase(
     query(database, "SELECT NAME FROM INFORMATION_SCHEMA.SEQUENCES WHERE SCHEMA = ''")
   ])
 
-  const entities: SpannerEntity[] = []
+  const entities: Array<SpannerEntity> = []
   const tableNames = new Set(
     tables
       .map((row) => text(row, 'TABLE_NAME'))
@@ -122,7 +122,9 @@ export async function introspectDatabase(
 
   for (const tableRow of tables) {
     const tableName = text(tableRow, 'TABLE_NAME')
-    if (!tableNames.has(tableName)) continue
+    if (!tableNames.has(tableName)) {
+      continue
+    }
     const parent = optionalText(tableRow, 'PARENT_TABLE_NAME')
     entities.push({
       entityType: 'tables',
@@ -133,7 +135,9 @@ export async function introspectDatabase(
     })
 
     for (const columnRow of columns) {
-      if (text(columnRow, 'TABLE_NAME') !== tableName) continue
+      if (text(columnRow, 'TABLE_NAME') !== tableName) {
+        continue
+      }
       const columnName = text(columnRow, 'COLUMN_NAME')
       const generationExpression = optionalText(columnRow, 'GENERATION_EXPRESSION')
       const entity: ColumnEntity = {
@@ -152,7 +156,7 @@ export async function introspectDatabase(
       entities.push(entity)
     }
 
-    const keyPartsOf = (indexName: string): KeyPart[] =>
+    const keyPartsOf = (indexName: string): Array<KeyPart> =>
       indexColumns
         .filter(
           (row) =>
@@ -212,7 +216,9 @@ export async function introspectDatabase(
       const referentialRow = referential.find(
         (row) => text(row, 'CONSTRAINT_NAME') === constraintName
       )
-      if (!referentialRow || fkUsage.length === 0) continue
+      if (!referentialRow || fkUsage.length === 0) {
+        continue
+      }
       const uniqueName = text(referentialRow, 'UNIQUE_CONSTRAINT_NAME')
       const uniqueUsage = keyUsage.filter(
         (row) => text(row, 'CONSTRAINT_NAME') === uniqueName
@@ -239,7 +245,9 @@ export async function introspectDatabase(
     }
 
     for (const checkRow of checks) {
-      if (text(checkRow, 'TABLE_NAME') !== tableName) continue
+      if (text(checkRow, 'TABLE_NAME') !== tableName) {
+        continue
+      }
       entities.push({
         entityType: 'checks',
         table: tableName,

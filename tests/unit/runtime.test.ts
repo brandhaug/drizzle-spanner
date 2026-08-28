@@ -52,7 +52,7 @@ function abortedError(): Error & { code: number } {
  * cap standing in for the driver's deadline.
  */
 function fakeRetryingDatabase(retryCap = 25) {
-  const recordedOptions: unknown[] = []
+  const recordedOptions: Array<unknown> = []
   let attempts = 0
   const transaction: SpannerDriverTransaction = {
     async run(request: SpannerSqlRequest) {
@@ -89,7 +89,9 @@ function fakeRetryingDatabase(retryCap = 25) {
         try {
           return await runFn(transaction)
         } catch (error) {
-          if ((error as { code?: unknown }).code === GrpcStatus.ABORTED) continue
+          if ((error as { code?: unknown }).code === GrpcStatus.ABORTED) {
+            continue
+          }
           throw error
         }
       }
@@ -109,13 +111,15 @@ function fakeRetryingDatabase(retryCap = 25) {
 }
 
 /** Fake database whose getSnapshot records bounds and serves a read-only snapshot. */
-function fakeSnapshotDatabase(rows: { name: string; value: unknown }[][] = []) {
-  const snapshotBounds: unknown[] = []
-  const snapshotRequests: SpannerSqlRequest[] = []
+function fakeSnapshotDatabase(
+  rows: Array<Array<{ name: string; value: unknown }>> = []
+) {
+  const snapshotBounds: Array<unknown> = []
+  const snapshotRequests: Array<SpannerSqlRequest> = []
   let ended = 0
   const database = {
     async run() {
-      return [[]] as [SpannerDriverRow[]]
+      return [[]] as [Array<SpannerDriverRow>]
     },
     async runTransactionAsync<T>(
       optionsOrRunFn:
@@ -133,7 +137,7 @@ function fakeSnapshotDatabase(rows: { name: string; value: unknown }[][] = []) {
         {
           async run(request: SpannerSqlRequest) {
             snapshotRequests.push(request)
-            return [rows] as [SpannerDriverRow[]]
+            return [rows] as [Array<SpannerDriverRow>]
           },
           end() {
             ended += 1
@@ -171,7 +175,9 @@ describe('transaction options', () => {
     let calls = 0
     const result = await db.transaction(async (tx) => {
       calls += 1
-      if (calls < 3) throw abortedError()
+      if (calls < 3) {
+        throw abortedError()
+      }
       const rows = await tx.select().from(singers)
       void rows
       return 'done'
@@ -294,13 +300,15 @@ describe('read-only transactions', () => {
 })
 
 describe('single-use stale reads (withStaleness)', () => {
-  function fakeBoundedReadDatabase(rows: { name: string; value: unknown }[][] = []) {
-    const runBounds: unknown[] = []
+  function fakeBoundedReadDatabase(
+    rows: Array<Array<{ name: string; value: unknown }>> = []
+  ) {
+    const runBounds: Array<unknown> = []
     const database = {
       async run(request: SpannerSqlRequest, bounds?: unknown) {
         void request
         runBounds.push(bounds)
-        return [rows] as [SpannerDriverRow[]]
+        return [rows] as [Array<SpannerDriverRow>]
       },
       async runTransactionAsync<T>(
         optionsOrRunFn:
@@ -312,7 +320,7 @@ describe('single-use stale reads (withStaleness)', () => {
           typeof optionsOrRunFn === 'function' ? optionsOrRunFn : maybeRunFn!
         return runFn({
           async run() {
-            return [rows] as [SpannerDriverRow[]]
+            return [rows] as [Array<SpannerDriverRow>]
           },
           async commit() {
             return
@@ -330,7 +338,7 @@ describe('single-use stale reads (withStaleness)', () => {
         return [
           {
             async run() {
-              return [rows] as [SpannerDriverRow[]]
+              return [rows] as [Array<SpannerDriverRow>]
             },
             end() {}
           }
@@ -440,7 +448,7 @@ describe('bufferedMutations transactions', () => {
   }
 
   function fakeMutationDatabase() {
-    const mutations: RecordedMutation[] = []
+    const mutations: Array<RecordedMutation> = []
     let commits = 0
     let rollbacks = 0
     let runs = 0
@@ -458,22 +466,22 @@ describe('bufferedMutations transactions', () => {
         rollbacks += 1
         return
       },
-      insert(table: string, rows: Record<string, unknown>[]) {
+      insert(table: string, rows: Array<Record<string, unknown>>) {
         mutations.push({ kind: 'insert', table, payload: rows })
       },
-      update(table: string, rows: Record<string, unknown>[]) {
+      update(table: string, rows: Array<Record<string, unknown>>) {
         mutations.push({ kind: 'update', table, payload: rows })
       },
-      upsert(table: string, rows: Record<string, unknown>[]) {
+      upsert(table: string, rows: Array<Record<string, unknown>>) {
         mutations.push({ kind: 'upsert', table, payload: rows })
       },
-      deleteRows(table: string, keys: unknown[][]) {
+      deleteRows(table: string, keys: Array<Array<unknown>>) {
         mutations.push({ kind: 'deleteRows', table, payload: keys })
       }
     }
     const database = {
       async run() {
-        return [[]] as [SpannerDriverRow[]]
+        return [[]] as [Array<SpannerDriverRow>]
       },
       async runTransactionAsync<T>(
         optionsOrRunFn:

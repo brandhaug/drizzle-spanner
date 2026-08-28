@@ -9,11 +9,11 @@ import * as utils from 'drizzle-orm/utils'
  */
 
 interface SelectedFieldsOrderedItem {
-  path: string[]
+  path: Array<string>
   field: Column<any> | SQL | SQL.Aliased
 }
 
-export type SelectedFieldsOrdered = SelectedFieldsOrderedItem[]
+export type SelectedFieldsOrdered = Array<SelectedFieldsOrderedItem>
 
 type SelectedFields = Record<string, unknown>
 
@@ -24,11 +24,11 @@ interface InternalUtils {
   // re-export below.
   orderSelectedFields: (
     fields: SelectedFields,
-    pathPrefix?: string[]
+    pathPrefix?: Array<string>
   ) => SelectedFieldsOrdered
   mapResultRow: <TResult>(
     columns: SelectedFieldsOrdered,
-    row: unknown[],
+    row: Array<unknown>,
     joinsNotNullableMap: Record<string, boolean> | undefined
   ) => TResult
 }

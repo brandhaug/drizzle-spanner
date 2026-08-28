@@ -32,7 +32,7 @@ async function rejectsMatching<T>(
   }
 }
 
-function ddlOf(schemaExports: Record<string, unknown>): SpannerEntity[] {
+function ddlOf(schemaExports: Record<string, unknown>): Array<SpannerEntity> {
   return serializeSchema(schemaExports)
 }
 

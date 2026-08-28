@@ -43,8 +43,8 @@ interface RecordedCall {
 }
 
 /** Fake @google-cloud/spanner Database recording requests and serving canned rows. */
-function fakeDatabase(rows: { name: string; value: unknown }[][] = []) {
-  const calls: RecordedCall[] = []
+function fakeDatabase(rows: Array<Array<{ name: string; value: unknown }>> = []) {
+  const calls: Array<RecordedCall> = []
   let commits = 0
   let rollbacks = 0
   const transaction: SpannerDriverTransaction = {
@@ -200,7 +200,9 @@ describe('db.transaction', () => {
           try {
             return await runFn(driverTx)
           } catch (error) {
-            if ((error as { code?: number }).code === GrpcStatus.ABORTED) continue
+            if ((error as { code?: number }).code === GrpcStatus.ABORTED) {
+              continue
+            }
             throw error
           }
         }
@@ -348,7 +350,9 @@ describe('error taxonomy', () => {
     const failure = await rejectionOf(
       db.insert(singers).values({ id: secret, name: secret }).execute()
     )
-    if (!(failure instanceof SpannerError)) throw new Error('expected SpannerError')
+    if (!(failure instanceof SpannerError)) {
+      throw new Error('expected SpannerError')
+    }
     expect(failure.message).not.toContain(secret)
     expect(failure.query!.sql).not.toContain(secret)
     const sanitized = Object.fromEntries(

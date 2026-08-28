@@ -48,7 +48,9 @@ export class SpannerNumericString extends SpannerColumn<
   }
 
   override mapFromDriverValue = (value: unknown): string | null => {
-    if (value === null) return null
+    if (value === null) {
+      return null
+    }
     return unwrapNumeric(value)
   }
 
@@ -89,7 +91,9 @@ export class SpannerNumericNumber extends SpannerColumn<
   }
 
   override mapFromDriverValue = (value: unknown): number | null => {
-    if (value === null) return null
+    if (value === null) {
+      return null
+    }
     return Number(unwrapNumeric(value))
   }
 

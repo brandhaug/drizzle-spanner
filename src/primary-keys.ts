@@ -4,7 +4,7 @@ import { type SpannerTable } from './table.js'
 
 export type PrimaryKeyColumns = readonly [
   SpannerExtraConfigColumn,
-  ...SpannerExtraConfigColumn[]
+  ...Array<SpannerExtraConfigColumn>
 ]
 
 export interface PrimaryKeyConfig<
@@ -34,18 +34,18 @@ export function primaryKey<const TColumns extends PrimaryKeyColumns>(
  * phantom; the runtime key order lives in `columns`.
  */
 export class PrimaryKeyBuilder<
-  out TColumnNames extends readonly string[] = readonly string[]
+  out TColumnNames extends ReadonlyArray<string> = ReadonlyArray<string>
 > {
   static readonly [entityKind]: string = 'SpannerPrimaryKeyBuilder'
 
   declare protected $pkColumnNames: TColumnNames
 
   /** @internal */
-  readonly columns: SpannerExtraConfigColumn[]
+  readonly columns: Array<SpannerExtraConfigColumn>
   /** @internal */
   readonly name: string | undefined
 
-  constructor(columns: SpannerExtraConfigColumn[], name?: string) {
+  constructor(columns: Array<SpannerExtraConfigColumn>, name?: string) {
     this.columns = columns
     this.name = name
   }
@@ -61,7 +61,7 @@ export class PrimaryKey {
 
   constructor(
     readonly table: SpannerTable,
-    readonly columns: SpannerExtraConfigColumn[],
+    readonly columns: Array<SpannerExtraConfigColumn>,
     readonly name: string | undefined
   ) {}
 }

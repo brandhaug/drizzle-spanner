@@ -22,7 +22,7 @@ function lengthLiteral(length: string): string {
 
 interface ParsedType {
   builder: string
-  args: string[]
+  args: Array<string>
   array: boolean
 }
 
@@ -75,8 +75,12 @@ function parseType(
 function renderColumn(column: ColumnEntity, inlinePrimaryKey: boolean): string {
   const parsed = parseType(column.type, column.allowCommitTimestamp, column.name)
   let expression = `${parsed.builder}(${parsed.args.join(', ')})`
-  if (parsed.array) expression += '.array()'
-  if (column.notNull) expression += '.notNull()'
+  if (parsed.array) {
+    expression += '.array()'
+  }
+  if (column.notNull) {
+    expression += '.notNull()'
+  }
   if (column.generatedIdentity) {
     expression += '.generatedAsIdentity()'
   } else if (column.generated) {
@@ -87,7 +91,9 @@ function renderColumn(column: ColumnEntity, inlinePrimaryKey: boolean): string {
         ? '.defaultGenerateUuid()'
         : `.default(sql\`${column.default}\`)`
   }
-  if (inlinePrimaryKey) expression += '.primaryKey()'
+  if (inlinePrimaryKey) {
+    expression += '.primaryKey()'
+  }
   return `${camelCase(column.name)}: ${expression},`
 }
 
@@ -100,11 +106,11 @@ function renderExtraConfig(
   inlinePk: boolean,
   table: TableEntity,
   tableVariables: Map<string, string>,
-  indexes: IndexEntity[],
-  fks: ForeignKeyEntity[],
-  checks: CheckEntity[]
-): { lines: string[]; imports: Set<string>; needsSql: boolean } {
-  const lines: string[] = []
+  indexes: Array<IndexEntity>,
+  fks: Array<ForeignKeyEntity>,
+  checks: Array<CheckEntity>
+): { lines: Array<string>; imports: Set<string>; needsSql: boolean } {
+  const lines: Array<string> = []
   const imports = new Set<string>()
   let needsSql = false
 
@@ -127,7 +133,9 @@ function renderExtraConfig(
     let line = `${index.unique ? 'uniqueIndex' : 'index'}('${index.name}').on(${index.columns
       .map(keyPartRef)
       .join(', ')})`
-    if (index.nullFiltered) line += '.nullFiltered()'
+    if (index.nullFiltered) {
+      line += '.nullFiltered()'
+    }
     if (index.storing.length > 0) {
       line += `.storing(${index.storing.map((name) => `t.${camelCase(name)}`).join(', ')})`
     }
@@ -145,7 +153,9 @@ function renderExtraConfig(
       `      columns: [${fk.columns.map((name) => `t.${camelCase(name)}`).join(', ')}],\n` +
       `      foreignColumns: [${foreignColumns}],\n` +
       '    })'
-    if (fk.onDelete === 'cascade') line += ".onDelete('cascade')"
+    if (fk.onDelete === 'cascade') {
+      line += ".onDelete('cascade')"
+    }
     lines.push(`${line},`)
   }
   for (const check of checks) {
@@ -160,7 +170,7 @@ function renderExtraConfig(
  * Renders snapshot entities as a schema module in the milestone-1 schema
  * API — the output of `pull`.
  */
-export function renderSchemaModule(entities: SpannerEntity[]): string {
+export function renderSchemaModule(entities: Array<SpannerEntity>): string {
   const buckets = bucketEntities(entities)
   const { tables, sequences } = buckets
   const columnsByTable = groupByTable(buckets.columns)
@@ -179,7 +189,7 @@ export function renderSchemaModule(entities: SpannerEntity[]): string {
 
   const imports = new Set<string>(['spannerTable'])
   let needsSql = false
-  const declarations: string[] = []
+  const declarations: Array<string> = []
 
   for (const sequence of sequences) {
     imports.add('sequence')
@@ -220,7 +230,9 @@ export function renderSchemaModule(entities: SpannerEntity[]): string {
       fks,
       checks
     )
-    for (const name of extra.imports) imports.add(name)
+    for (const name of extra.imports) {
+      imports.add(name)
+    }
     needsSql ||= extra.needsSql
 
     const variable = tableVariables.get(table.name)!

@@ -24,8 +24,8 @@ export interface GenerateOptions {
 export interface GenerateResult {
   /** The written migration folder, or null when the diff is empty. */
   folder: string | null
-  statements: string[]
-  renames: ResolvedRename[]
+  statements: Array<string>
+  renames: Array<ResolvedRename>
 }
 
 /** `generate`: schema module -> snapshot -> diff against the latest snapshot -> migration folder. */
