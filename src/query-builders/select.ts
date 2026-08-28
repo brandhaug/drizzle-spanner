@@ -12,11 +12,9 @@ import { toTimestampBounds } from '../staleness.js'
 import { type AnySpannerTable } from '../table.js'
 import { TableColumns } from '../symbols.js'
 import { SpannerQueryBase } from './query-base.js'
+import { type SpannerSelectedFields } from './select-fields.js'
 
-export type SpannerSelectedFields = Record<
-  string,
-  SpannerColumn<any> | SQL | SQL.Aliased
->
+export type { SpannerSelectedFields } from './select-fields.js'
 
 export type SelectResultField<T> =
   T extends Column<any>
