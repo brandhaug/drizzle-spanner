@@ -20,7 +20,7 @@ import { NO_CLIENT_MESSAGE } from '../session.js'
 import { type SpannerTimestampBounds } from '../staleness.js'
 import { type SpannerColumns, type SpannerTable } from '../table.js'
 import { TableColumns } from '../symbols.js'
-import { type SpannerSelectedFields } from './select.js'
+import { type SpannerSelectedFields } from './select-fields.js'
 
 /** Wraps plain values in `Param` bound to their table column; SQL passes through. */
 export function mapRowToParams(
