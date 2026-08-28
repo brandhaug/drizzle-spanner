@@ -197,6 +197,6 @@ describe('parameter type hints', () => {
         .getSQL()
     )
     // bun:test types toEqual<T> off the received value, so widen explicitly.
-    expect(query.typings).toEqual<string[]>(['string', 'int64', 'timestamp'])
+    expect(query.typings).toEqual<Array<string>>(['string', 'int64', 'timestamp'])
   })
 })

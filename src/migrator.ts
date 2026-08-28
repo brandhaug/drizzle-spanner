@@ -12,7 +12,7 @@ export interface SpannerMigrationConfig {
 
 export interface SpannerMigrationResult {
   /** Folder names applied by this run, in order. */
-  applied: string[]
+  applied: Array<string>
 }
 
 /**
@@ -21,8 +21,8 @@ export interface SpannerMigrationResult {
  */
 export interface SpannerDriverDatabaseWithDdl extends SpannerDriverDatabase {
   updateSchema(
-    statements: string[]
-  ): Promise<[{ promise(): Promise<unknown> }, ...unknown[]]>
+    statements: Array<string>
+  ): Promise<[{ promise(): Promise<unknown> }, ...Array<unknown>]>
 }
 
 function escapeIdentifier(name: string): string {
@@ -30,11 +30,11 @@ function escapeIdentifier(name: string): string {
 }
 
 function escapeString(value: string): string {
-  return `'${value.replaceAll("'", "\\'")}'`
+  return `'${value.replaceAll("'", String.raw`\'`)}'`
 }
 
 /** readMigrationFiles keeps raw chunk text; updateSchema wants bare statements. */
-function toStatements(sqlChunks: string[]): string[] {
+function toStatements(sqlChunks: Array<string>): Array<string> {
   return sqlChunks
     .map((chunk) => chunk.trim().replace(/;$/, ''))
     .filter((chunk) => chunk.length > 0)
@@ -46,8 +46,11 @@ function toStatements(sqlChunks: string[]): string[] {
  * statement that succeeded.
  */
 function failedStatementIndex(error: unknown): number | undefined {
-  const metadata = (error as { metadata?: { commitTimestamps?: unknown[] } }).metadata
-  if (Array.isArray(metadata?.commitTimestamps)) return metadata.commitTimestamps.length
+  const metadata = (error as { metadata?: { commitTimestamps?: Array<unknown> } })
+    .metadata
+  if (Array.isArray(metadata?.commitTimestamps)) {
+    return metadata.commitTimestamps.length
+  }
   return undefined
 }
 
@@ -62,7 +65,7 @@ export type SpannerDdlClient = Pick<SpannerDriverDatabaseWithDdl, 'updateSchema'
  */
 export async function applyDdlStatements(
   client: SpannerDdlClient,
-  statements: string[],
+  statements: Array<string>,
   messageContext: string
 ): Promise<void> {
   try {
@@ -85,7 +88,7 @@ export async function applyDdlStatements(
 
 async function runDdl(
   client: SpannerDriverDatabaseWithDdl,
-  statements: string[],
+  statements: Array<string>,
   migrationName: string
 ): Promise<void> {
   await applyDdlStatements(
@@ -99,9 +102,9 @@ async function readColumn(
   client: SpannerDriverDatabaseWithDdl,
   sql: string,
   column: string
-): Promise<string[]> {
+): Promise<Array<string>> {
   const [rows] = await client.run({ sql, params: {}, types: {} })
-  return (rows as SpannerDriverRow[]).map((row) =>
+  return (rows as Array<SpannerDriverRow>).map((row) =>
     String(driverRowToObject(row)[column])
   )
 }
@@ -171,9 +174,11 @@ export async function migrate(
     await readColumn(client, `SELECT \`hash\` FROM ${escapedTable}`, 'hash')
   )
 
-  const applied: string[] = []
+  const applied: Array<string> = []
   for (const migration of migrations) {
-    if (appliedHashes.has(migration.hash)) continue
+    if (appliedHashes.has(migration.hash)) {
+      continue
+    }
     await runDdl(client, toStatements(migration.sql), migration.name)
     // Inlined literals: a hash, a folder name and epoch millis — no user data.
     await runDml(

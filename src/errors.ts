@@ -7,9 +7,9 @@ import { DrizzleError } from 'drizzle-orm/errors'
  */
 export interface SpannerErrorQueryContext {
   sql: string
-  paramNames: string[]
+  paramNames: Array<string>
   /** Column name behind each positional parameter, when bound through a schema column. */
-  paramColumns?: (string | undefined)[]
+  paramColumns?: Array<string | undefined>
 }
 
 export interface SpannerErrorOptions {
@@ -130,9 +130,13 @@ export function wrapSpannerError(
   error: unknown,
   query?: SpannerErrorQueryContext
 ): unknown {
-  if (error instanceof SpannerError) return error
+  if (error instanceof SpannerError) {
+    return error
+  }
   const grpcError = error as { code?: unknown; message?: unknown } | null | undefined
-  if (typeof grpcError?.code !== 'number') return error
+  if (typeof grpcError?.code !== 'number') {
+    return error
+  }
   const message =
     typeof grpcError.message === 'string' ? grpcError.message : 'Spanner error'
   const options: SpannerErrorOptions = {

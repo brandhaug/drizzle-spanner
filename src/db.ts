@@ -40,14 +40,14 @@ import { type AnySpannerTable, type SpannerTable } from './table.js'
  * a hard import so unit tests and `drizzle.mock()` need no driver install.
  */
 export interface SpannerDriverTransaction {
-  run(request: SpannerSqlRequest): Promise<[SpannerDriverRow[], ...unknown[]]>
+  run(request: SpannerSqlRequest): Promise<[Array<SpannerDriverRow>, ...Array<unknown>]>
   commit(): Promise<unknown>
   rollback(): Promise<unknown>
   /** Mutation buffer used by the bufferedMutations transaction mode. */
-  insert(table: string, rows: Record<string, unknown>[]): void
-  update(table: string, rows: Record<string, unknown>[]): void
-  upsert(table: string, rows: Record<string, unknown>[]): void
-  deleteRows(table: string, keys: unknown[][]): void
+  insert(table: string, rows: Array<Record<string, unknown>>): void
+  update(table: string, rows: Array<Record<string, unknown>>): void
+  upsert(table: string, rows: Array<Record<string, unknown>>): void
+  deleteRows(table: string, keys: Array<Array<unknown>>): void
 }
 
 /** Options the driver's transaction runner accepts (`RunTransactionOptions`). */
@@ -57,7 +57,7 @@ export interface SpannerDriverRunTransactionOptions {
 
 /** A read-only snapshot from `database.getSnapshot`. */
 export interface SpannerDriverSnapshot {
-  run(request: SpannerSqlRequest): Promise<[SpannerDriverRow[], ...unknown[]]>
+  run(request: SpannerSqlRequest): Promise<[Array<SpannerDriverRow>, ...Array<unknown>]>
   end(): void
 }
 
@@ -65,7 +65,7 @@ export interface SpannerDriverDatabase {
   run(
     request: SpannerSqlRequest,
     bounds?: SpannerTimestampBounds
-  ): Promise<[SpannerDriverRow[], ...unknown[]]>
+  ): Promise<[Array<SpannerDriverRow>, ...Array<unknown>]>
   runTransactionAsync<T>(
     runFn: (transaction: SpannerDriverTransaction) => Promise<T>
   ): Promise<T>
@@ -75,7 +75,7 @@ export interface SpannerDriverDatabase {
   ): Promise<T>
   getSnapshot(
     bounds?: SpannerTimestampBounds
-  ): Promise<readonly [SpannerDriverSnapshot, ...unknown[]]>
+  ): Promise<readonly [SpannerDriverSnapshot, ...Array<unknown>]>
 }
 
 /** Reads on `database.run`; each standalone DML statement in its own read-write transaction. */
@@ -86,7 +86,7 @@ class DatabaseRunner {
     request: SpannerSqlRequest,
     isDml: boolean,
     staleness?: SpannerTimestampBounds
-  ): Promise<SpannerDriverRow[]> {
+  ): Promise<Array<SpannerDriverRow>> {
     if (!isDml) {
       const [rows] = staleness
         ? await this.database.run(request, staleness)
@@ -123,7 +123,7 @@ class TransactionRunner {
     request: SpannerSqlRequest,
     _isDml: boolean,
     staleness?: SpannerTimestampBounds
-  ): Promise<SpannerDriverRow[]> {
+  ): Promise<Array<SpannerDriverRow>> {
     rejectStalenessInTransaction(staleness)
     const [rows] = await this.transaction.run(request)
     return rows
@@ -138,7 +138,7 @@ class SnapshotRunner {
     request: SpannerSqlRequest,
     isDml: boolean,
     staleness?: SpannerTimestampBounds
-  ): Promise<SpannerDriverRow[]> {
+  ): Promise<Array<SpannerDriverRow>> {
     if (isDml) {
       throw new SpannerInvalidArgumentError({
         message:
@@ -156,7 +156,7 @@ class SnapshotRunner {
  * the session's sink; anything that reaches the runner has no mutation form.
  */
 class MutationModeRunner {
-  run(request: SpannerSqlRequest, isDml: boolean): Promise<SpannerDriverRow[]> {
+  run(request: SpannerSqlRequest, isDml: boolean): Promise<Array<SpannerDriverRow>> {
     void request
     throw new SpannerInvalidArgumentError({
       message: isDml
@@ -167,7 +167,7 @@ class MutationModeRunner {
 }
 
 class MockRunner {
-  run(): Promise<SpannerDriverRow[]> {
+  run(): Promise<Array<SpannerDriverRow>> {
     throw new Error(NO_CLIENT_MESSAGE)
   }
 }
@@ -228,7 +228,7 @@ export interface SpannerReadOnlyTransaction<
     fields: TSelection
   ): SpannerTransactionSelectBuilder<TSelection>
   $count(table: AnySpannerTable | SQL, where?: SQL): Promise<number>
-  execute<T = Record<string, unknown>[]>(query: SQL): Promise<T>
+  execute<T = Array<Record<string, unknown>>>(query: SQL): Promise<T>
   query: SpannerRelationalQueries<TRelations>
 }
 
@@ -329,7 +329,7 @@ export class SpannerDatabaseCore<TRelations extends AnyRelations = EmptyRelation
   }
 
   /** Raw SQL escape hatch; rows arrive as the driver's `toJSON()` objects. */
-  execute<T = Record<string, unknown>[]>(query: SQL): Promise<T> {
+  execute<T = Array<Record<string, unknown>>>(query: SQL): Promise<T> {
     return this.session.execute<T>(query)
   }
 }

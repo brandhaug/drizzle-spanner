@@ -54,8 +54,8 @@ type SingleKeyTuple<TKey extends string> = [TKey] extends [never]
       : [TKey]
 
 /** Every non-empty prefix of a key order, as a union. */
-type PkPrefixes<TNames extends readonly string[]> = TNames extends readonly [
-  ...infer THead extends readonly string[],
+type PkPrefixes<TNames extends ReadonlyArray<string>> = TNames extends readonly [
+  ...infer THead extends ReadonlyArray<string>,
   string
 ]
   ? TNames | PkPrefixes<THead>
@@ -73,18 +73,18 @@ type PkPrefixes<TNames extends readonly string[]> = TNames extends readonly [
  */
 export type AdmissiblePkOrder<TEntries> =
   Extract<TEntries, PrimaryKeyBuilder> extends PrimaryKeyBuilder<
-    infer TNames extends readonly string[]
+    infer TNames extends ReadonlyArray<string>
   >
     ? [Extract<TEntries, PrimaryKeyBuilder>] extends [never]
-      ? readonly string[]
+      ? ReadonlyArray<string>
       : [PkPrefixes<TNames>] extends [never]
-        ? readonly string[]
+        ? ReadonlyArray<string>
         : PkPrefixes<TNames> | UnknownPkOrder
-    : readonly string[]
+    : ReadonlyArray<string>
 
 export class InterleaveBuilder<
   in TChildColumnsData = any,
-  out TParentPkOrder extends readonly string[] = readonly string[]
+  out TParentPkOrder extends ReadonlyArray<string> = ReadonlyArray<string>
 > {
   static readonly [entityKind]: string = 'SpannerInterleaveBuilder'
 

@@ -29,14 +29,14 @@ export interface SpannerSelectConfig {
   fields: Record<string, unknown>
   fieldsFlat?: SelectedFieldsOrdered
   where?: SQL
-  orderBy?: (SpannerColumn<any> | SQL)[]
+  orderBy?: Array<SpannerColumn<any> | SQL>
   limit?: number | SQL
   offset?: number | SQL
 }
 
 export interface SpannerInsertConfig {
   table: SpannerTable
-  values: Record<string, Param | SQL>[]
+  values: Array<Record<string, Param | SQL>>
   returning?: SelectedFieldsOrdered
   /** `INSERT OR UPDATE` / `INSERT OR IGNORE` (ADR 0002) — Spanner's upsert forms. */
   conflictAction?: 'update' | 'ignore'
@@ -62,8 +62,8 @@ export interface SpannerDeleteConfig {
  * column a failing parameter binds.
  */
 export interface SpannerQueryWithTypings extends Query {
-  typings?: string[]
-  paramColumns?: (string | undefined)[]
+  typings?: Array<string>
+  paramColumns?: Array<string | undefined>
 }
 
 export class SpannerDialect {
@@ -78,7 +78,7 @@ export class SpannerDialect {
   }
 
   escapeString(str: string): string {
-    return `'${str.replaceAll("'", "\\'")}'`
+    return `'${str.replaceAll("'", String.raw`\'`)}'`
   }
 
   /**
@@ -99,11 +99,13 @@ export class SpannerDialect {
    */
   private collectParamInfo(
     sqlInput: SQL,
-    typings: string[],
-    paramColumns: (string | undefined)[]
+    typings: Array<string>,
+    paramColumns: Array<string | undefined>
   ): void {
     const walk = (chunk: unknown): void => {
-      if (chunk === undefined) return
+      if (chunk === undefined) {
+        return
+      }
       if (Array.isArray(chunk)) {
         chunk.forEach(walk)
         return
@@ -156,8 +158,8 @@ export class SpannerDialect {
       escapeString: this.escapeString.bind(this),
       invokeSource
     })
-    const typings: string[] = []
-    const paramColumns: (string | undefined)[] = []
+    const typings: Array<string> = []
+    const paramColumns: Array<string | undefined> = []
     this.collectParamInfo(sqlInput, typings, paramColumns)
     return { ...query, typings, paramColumns }
   }
@@ -165,13 +167,15 @@ export class SpannerDialect {
   private buildSelection(fields: SelectedFieldsOrdered): SQL {
     const columnsLen = fields.length
     const chunks = fields.flatMap(({ field }, i) => {
-      const chunk: SQLChunk[] = []
+      const chunk: Array<SQLChunk> = []
       if (is(field, SQL.Aliased)) {
         chunk.push(field.sql, sql` as ${sql.identifier(field.fieldAlias)}`)
       } else if (is(field, SQL) || is(field, Column)) {
         chunk.push(field)
       }
-      if (i < columnsLen - 1) chunk.push(sql`, `)
+      if (i < columnsLen - 1) {
+        chunk.push(sql`, `)
+      }
       return chunk
     })
     return sql.join(chunks)
@@ -210,9 +214,9 @@ export class SpannerDialect {
     const colEntries = Object.entries(columns)
     const insertOrder = colEntries.map(([, column]) => sql.identifier(column.name))
 
-    const valuesSqlList: (SQLChunk[] | SQL)[] = []
+    const valuesSqlList: Array<Array<SQLChunk> | SQL> = []
     for (const [valueIndex, value] of values.entries()) {
-      const valueList: SQLChunk[] = []
+      const valueList: Array<SQLChunk> = []
       for (const [fieldName] of colEntries) {
         const colValue = value[fieldName]
         if (
@@ -225,7 +229,9 @@ export class SpannerDialect {
         }
       }
       valuesSqlList.push(valueList)
-      if (valueIndex < values.length - 1) valuesSqlList.push(sql`, `)
+      if (valueIndex < values.length - 1) {
+        valuesSqlList.push(sql`, `)
+      }
     }
     const valuesSql = sql.join(valuesSqlList)
 
@@ -287,7 +293,7 @@ export class SpannerDialect {
     const columnContainer = table[TableColumns]
     const columnsConfig =
       config === true || config === undefined ? undefined : config.columns
-    const columnIdentifiers: SQL[] = []
+    const columnIdentifiers: Array<SQL> = []
     const pushColumn = (key: string, column: SpannerColumn<any>): void => {
       columnIdentifiers.push(this.buildRqbColumn(table, column, key))
       selection.push({ key, field: column })
@@ -298,11 +304,15 @@ export class SpannerDialect {
       )
       const included = entries.filter(([, value]) => value)
       if (included.length > 0) {
-        for (const [key] of included) pushColumn(key, columnContainer[key]!)
+        for (const [key] of included) {
+          pushColumn(key, columnContainer[key]!)
+        }
       } else {
         // Exclusion mode: everything except the false keys.
         for (const [key, column] of Object.entries(columnContainer)) {
-          if (columnsConfig[key] === false) continue
+          if (columnsConfig[key] === false) {
+            continue
+          }
           pushColumn(key, column)
         }
       }
@@ -310,7 +320,9 @@ export class SpannerDialect {
         ? sql.join(columnIdentifiers, sql`, `)
         : undefined
     }
-    for (const [key, column] of Object.entries(columnContainer)) pushColumn(key, column)
+    for (const [key, column] of Object.entries(columnContainer)) {
+      pushColumn(key, column)
+    }
     return sql.join(columnIdentifiers, sql`, `)
   }
 
@@ -350,9 +362,11 @@ export class SpannerDialect {
       ? // `as never`: drizzle types `extras` with the unexported DBQueryConfigExtras type.
         relationExtrasToSQL(table, params.extras as never)
       : undefined
-    if (extras) selection.push(...extras.selection)
+    if (extras) {
+      selection.push(...extras.selection)
+    }
 
-    const selectionArr: SQL[] = columns ? [columns] : []
+    const selectionArr: Array<SQL> = columns ? [columns] : []
     const withEntries = params?.with
       ? Object.entries(params.with as Record<string, unknown>).filter(
           ([, value]) => value
@@ -397,7 +411,9 @@ export class SpannerDialect {
       // 'first'); the decoder unwraps the single element.
       selectionArr.push(sql`array(${innerQuery.sql}) as ${sql.identifier(key)}`)
     }
-    if (extras?.sql) selectionArr.push(extras.sql)
+    if (extras?.sql) {
+      selectionArr.push(extras.sql)
+    }
     if (selectionArr.length === 0) {
       throw new DrizzleError({
         message: `No fields selected for table "${tableConfig.name}"${currentPath ? ` ("${currentPath}")` : ''}`

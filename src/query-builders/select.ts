@@ -34,13 +34,13 @@ export type SelectResultFields<TSelection> = {
  * except `withStaleness` — a single-use bounded read cannot run on an open
  * transaction, so the method is omitted from the type (spec: runtime API).
  */
-export interface SpannerTransactionSelect<TResult> extends PromiseLike<TResult[]> {
+export interface SpannerTransactionSelect<TResult> extends PromiseLike<Array<TResult>> {
   where(where: SQL | undefined): this
-  orderBy(...orderBy: (SpannerColumn<any> | SQL)[]): this
+  orderBy(...orderBy: Array<SpannerColumn<any> | SQL>): this
   limit(limit: number): this
   offset(offset: number): this
   toSQL(): Query
-  execute(): Promise<TResult[]>
+  execute(): Promise<Array<TResult>>
 }
 
 export interface SpannerTransactionSelectBuilder<
@@ -78,7 +78,7 @@ export class SpannerSelectBuilder<
   }
 }
 
-export class SpannerSelect<TResult> extends SpannerQueryBase<TResult[]> {
+export class SpannerSelect<TResult> extends SpannerQueryBase<Array<TResult>> {
   static override readonly [entityKind]: string = 'SpannerSelect'
 
   private readonly config: SpannerSelectConfig
@@ -108,7 +108,7 @@ export class SpannerSelect<TResult> extends SpannerQueryBase<TResult[]> {
     return this
   }
 
-  orderBy(...orderBy: (SpannerColumn<any> | SQL)[]): this {
+  orderBy(...orderBy: Array<SpannerColumn<any> | SQL>): this {
     this.config.orderBy = orderBy
     return this
   }

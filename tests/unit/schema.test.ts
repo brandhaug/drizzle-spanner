@@ -173,7 +173,7 @@ describe('extra config builders', () => {
       b: string('b', { length: 'max' }),
       c: string('c', { length: 'max' })
     })
-    const builders: IndexBuilder[] = []
+    const builders: Array<IndexBuilder> = []
     spannerTable(
       't2',
       {

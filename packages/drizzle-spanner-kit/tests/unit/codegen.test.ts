@@ -4,7 +4,7 @@ import { type SpannerEntity } from '../../src/snapshot.js'
 
 describe('renderSchemaModule', () => {
   it('renders tables with columns, keys, interleaving, indexes, constraints and sequences', () => {
-    const entities: SpannerEntity[] = [
+    const entities: Array<SpannerEntity> = [
       { entityType: 'sequences', name: 'singer_ids', kind: 'bit_reversed_positive' },
       { entityType: 'tables', name: 'singers', interleave: null },
       {
@@ -158,7 +158,7 @@ export const albums = spannerTable(
   })
 
   it('renders single ascending primary keys inline on the column', () => {
-    const entities: SpannerEntity[] = [
+    const entities: Array<SpannerEntity> = [
       { entityType: 'tables', name: 't', interleave: null },
       {
         entityType: 'columns',
@@ -181,7 +181,7 @@ export const albums = spannerTable(
   })
 
   it('renders arrays, generated columns and plain SQL defaults', () => {
-    const entities: SpannerEntity[] = [
+    const entities: Array<SpannerEntity> = [
       { entityType: 'tables', name: 't', interleave: null },
       {
         entityType: 'columns',

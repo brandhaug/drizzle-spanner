@@ -4,12 +4,11 @@
 // between the tested-versions markers. CI runs `--check` so the two can
 // never drift; a new drizzle-orm beta is added to the JSON file only.
 import { readFileSync, writeFileSync } from 'node:fs'
-import { dirname, join } from 'node:path'
-import { fileURLToPath } from 'node:url'
+import { join } from 'node:path'
 
 export interface TestedVersions {
-  'drizzle-orm': string[]
-  node: string[]
+  'drizzle-orm': Array<string>
+  node: Array<string>
   bun: boolean
 }
 
@@ -31,7 +30,7 @@ export function renderTestedVersionsTable(versions: TestedVersions): string {
   const widths = rows[0]!.map((_, column) =>
     Math.max(...rows.map((row) => row[column]!.length))
   )
-  const line = (cells: string[]) =>
+  const line = (cells: Array<string>) =>
     `| ${cells.map((cell, i) => cell.padEnd(widths[i]!)).join(' | ')} |`
   const [header, ...body] = rows
   return [
@@ -57,14 +56,16 @@ export function replaceTestedVersions(readme: string, table: string): string {
 }
 
 function main(check: boolean): void {
-  const root = join(dirname(fileURLToPath(import.meta.url)), '..')
+  const root = join(import.meta.dirname, '..')
   const versions = JSON.parse(
     readFileSync(join(root, '.github/tested-versions.json'), 'utf8')
   ) as TestedVersions
   const readmePath = join(root, 'README.md')
   const readme = readFileSync(readmePath, 'utf8')
   const updated = replaceTestedVersions(readme, renderTestedVersionsTable(versions))
-  if (updated === readme) return
+  if (updated === readme) {
+    return
+  }
   if (check) {
     console.error(
       'README tested-versions table is out of sync with .github/tested-versions.json.\n' +

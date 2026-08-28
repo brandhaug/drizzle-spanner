@@ -26,7 +26,9 @@ import { type SpannerTable } from '../table.js'
  * use `.mapWith()` on the extra for the full INT64 range).
  */
 function isWrappedNumber(value: unknown): value is { valueOf(): number } {
-  if (value === null || typeof value !== 'object' || !('value' in value)) return false
+  if (value === null || typeof value !== 'object' || !('value' in value)) {
+    return false
+  }
   const name = (value as { constructor?: { name?: string } }).constructor?.name
   return name === 'Int' || name === 'Float' || name === 'Float32' || name === 'Numeric'
 }
@@ -57,7 +59,9 @@ function normalizeRelationalRow(
         ? ((value[0] as Record<string, unknown> | undefined) ?? null)
         : null
       row[item.key] = single
-      if (single) normalizeRelationalRow(single, item.selection)
+      if (single) {
+        normalizeRelationalRow(single, item.selection)
+      }
       continue
     }
     // Columns keep their wrappers — their decoders unwrap with full range
@@ -84,7 +88,7 @@ export class SpannerRelationalQueryBuilder<
 
   findMany<TConfig extends DBQueryConfig<'many', TSchema, TFields>>(
     config?: KnownKeysOnly<TConfig, DBQueryConfig<'many', TSchema, TFields>>
-  ): SpannerRelationalQuery<BuildQueryResult<TSchema, TFields, TConfig>[]> {
+  ): SpannerRelationalQuery<Array<BuildQueryResult<TSchema, TFields, TConfig>>> {
     return new SpannerRelationalQuery(
       this.schema,
       this.table,
@@ -156,10 +160,12 @@ export class SpannerRelationalQuery<TResult>
     return this.session
       .prepareRelationalQuery<TResult>(this.dialect.sqlToQuery(query.sql), (rows) => {
         // Unwrap to-one ARRAY(...) values to single structs before mapping.
-        for (const row of rows) normalizeRelationalRow(row, query.selection)
+        for (const row of rows) {
+          normalizeRelationalRow(row, query.selection)
+        }
         const mapped = mapRelationalRow(rows, false, query.selection)
         return (
-          this.mode === 'first' ? (mapped as Record<string, unknown>[])[0] : mapped
+          this.mode === 'first' ? (mapped as Array<Record<string, unknown>>)[0] : mapped
         ) as TResult
       })
       .execute()

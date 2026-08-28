@@ -29,7 +29,9 @@ export function mapRowToParams(
 ): Record<string, Param | SQL> {
   const mapped: Record<string, Param | SQL> = {}
   for (const [key, value] of Object.entries(row)) {
-    if (value === undefined) continue
+    if (value === undefined) {
+      continue
+    }
     mapped[key] = is(value, SQL) ? value : new Param(value, columns[key])
   }
   return mapped

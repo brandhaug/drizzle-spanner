@@ -60,7 +60,9 @@ export class SpannerInt64Number extends SpannerColumn<
   }
 
   override mapFromDriverValue = (value: unknown): number | null => {
-    if (value === null) return null
+    if (value === null) {
+      return null
+    }
     // The driver returns INT64 cells as `Int` wrappers `{ value: '42' }`.
     const raw = String(unwrapDriverWrapper(value))
     const parsed = Number(raw)
@@ -107,7 +109,9 @@ export class SpannerInt64BigInt extends SpannerColumn<
   }
 
   override mapFromDriverValue = (value: unknown): bigint | null => {
-    if (value === null) return null
+    if (value === null) {
+      return null
+    }
     return BigInt(String(unwrapDriverWrapper(value)))
   }
 

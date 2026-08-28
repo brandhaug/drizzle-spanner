@@ -25,9 +25,9 @@ export class SpannerInsertBuilder<TTable extends AnySpannerTable> {
   ) {}
 
   values(value: SpannerInsertValue<TTable>): SpannerInsert<TTable, void>
-  values(values: SpannerInsertValue<TTable>[]): SpannerInsert<TTable, void>
+  values(values: Array<SpannerInsertValue<TTable>>): SpannerInsert<TTable, void>
   values(
-    values: SpannerInsertValue<TTable> | SpannerInsertValue<TTable>[]
+    values: SpannerInsertValue<TTable> | Array<SpannerInsertValue<TTable>>
   ): SpannerInsert<TTable, void> {
     const rows = Array.isArray(values) ? values : [values]
     if (rows.length === 0) {
@@ -51,7 +51,7 @@ export class SpannerInsert<
 
   constructor(
     table: TTable,
-    values: Record<string, Param | SQL>[],
+    values: Array<Record<string, Param | SQL>>,
     session: SpannerSession | undefined,
     dialect: SpannerDialect
   ) {
@@ -85,10 +85,10 @@ export class SpannerInsert<
   }
 
   /** Compiles to `THEN RETURN` — Spanner's RETURNING. */
-  returning(): SpannerInsert<TTable, InferSelectModel<TTable>[]>
+  returning(): SpannerInsert<TTable, Array<InferSelectModel<TTable>>>
   returning<TSelection extends SpannerSelectedFields>(
     fields: TSelection
-  ): SpannerInsert<TTable, SelectResultFields<TSelection>[]>
+  ): SpannerInsert<TTable, Array<SelectResultFields<TSelection>>>
   returning(fields?: SpannerSelectedFields): SpannerInsert<TTable, unknown> {
     return this.setReturning(fields) as SpannerInsert<TTable, unknown>
   }

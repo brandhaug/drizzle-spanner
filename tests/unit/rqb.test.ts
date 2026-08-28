@@ -169,8 +169,8 @@ describe('relational queries: golden SQL', () => {
 })
 
 describe('relational queries: decoding', () => {
-  function fakeRqbDatabase(rows: Record<string, unknown>[]) {
-    const requests: unknown[] = []
+  function fakeRqbDatabase(rows: Array<Record<string, unknown>>) {
+    const requests: Array<unknown> = []
     const database: SpannerDriverDatabase = {
       async run(request: unknown) {
         requests.push(request)
@@ -184,7 +184,7 @@ describe('relational queries: decoding', () => {
             }
           })
         })
-        return [driverRows] as [SpannerDriverRow[]]
+        return [driverRows] as [Array<SpannerDriverRow>]
       },
       async runTransactionAsync(): Promise<never> {
         throw new Error('RQB reads must not open a transaction')

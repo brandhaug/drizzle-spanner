@@ -44,15 +44,15 @@ function hashOf(sql: string): string {
 
 interface FakeOptions {
   bookkeepingExists?: boolean
-  appliedHashes?: string[]
+  appliedHashes?: Array<string>
   failDdlAtStatement?: number
 }
 
 function fakeDdlDatabase(options: FakeOptions = {}) {
-  const ddlBatches: string[][] = []
-  const dmlStatements: string[] = []
+  const ddlBatches: Array<Array<string>> = []
+  const dmlStatements: Array<string> = []
   const database = {
-    async run(request: SpannerSqlRequest): Promise<[SpannerDriverRow[]]> {
+    async run(request: SpannerSqlRequest): Promise<[Array<SpannerDriverRow>]> {
       if (request.sql.includes('INFORMATION_SCHEMA.TABLES')) {
         return [
           options.bookkeepingExists
@@ -75,7 +75,7 @@ function fakeDdlDatabase(options: FakeOptions = {}) {
     },
     async runTransactionAsync<T>(
       runFn: (tx: {
-        run(request: SpannerSqlRequest): Promise<[SpannerDriverRow[]]>
+        run(request: SpannerSqlRequest): Promise<[Array<SpannerDriverRow>]>
         commit(): Promise<void>
         rollback(): Promise<void>
         insert(): void
@@ -100,7 +100,7 @@ function fakeDdlDatabase(options: FakeOptions = {}) {
     async getSnapshot(): Promise<never> {
       throw new Error('not used')
     },
-    async updateSchema(statements: string[]) {
+    async updateSchema(statements: Array<string>) {
       ddlBatches.push(statements)
       return [
         {

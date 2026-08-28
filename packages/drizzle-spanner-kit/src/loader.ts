@@ -5,7 +5,7 @@ import { pathToFileURL } from 'node:url'
  * load through the runtime's native TS support (Node >= 22.18, Bun).
  */
 export async function loadSchemaExports(
-  paths: string[]
+  paths: Array<string>
 ): Promise<Record<string, unknown>> {
   const merged: Record<string, unknown> = {}
   for (const path of paths) {

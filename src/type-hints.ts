@@ -30,7 +30,9 @@ export type SpannerDriverParamType = string | { type: 'array'; child: string }
 
 /** Decodes a hint into a driver `types` entry; `none` yields no entry. */
 export function toDriverParamType(hint: string): SpannerDriverParamType | undefined {
-  if (hint === 'none') return undefined
+  if (hint === 'none') {
+    return undefined
+  }
   return hint.startsWith('array:')
     ? { type: 'array', child: hint.slice('array:'.length) }
     : hint

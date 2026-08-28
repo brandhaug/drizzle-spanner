@@ -45,7 +45,7 @@ export class SpannerTable<T extends TableConfig = TableConfig> extends Table<T> 
   declare [ExtraConfigBuilder]:
     | ((
         self: Record<string, SpannerExtraConfigColumn>
-      ) => SpannerTableExtraConfigValue[])
+      ) => Array<SpannerTableExtraConfigValue>)
     | undefined
 }
 
@@ -88,7 +88,7 @@ export type AnySpannerTable = SpannerTable
  * `primaryKey({ columns })` entry wins, else the `.primaryKey()` columns in
  * declaration order. Key order matters — Spanner mutations address rows by it.
  */
-export function getPrimaryKeyColumns(table: SpannerTable): SpannerColumn<any>[] {
+export function getPrimaryKeyColumns(table: SpannerTable): Array<SpannerColumn<any>> {
   const columns = table[TableColumns]
   const extraConfigBuilder = table[ExtraConfigBuilder]
   if (extraConfigBuilder) {
@@ -112,12 +112,12 @@ export function getPrimaryKeyColumns(table: SpannerTable): SpannerColumn<any>[] 
  */
 export function getTableExtraConfig(
   table: SpannerTable
-): SpannerTableExtraConfigValue[] {
+): Array<SpannerTableExtraConfigValue> {
   const builder = table[ExtraConfigBuilder]
   return builder ? builder(table[ExtraConfigColumns]) : []
 }
 
-function primaryKeyColumnNames(table: SpannerTable): string[] {
+function primaryKeyColumnNames(table: SpannerTable): Array<string> {
   return getPrimaryKeyColumns(table).map((column) => column.name)
 }
 
@@ -156,10 +156,9 @@ function validateInterleavePrefix(
 export function spannerTable<
   TTableName extends string,
   TColumnsMap extends Record<string, ColumnBuilderBase>,
-  TExtraConfig extends readonly SpannerTableExtraConfigValueFor<
-    TColumnsMap,
-    TExtraConfig[number]
-  >[]
+  TExtraConfig extends ReadonlyArray<
+    SpannerTableExtraConfigValueFor<TColumnsMap, TExtraConfig[number]>
+  >
 >(
   name: TTableName,
   columns: TColumnsMap,
@@ -190,11 +189,13 @@ export function spannerTable<
     // `Record` form of the callback is only reachable through `unknown`.
     table[ExtraConfigBuilder] = extraConfig as unknown as (
       self: Record<string, SpannerExtraConfigColumn>
-    ) => SpannerTableExtraConfigValue[]
+    ) => Array<SpannerTableExtraConfigValue>
     for (const entry of extraConfig(
       builtExtraConfigColumns as BuildSpannerExtraConfigColumns<TColumnsMap>
     )) {
-      if (is(entry, InterleaveBuilder)) validateInterleavePrefix(table, entry)
+      if (is(entry, InterleaveBuilder)) {
+        validateInterleavePrefix(table, entry)
+      }
     }
   }
 

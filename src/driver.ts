@@ -12,8 +12,12 @@ export type SpannerDrizzleConfig<TRelations extends AnyRelations = AnyRelations>
 >
 
 function resolveLogger(logger: SpannerDrizzleConfig['logger']): Logger | undefined {
-  if (logger === true) return new DefaultLogger()
-  if (logger === false || logger === undefined) return undefined
+  if (logger === true) {
+    return new DefaultLogger()
+  }
+  if (logger === false || logger === undefined) {
+    return undefined
+  }
   return logger
 }
 

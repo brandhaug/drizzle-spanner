@@ -37,26 +37,26 @@ export interface ColumnEntity {
 export interface PrimaryKeyEntity {
   entityType: 'pks'
   table: string
-  columns: KeyPart[]
+  columns: Array<KeyPart>
 }
 
 export interface IndexEntity {
   entityType: 'indexes'
   table: string
   name: string
-  columns: KeyPart[]
+  columns: Array<KeyPart>
   unique: boolean
   nullFiltered: boolean
-  storing: string[]
+  storing: Array<string>
 }
 
 export interface ForeignKeyEntity {
   entityType: 'fks'
   table: string
   name: string
-  columns: string[]
+  columns: Array<string>
   foreignTable: string
-  foreignColumns: string[]
+  foreignColumns: Array<string>
   onDelete: ForeignKeyAction
 }
 
@@ -92,20 +92,20 @@ export interface SpannerSnapshot {
   version: '8'
   dialect: 'spanner'
   id: string
-  prevIds: string[]
-  ddl: SpannerEntity[]
+  prevIds: Array<string>
+  ddl: Array<SpannerEntity>
   /** Recorded rename resolutions, `table.old->table.new` / `old->new`. */
-  renames: string[]
+  renames: Array<string>
 }
 
 export interface CreateSnapshotOptions {
   id?: string
-  prevIds?: string[]
-  renames?: string[]
+  prevIds?: Array<string>
+  renames?: Array<string>
 }
 
 export function createSnapshot(
-  ddl: SpannerEntity[],
+  ddl: Array<SpannerEntity>,
   options: CreateSnapshotOptions = {}
 ): SpannerSnapshot {
   return {

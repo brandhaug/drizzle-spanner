@@ -1,7 +1,6 @@
 import { mkdir, readFile, rm, writeFile } from 'node:fs/promises'
 import { randomUUID } from 'node:crypto'
 import { join } from 'node:path'
-import { fileURLToPath } from 'node:url'
 import { afterAll, beforeAll, describe, expect, it } from 'bun:test'
 import { generate, migrate, pull, push } from '../../src/index.js'
 import { type KitEmulatorHarness } from './harness.js'
@@ -9,7 +8,7 @@ import { startKitEmulator } from './harness.js'
 
 // Fixture modules must live inside the repo so their `drizzle-spanner`
 // import resolves through the repo's tsconfig paths / workspace link.
-const TMP_ROOT = join(fileURLToPath(new URL('.', import.meta.url)), '.tmp')
+const TMP_ROOT = join(import.meta.dirname, '.tmp')
 
 const SCHEMA_V1 = `
 import { sql } from 'drizzle-orm/sql';

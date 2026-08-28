@@ -24,7 +24,7 @@ export interface SpannerSqlRequest {
 }
 
 /** A driver row in array mode: one `{ name, value }` cell per selected field. */
-export type SpannerDriverRow = { name: string; value: unknown }[] & {
+export type SpannerDriverRow = Array<{ name: string; value: unknown }> & {
   toJSON?: (options?: { wrapNumbers?: boolean }) => Record<string, unknown>
 }
 
@@ -35,7 +35,9 @@ export type SpannerDriverRow = { name: string; value: unknown }[] & {
  * decoders see the same cell values as the flat row path.
  */
 export function driverRowToObject(row: SpannerDriverRow): Record<string, unknown> {
-  if (row.toJSON) return row.toJSON({ wrapNumbers: true })
+  if (row.toJSON) {
+    return row.toJSON({ wrapNumbers: true })
+  }
   return Object.fromEntries(row.map((cell) => [cell.name, cell.value]))
 }
 
@@ -51,7 +53,7 @@ export interface SpannerQueryRunner {
     request: SpannerSqlRequest,
     isDml: boolean,
     staleness?: SpannerTimestampBounds
-  ): Promise<SpannerDriverRow[]>
+  ): Promise<Array<SpannerDriverRow>>
 }
 
 export interface SpannerSessionOptions {
@@ -66,8 +68,8 @@ export interface SpannerQueryMetadata {
 
 /** Converts drizzle's positional params to Spanner named params plus type hints. */
 export function toNamedParams(
-  params: unknown[],
-  typings: string[] | undefined
+  params: Array<unknown>,
+  typings: Array<string> | undefined
 ): { named: Record<string, unknown>; types: Record<string, unknown> } {
   const named: Record<string, unknown> = {}
   const types: Record<string, unknown> = {}
@@ -92,10 +94,10 @@ export class SpannerPreparedQuery<T = unknown> implements PreparedQuery {
     private readonly queryWithTypings: SpannerQueryWithTypings,
     private readonly logger: Logger,
     private readonly fields: SelectedFieldsOrdered | undefined,
-    private readonly customResultMapper?: (rows: unknown[][]) => T,
+    private readonly customResultMapper?: (rows: Array<Array<unknown>>) => T,
     private readonly queryMetadata?: SpannerQueryMetadata,
     /** Relational queries map whole driver rows (nested STRUCTs), not cell arrays. */
-    private readonly rawRowMapper?: (rows: Record<string, unknown>[]) => T
+    private readonly rawRowMapper?: (rows: Array<Record<string, unknown>>) => T
   ) {}
 
   getQuery(): Query {
@@ -111,7 +113,7 @@ export class SpannerPreparedQuery<T = unknown> implements PreparedQuery {
     this.logger.logQuery(this.queryWithTypings.sql, params)
     const { named, types } = toNamedParams(
       params,
-      this.queryWithTypings.typings as string[] | undefined
+      this.queryWithTypings.typings as Array<string> | undefined
     )
     const request: SpannerSqlRequest = {
       sql: this.queryWithTypings.sql,
@@ -122,7 +124,7 @@ export class SpannerPreparedQuery<T = unknown> implements PreparedQuery {
       ? this.queryMetadata.type !== 'select'
       : DML_PATTERN.test(this.queryWithTypings.sql)
 
-    let rawRows: SpannerDriverRow[]
+    let rawRows: Array<SpannerDriverRow>
     try {
       rawRows = await this.runner.run(request, isDml, this.queryMetadata?.staleness)
     } catch (error) {
@@ -141,7 +143,9 @@ export class SpannerPreparedQuery<T = unknown> implements PreparedQuery {
     }
     // Array row mode: cells arrive as { name, value } in select order.
     const rows = rawRows.map((row) => row.map((cell) => cell.value))
-    if (this.customResultMapper) return this.customResultMapper(rows)
+    if (this.customResultMapper) {
+      return this.customResultMapper(rows)
+    }
     return rows.map((row) => mapResultRow(this.fields!, row, undefined)) as T
   }
 }
@@ -168,7 +172,7 @@ export class SpannerSession {
   prepareQuery<T = unknown>(
     query: SpannerQueryWithTypings,
     fields: SelectedFieldsOrdered | undefined,
-    customResultMapper?: (rows: unknown[][]) => T,
+    customResultMapper?: (rows: Array<Array<unknown>>) => T,
     queryMetadata?: SpannerQueryMetadata
   ): SpannerPreparedQuery<T> {
     return new SpannerPreparedQuery(
@@ -184,7 +188,7 @@ export class SpannerSession {
   /** Prepares a relational query whose rows decode as whole objects (nested STRUCTs). */
   prepareRelationalQuery<T = unknown>(
     query: SpannerQueryWithTypings,
-    mapper: (rows: Record<string, unknown>[]) => T
+    mapper: (rows: Array<Record<string, unknown>>) => T
   ): SpannerPreparedQuery<T> {
     return new SpannerPreparedQuery(
       this.runner,

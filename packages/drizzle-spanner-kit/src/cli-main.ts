@@ -49,20 +49,22 @@ async function promptRename(candidate: RenameCandidate): Promise<string | null> 
   }
 }
 
-function printPlan(statements: string[]): void {
+function printPlan(statements: Array<string>): void {
   console.log('The following DDL will be applied:\n')
-  for (const statement of statements) console.log(`${statement};\n`)
+  for (const statement of statements) {
+    console.log(`${statement};\n`)
+  }
 }
 
 /** `--yes`: still print the plan (spec: push always prints it) before applying. */
-function acceptPlan(statements: string[]): Promise<boolean> {
+function acceptPlan(statements: Array<string>): Promise<boolean> {
   printPlan(statements)
   // Non-async on purpose: matches confirmPlan's Promise-typed interface
   // without pretending to await anything.
   return Promise.resolve(true)
 }
 
-async function confirmPlan(statements: string[]): Promise<boolean> {
+async function confirmPlan(statements: Array<string>): Promise<boolean> {
   printPlan(statements)
   const readline = createInterface({ input: process.stdin, output: process.stdout })
   try {
@@ -73,7 +75,9 @@ async function confirmPlan(statements: string[]): Promise<boolean> {
   }
 }
 
-export async function main(argv: string[] = process.argv.slice(2)): Promise<number> {
+export async function main(
+  argv: Array<string> = process.argv.slice(2)
+): Promise<number> {
   const { positionals, values } = parseArgs({
     args: argv,
     allowPositionals: true,
@@ -127,9 +131,12 @@ export async function main(argv: string[] = process.argv.slice(2)): Promise<numb
         return 0
       }
       case 'push': {
-        let confirm: ((statements: string[]) => Promise<boolean>) | undefined
-        if (values.yes) confirm = acceptPlan
-        else if (interactive) confirm = confirmPlan
+        let confirm: ((statements: Array<string>) => Promise<boolean>) | undefined
+        if (values.yes) {
+          confirm = acceptPlan
+        } else if (interactive) {
+          confirm = confirmPlan
+        }
         const result = await push(config, {
           confirm,
           resolveRename: interactive ? promptRename : undefined,
@@ -140,7 +147,9 @@ export async function main(argv: string[] = process.argv.slice(2)): Promise<numb
         } else if (result.applied) {
           console.log(`Applied ${result.statements.length} statements.`)
         } else {
-          if (!confirm) printPlan(result.statements)
+          if (!confirm) {
+            printPlan(result.statements)
+          }
           console.log('Not applied. Re-run with --yes or confirm interactively.')
         }
         return 0

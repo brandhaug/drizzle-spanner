@@ -16,7 +16,7 @@ const FOLDER_PATTERN = /^(\d{14})_(.+)$/
 const STATEMENT_BREAKPOINT = '--> statement-breakpoint'
 
 /** Migration folders under `out`, sorted by timestamp (folder name). */
-async function listMigrationFolders(out: string): Promise<MigrationFolder[]> {
+async function listMigrationFolders(out: string): Promise<Array<MigrationFolder>> {
   let entries
   try {
     entries = await readdir(out, { withFileTypes: true })
@@ -44,7 +44,7 @@ async function readSnapshot(migration: MigrationFolder): Promise<SpannerSnapshot
 /** The latest snapshot in the migrations folder, or null before the first migration. */
 export async function readLatestSnapshot(out: string): Promise<SpannerSnapshot | null> {
   const folders = await listMigrationFolders(out)
-  const latest = folders[folders.length - 1]
+  const latest = folders.at(-1)
   return latest ? readSnapshot(latest) : null
 }
 
@@ -59,7 +59,7 @@ export function formatTimestamp(date: Date): string {
   )
 }
 
-function renderMigrationSql(statements: string[]): string {
+function renderMigrationSql(statements: Array<string>): string {
   return statements
     .map((statement) => `${statement};\n`)
     .join(`${STATEMENT_BREAKPOINT}\n`)
@@ -69,7 +69,7 @@ export async function writeMigrationFolder(
   out: string,
   timestamp: string,
   name: string,
-  statements: string[],
+  statements: Array<string>,
   snapshot: SpannerSnapshot
 ): Promise<string> {
   const folder = join(out, `${timestamp}_${name}`)

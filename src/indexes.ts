@@ -14,10 +14,10 @@ export class IndexedColumn {
 
 export interface IndexConfig {
   name: string
-  columns: (IndexedColumn | SQL)[]
+  columns: Array<IndexedColumn | SQL>
   unique: boolean
   nullFiltered: boolean
-  storing: (SpannerColumn<any> | SpannerExtraConfigColumn)[]
+  storing: Array<SpannerColumn<any> | SpannerExtraConfigColumn>
 }
 
 export class IndexBuilderOn {
@@ -29,12 +29,17 @@ export class IndexBuilderOn {
   ) {}
 
   on(
-    ...columns: [SpannerExtraConfigColumn | SQL, ...(SpannerExtraConfigColumn | SQL)[]]
+    ...columns: [
+      SpannerExtraConfigColumn | SQL,
+      ...Array<SpannerExtraConfigColumn | SQL>
+    ]
   ): IndexBuilder {
     return new IndexBuilder(
       this.name,
       columns.map((column) => {
-        if (is(column, SQL)) return column
+        if (is(column, SQL)) {
+          return column
+        }
         const indexed = new IndexedColumn(column.name, column.indexConfig.order)
         column.indexConfig = { order: 'asc' }
         return indexed
@@ -50,7 +55,7 @@ export class IndexBuilder {
   /** @internal */
   readonly config: IndexConfig
 
-  constructor(name: string, columns: (IndexedColumn | SQL)[], unique: boolean) {
+  constructor(name: string, columns: Array<IndexedColumn | SQL>, unique: boolean) {
     this.config = { name, columns, unique, nullFiltered: false, storing: [] }
   }
 
@@ -64,7 +69,7 @@ export class IndexBuilder {
   storing(
     ...columns: [
       SpannerColumn<any> | SpannerExtraConfigColumn,
-      ...(SpannerColumn<any> | SpannerExtraConfigColumn)[]
+      ...Array<SpannerColumn<any> | SpannerExtraConfigColumn>
     ]
   ): this {
     this.config.storing.push(...columns)

@@ -28,10 +28,10 @@ export class SpannerDelete<
   }
 
   /** Compiles to `THEN RETURN` — Spanner's RETURNING. */
-  returning(): SpannerDelete<TTable, InferSelectModel<TTable>[]>
+  returning(): SpannerDelete<TTable, Array<InferSelectModel<TTable>>>
   returning<TSelection extends SpannerSelectedFields>(
     fields: TSelection
-  ): SpannerDelete<TTable, SelectResultFields<TSelection>[]>
+  ): SpannerDelete<TTable, Array<SelectResultFields<TSelection>>>
   returning(fields?: SpannerSelectedFields): SpannerDelete<TTable, unknown> {
     return this.setReturning(fields) as SpannerDelete<TTable, unknown>
   }

@@ -48,7 +48,9 @@ export class SpannerBytes extends SpannerColumn<
   }
 
   override mapFromDriverValue = (value: unknown): Uint8Array | null => {
-    if (value === null) return null
+    if (value === null) {
+      return null
+    }
     // The driver decodes BYTES to a Buffer, which is a Uint8Array.
     return value as Uint8Array
   }

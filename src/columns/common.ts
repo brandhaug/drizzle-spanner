@@ -73,8 +73,8 @@ export abstract class SpannerColumnBuilder<
   /** Wraps the column in `ARRAY<T>`. Spanner arrays cannot nest. */
   array(): SpannerArrayBuilder<{
     dataType: 'array'
-    data: (T extends { $type: infer U } ? U : T['data'])[]
-    driverParam: T['driverParam'][]
+    data: Array<T extends { $type: infer U } ? U : T['data']>
+    driverParam: Array<T['driverParam']>
     notNull: false
     hasDefault: false
   }> {
@@ -130,7 +130,9 @@ export abstract class SpannerFloatColumn<
   static override readonly [entityKind]: string = 'SpannerFloatColumn'
 
   override mapFromDriverValue = (value: unknown): number | null => {
-    if (value === null) return null
+    if (value === null) {
+      return null
+    }
     return unwrapFloat(value)
   }
 }
@@ -166,8 +168,8 @@ export class SpannerExtraConfigColumn<TName extends string = string> extends Col
 }
 
 export interface SpannerArrayBuilderConfig extends ColumnBuilderBaseConfig<'array'> {
-  data: unknown[]
-  driverParam: unknown[]
+  data: Array<unknown>
+  driverParam: Array<unknown>
 }
 
 export class SpannerArrayBuilder<
@@ -188,7 +190,7 @@ export class SpannerArrayBuilder<
     const baseColumn = this.config.baseBuilder.build(table)
     return new SpannerArray(
       table,
-      this.config as ColumnBuilderRuntimeConfig<unknown[]>,
+      this.config as ColumnBuilderRuntimeConfig<Array<unknown>>,
       baseColumn
     )
   }
@@ -201,7 +203,7 @@ export class SpannerArray extends SpannerColumn<ColumnBaseConfig<'array'>> {
 
   constructor(
     table: SpannerTable,
-    config: ColumnBuilderRuntimeConfig<unknown[]>,
+    config: ColumnBuilderRuntimeConfig<Array<unknown>>,
     baseColumn: SpannerColumn<any>
   ) {
     super(table, config)
@@ -217,15 +219,19 @@ export class SpannerArray extends SpannerColumn<ColumnBaseConfig<'array'>> {
   }
 
   override mapFromDriverValue = (value: unknown): unknown => {
-    if (value === null) return null
-    return (value as unknown[]).map((element) =>
+    if (value === null) {
+      return null
+    }
+    return (value as Array<unknown>).map((element) =>
       this.baseColumn.mapFromDriverValue(element)
     )
   }
 
   override mapToDriverValue = (value: unknown): unknown => {
-    if (value === null) return null
-    return (value as unknown[]).map((element) =>
+    if (value === null) {
+      return null
+    }
+    return (value as Array<unknown>).map((element) =>
       element === null ? null : this.baseColumn.mapToDriverValue(element)
     )
   }

@@ -13,20 +13,20 @@ export interface PushOptions {
   /** Apply without asking; equivalent to answering yes. */
   yes?: boolean
   /** Asked with the full DDL plan when `yes` is not set. */
-  confirm?: (statements: string[]) => Promise<boolean>
+  confirm?: (statements: Array<string>) => Promise<boolean>
   resolveRename?: RenameResolver
   acceptDrops?: boolean
 }
 
 export interface PushResult {
-  statements: string[]
+  statements: Array<string>
   applied: boolean
 }
 
 /** Applies one batched DDL operation, surfacing partial failure typed. */
 async function applyDdl(
   database: KitDriverDatabase,
-  statements: string[]
+  statements: Array<string>
 ): Promise<void> {
   await applyDdlStatements(database, statements, 'push failed to apply the DDL plan')
 }
