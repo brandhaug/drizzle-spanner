@@ -90,7 +90,7 @@
   "catalog": {
     "@arethetypeswrong/cli": "0.18.5",
     "@google-cloud/spanner": "8.11.0",
-    "@types/node": "26.2.0",
+    "@types/node": "26.3.0",
     "drizzle-orm": "1.0.0-rc.4",
     "lint-staged": "17.3.0",
     "oxfmt": "0.64.0",
