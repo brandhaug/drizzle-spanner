@@ -1,3 +1,5 @@
+// fallow-ignore-file unused-file
+// Executed by the example's `npm start` script (see package.json).
 // Interleaved singers/albums: buffered-mutation writes, a relational query
 // compiled to ARRAY(SELECT AS STRUCT), and a stale read. The schema was
 // applied by `drizzle-spanner-kit push` (see package.json's start script).

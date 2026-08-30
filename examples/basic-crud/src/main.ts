@@ -1,3 +1,5 @@
+// fallow-ignore-file unused-file
+// Executed by the example's `npm start` script (see package.json).
 // CRUD and a read-write transaction against the Spanner emulator. The
 // schema was applied by `drizzle-spanner-kit migrate` (see package.json's
 // start script); the migration folder was produced by

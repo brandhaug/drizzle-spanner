@@ -10,17 +10,17 @@
         "backend_family": "",
         "completeness": "complete"
       },
-      "totalIssues": 16,
-      "unusedFiles": 9,
-      "unusedExports": 4,
+      "totalIssues": 0,
+      "unusedFiles": 0,
+      "unusedExports": 0,
       "unusedTypes": 0,
       "unusedDependencies": 0,
-      "unusedDevDependencies": 2,
+      "unusedDevDependencies": 0,
       "unusedOptionalDependencies": 0,
       "unusedEnumMembers": 0,
       "unusedClassMembers": 0,
       "unresolvedImports": 0,
-      "unlistedDependencies": 1,
+      "unlistedDependencies": 0,
       "duplicateExports": 0,
       "circularDependencies": 0,
       "reExportCycles": 0,
@@ -33,10 +33,5 @@
       "policyViolations": 0
     }
   },
-  "rules": {
-    "unlisted-dependencies": "warn",
-    "unused-dependencies": "warn",
-    "unused-exports": "warn",
-    "unused-files": "warn"
-  }
+  "ignoreDependencies": ["ultracite", "drizzle-spanner", "dependency-cruiser"]
 }

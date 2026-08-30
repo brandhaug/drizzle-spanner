@@ -1,3 +1,5 @@
+// fallow-ignore-file unused-file
+// Loaded dynamically by drizzle-spanner-kit via the example's `npm start`.
 import { defineConfig } from 'drizzle-spanner-kit'
 
 export default defineConfig({

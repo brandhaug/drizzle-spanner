@@ -1,3 +1,5 @@
+// fallow-ignore-file unused-file
+// Template file: copied into consumer repos by SKILL.md; never executed here.
 // @ts-check
 // Deep-module enforcement for dependency-cruiser.
 //
