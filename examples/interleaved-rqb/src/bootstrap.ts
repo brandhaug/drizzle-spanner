@@ -1,3 +1,5 @@
+// fallow-ignore-file unused-file
+// Executed by the example's `npm start` script (see package.json).
 // Creates the emulator instance and database this example runs against.
 // Idempotent: an existing instance/database is left as-is.
 import { Spanner } from '@google-cloud/spanner'
