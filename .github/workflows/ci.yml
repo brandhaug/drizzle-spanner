@@ -27,7 +27,7 @@ jobs:
       - uses: actions/checkout@v4
       - uses: oven-sh/setup-bun@v2
         with:
-          bun-version: 1.4.0
+          bun-version: 1.4.2
       - run: bun install --frozen-lockfile
       - run: bun run lint
       - run: bun run typecheck
@@ -46,7 +46,7 @@ jobs:
       - uses: actions/checkout@v4
       - uses: oven-sh/setup-bun@v2
         with:
-          bun-version: 1.4.0
+          bun-version: 1.4.2
       - run: bun install --frozen-lockfile
       - run: bun run build
       # Refresh the file: snapshot of drizzle-spanner now that dist/ exists,
@@ -76,7 +76,7 @@ jobs:
       - uses: actions/checkout@v4
       - uses: oven-sh/setup-bun@v2
         with:
-          bun-version: 1.4.0
+          bun-version: 1.4.2
       - run: bun install --frozen-lockfile
       - run: bun run build
       # Refresh the file: snapshot of drizzle-spanner now that dist/ exists.
@@ -110,7 +110,7 @@ jobs:
       # Root install only provides workspace builds; catalogs need Bun.
       - uses: oven-sh/setup-bun@v2
         with:
-          bun-version: 1.4.0
+          bun-version: 1.4.2
       - run: bun install --frozen-lockfile
       - run: bun run build
       # Refresh the file: snapshot of drizzle-spanner now that dist/ exists.
@@ -135,7 +135,7 @@ jobs:
       - uses: actions/checkout@v4
       - uses: oven-sh/setup-bun@v2
         with:
-          bun-version: 1.4.0
+          bun-version: 1.4.2
       - run: bun install --frozen-lockfile
       # Bun cannot manage the testcontainers lifecycle per file in one
       # process, so start one shared emulator for the whole run.
