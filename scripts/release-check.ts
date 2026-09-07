@@ -1,6 +1,6 @@
 // Both packages release in lockstep from a single v<version> tag. The
-// release workflow runs this before the dry-run publish so a tag can never
-// ship a version that package.json or the changelogs disagree with.
+// release workflow runs this before publishing so a tag can never
+// ship a version that package.json or the shared changelog disagree with.
 import { readFileSync } from 'node:fs'
 import { join } from 'node:path'
 
@@ -23,7 +23,16 @@ export function findReleaseIssues(
   for (const pkg of packages) {
     if (pkg.version !== version) {
       issues.push(`${pkg.name} is at ${pkg.version} but the tag says ${version}`)
-    } else if (!pkg.changelog.includes(`## ${version}`)) {
+    } else if (
+      !pkg.changelog
+        .split('\n')
+        .some(
+          (line) =>
+            line === `## ${version}` ||
+            line.startsWith(`## ${version} `) ||
+            line.startsWith(`## [${version}]`)
+        )
+    ) {
       issues.push(`${pkg.name}'s CHANGELOG.md has no '## ${version}' entry`)
     }
   }
@@ -38,7 +47,7 @@ function loadPackage(dir: string): ReleasePackage {
   return {
     name: manifest.name,
     version: manifest.version,
-    changelog: readFileSync(join(dir, 'CHANGELOG.md'), 'utf8')
+    changelog: readFileSync(join(import.meta.dirname, '..', 'CHANGELOG.md'), 'utf8')
   }
 }
 
