@@ -147,3 +147,26 @@ jobs:
       - run: bun run test:integration:bun
         env:
           SPANNER_EMULATOR_HOST: localhost:9010
+
+  ci-passed:
+    name: CI passed
+    if: always()
+    needs:
+      - versions
+      - check
+      - package-hygiene
+      - integration-drizzle-orm
+      - examples
+      - integration-bun
+    runs-on: ubuntu-latest
+    steps:
+      - name: Require every CI job to succeed
+        env:
+          JOB_RESULTS: ${{ join(needs.*.result, ' ') }}
+        run: |
+          for result in $JOB_RESULTS; do
+            if [ "$result" != success ]; then
+              echo "A required CI job failed, was cancelled, or was skipped."
+              exit 1
+            fi
+          done
