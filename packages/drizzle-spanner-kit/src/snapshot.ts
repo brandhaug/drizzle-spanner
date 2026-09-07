@@ -1,5 +1,11 @@
 import { randomUUID } from 'node:crypto'
 import { type ForeignKeyAction } from 'drizzle-spanner'
+import {
+  snapshotObject,
+  snapshotString,
+  snapshotStrings,
+  validateSchemaEntities
+} from './schema-validation.js'
 
 /** The runtime's `ON DELETE` action union, re-exported as the kit's single source. */
 export type { ForeignKeyAction }
@@ -118,17 +124,7 @@ export function createSnapshot(
   }
 }
 
-const ENTITY_TYPES = new Set([
-  'tables',
-  'columns',
-  'pks',
-  'indexes',
-  'fks',
-  'checks',
-  'sequences'
-])
-
-/** Parses and shape-checks a snapshot read from disk. */
+/** Parses a complete snapshot and validates its entity references before planning DDL. */
 export function parseSnapshot(raw: string, source: string): SpannerSnapshot {
   let parsed: unknown
   try {
@@ -138,28 +134,24 @@ export function parseSnapshot(raw: string, source: string): SpannerSnapshot {
       cause: error
     })
   }
-  const snapshot = parsed as Partial<SpannerSnapshot>
+  const snapshot = snapshotObject(parsed, source)
   if (snapshot.version !== '8' || snapshot.dialect !== 'spanner') {
     throw new Error(
-      `drizzle-spanner-kit: ${source} is not a version-8 spanner snapshot (got version ${String(
-        snapshot.version
-      )}, dialect ${String(snapshot.dialect)})`
+      `drizzle-spanner-kit: ${source} is not a version-8 spanner snapshot`
     )
   }
-  if (typeof snapshot.id !== 'string' || !Array.isArray(snapshot.ddl)) {
-    throw new TypeError(`drizzle-spanner-kit: ${source} is missing id or ddl`)
-  }
-  for (const entity of snapshot.ddl) {
-    const entityType = (entity as { entityType?: unknown }).entityType
-    if (typeof entityType !== 'string' || !ENTITY_TYPES.has(entityType)) {
-      throw new Error(
-        `drizzle-spanner-kit: ${source} contains an unknown entity type ${String(entityType)}`
-      )
-    }
-  }
   return {
-    ...snapshot,
-    prevIds: snapshot.prevIds ?? [],
-    renames: snapshot.renames ?? []
-  } as SpannerSnapshot
+    version: '8',
+    dialect: 'spanner',
+    id: snapshotString(snapshot.id, `${source}.id`),
+    prevIds: snapshotStrings(
+      snapshot.prevIds === undefined ? [] : snapshot.prevIds,
+      `${source}.prevIds`
+    ),
+    renames: snapshotStrings(
+      snapshot.renames === undefined ? [] : snapshot.renames,
+      `${source}.renames`
+    ),
+    ddl: validateSchemaEntities(snapshot.ddl, source)
+  }
 }

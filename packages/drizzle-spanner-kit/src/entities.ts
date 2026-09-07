@@ -65,32 +65,25 @@ export function bucketEntities(entities: Array<SpannerEntity>): EntityBuckets {
   return buckets
 }
 
-/** Topologically orders tables parents-first by interleaving and FK targets. */
+/** Orders tables by interleave ancestry. Foreign keys are added after creation. */
 export function orderTablesParentsFirst(
-  tables: Array<TableEntity>,
-  fksByTable: Map<string, Array<ForeignKeyEntity>>
+  tables: Array<TableEntity>
 ): Array<TableEntity> {
   const remaining = new Map(tables.map((table) => [table.name, table]))
   const ordered: Array<TableEntity> = []
   const visiting = new Set<string>()
 
   const visit = (table: TableEntity): void => {
-    if (!remaining.has(table.name) || visiting.has(table.name)) {
+    if (visiting.has(table.name)) {
+      throw new Error(`drizzle-spanner-kit: interleave cycle at "${table.name}"`)
+    }
+    if (!remaining.has(table.name)) {
       return
     }
     visiting.add(table.name)
-    const dependencies: Array<string> = []
-    if (table.interleave) {
-      dependencies.push(table.interleave.parent)
-    }
-    for (const fk of fksByTable.get(table.name) ?? []) {
-      dependencies.push(fk.foreignTable)
-    }
-    for (const dependency of dependencies) {
-      const parent = remaining.get(dependency)
-      if (parent && parent !== table) {
-        visit(parent)
-      }
+    const parent = table.interleave && remaining.get(table.interleave.parent)
+    if (parent) {
+      visit(parent)
     }
     visiting.delete(table.name)
     remaining.delete(table.name)

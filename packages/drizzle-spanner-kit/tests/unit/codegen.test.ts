@@ -1,9 +1,91 @@
 import { describe, expect, it } from 'bun:test'
+import { mkdtemp, rm, writeFile } from 'node:fs/promises'
+import { join } from 'node:path'
+import { loadSchemaExports } from '../../src/loader.js'
+import { serializeSchema } from '../../src/serializer.js'
+import { assertSchemaRoundtrip } from '../../src/schema-roundtrip.js'
 import { renderSchemaModule } from '../../src/codegen.js'
 import { type SpannerEntity } from '../../src/snapshot.js'
 
+async function roundtrip(
+  entities: Array<SpannerEntity>
+): Promise<Array<SpannerEntity>> {
+  const directory = await mkdtemp(join(import.meta.dirname, '.codegen-'))
+  try {
+    const schemaFile = join(directory, 'schema.ts')
+    await writeFile(schemaFile, renderSchemaModule(entities))
+    const serialized = serializeSchema(await loadSchemaExports([schemaFile]))
+    assertSchemaRoundtrip(entities, serialized)
+    return serialized
+  } finally {
+    await rm(directory, { recursive: true, force: true })
+  }
+}
+
 describe('renderSchemaModule', () => {
-  it('renders tables with columns, keys, interleaving, indexes, constraints and sequences', () => {
+  it('preserves SQL text and virtual generated columns when importing emitted code', async () => {
+    const literal = String.raw`'${'$'}{1+1} backtick \` backslash \\ quote "'`
+    const entities: Array<SpannerEntity> = [
+      { entityType: 'tables', name: 'expressions', interleave: null },
+      {
+        entityType: 'columns',
+        table: 'expressions',
+        name: 'id',
+        type: 'INT64',
+        notNull: false,
+        default: null,
+        generated: null,
+        generatedIdentity: false,
+        allowCommitTimestamp: false
+      },
+      {
+        entityType: 'columns',
+        table: 'expressions',
+        name: 'text',
+        type: 'STRING(MAX)',
+        notNull: false,
+        default: literal,
+        generated: null,
+        generatedIdentity: false,
+        allowCommitTimestamp: false
+      },
+      {
+        entityType: 'columns',
+        table: 'expressions',
+        name: 'computed',
+        type: 'STRING(MAX)',
+        notNull: false,
+        default: null,
+        generated: { as: literal, stored: false },
+        generatedIdentity: false,
+        allowCommitTimestamp: false
+      },
+      {
+        entityType: 'pks',
+        table: 'expressions',
+        columns: [{ name: 'id', order: 'asc' }]
+      },
+      {
+        entityType: 'checks',
+        table: 'expressions',
+        name: 'literal_check',
+        value: `${literal} IS NOT NULL`
+      }
+    ]
+    const serialized = await roundtrip(entities)
+    expect(
+      serialized.find(
+        (entity) => entity.entityType === 'columns' && entity.name === 'computed'
+      )
+    ).toMatchObject({ generated: { as: literal, stored: false } })
+    expect(
+      serialized.find(
+        (entity) => entity.entityType === 'columns' && entity.name === 'id'
+      )
+    ).toMatchObject({ notNull: false })
+  })
+
+  it('roundtrips tables, columns, keys, interleaving, indexes, constraints and sequences', async () => {
     const entities: Array<SpannerEntity> = [
       { entityType: 'sequences', name: 'singer_ids', kind: 'bit_reversed_positive' },
       { entityType: 'tables', name: 'singers', interleave: null },
@@ -113,48 +195,7 @@ describe('renderSchemaModule', () => {
       }
     ]
 
-    expect(renderSchemaModule(entities)).toBe(`import { sql } from 'drizzle-orm/sql';
-import {
-  check,
-  foreignKey,
-  index,
-  int64,
-  interleaveInParent,
-  primaryKey,
-  sequence,
-  spannerTable,
-  string,
-  timestamp,
-} from 'drizzle-spanner';
-
-export const singerIds = sequence('singer_ids');
-
-export const singers = spannerTable('singers', {
-  id: string('id', { length: 36 }).notNull().defaultGenerateUuid().primaryKey(),
-  fullName: string('full_name', { length: 'max' }).notNull(),
-  updatedAt: timestamp('updated_at', { allowCommitTimestamp: true }),
-});
-
-export const albums = spannerTable(
-  'albums',
-  {
-    id: string('id', { length: 36 }).notNull(),
-    albumId: string('album_id', { length: 36 }).notNull(),
-    plays: int64('plays'),
-  },
-  (t) => [
-    primaryKey({ columns: [t.id, t.albumId.desc()] }),
-    interleaveInParent(singers, { onDelete: 'cascade' }),
-    index('idx_albums_plays').on(t.plays).nullFiltered().storing(t.albumId),
-    foreignKey({
-      name: 'fk_albums_singer',
-      columns: [t.id],
-      foreignColumns: [singers.id],
-    }).onDelete('cascade'),
-    check('positive_plays', sql\`plays >= 0\`),
-  ],
-);
-`)
+    await roundtrip(entities)
   })
 
   it('renders single ascending primary keys inline on the column', () => {
@@ -175,12 +216,12 @@ export const albums = spannerTable(
     ]
     const source = renderSchemaModule(entities)
     expect(source).toContain(
-      "id: int64('id').notNull().generatedAsIdentity().primaryKey(),"
+      'id: int64("id").notNull().generatedAsIdentity().primaryKey(),'
     )
     expect(source).not.toContain('primaryKey({')
   })
 
-  it('renders arrays, generated columns and plain SQL defaults', () => {
+  it('roundtrips arrays, generated columns and plain SQL defaults', async () => {
     const entities: Array<SpannerEntity> = [
       { entityType: 'tables', name: 't', interleave: null },
       {
@@ -229,13 +270,6 @@ export const albums = spannerTable(
       },
       { entityType: 'pks', table: 't', columns: [{ name: 'id', order: 'asc' }] }
     ]
-    const source = renderSchemaModule(entities)
-    expect(source).toContain("tags: string('tags', { length: 64 }).array(),")
-    expect(source).toContain(
-      "created: timestamp('created').default(sql`CURRENT_TIMESTAMP()`),"
-    )
-    expect(source).toContain(
-      "shadow: tokenlist('shadow').generatedAlwaysAs(sql`TOKENIZE_FULLTEXT(id)`),"
-    )
+    await roundtrip(entities)
   })
 })

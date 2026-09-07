@@ -1,4 +1,5 @@
-import { mkdir, writeFile } from 'node:fs/promises'
+import { randomUUID } from 'node:crypto'
+import { mkdir, rename, rm, writeFile } from 'node:fs/promises'
 import { dirname, join } from 'node:path'
 import { renderSchemaModule } from '../codegen.js'
 import { type ResolvedSpannerKitConfig } from '../config.js'
@@ -9,6 +10,7 @@ import { introspectDatabase } from '../introspect.js'
 import { loadSchemaExports } from '../loader.js'
 import { formatTimestamp, writeMigrationFolder } from '../migrations.js'
 import { serializeSchema } from '../serializer.js'
+import { assertSchemaRoundtrip } from '../schema-roundtrip.js'
 import { createSnapshot } from '../snapshot.js'
 
 export interface PullOptions {
@@ -29,9 +31,8 @@ export interface PullResult {
 
 /**
  * `pull`: introspects INFORMATION_SCHEMA, emits a schema module in the
- * schema API, and writes a baseline migration folder whose snapshot comes
- * from serializing the emitted module — so the next `generate` against it
- * diffs empty.
+ * schema API, verifies it against introspection, then publishes the schema
+ * and a baseline migration snapshot of the introspected database.
  */
 export async function pull(
   config: Pick<ResolvedSpannerKitConfig, 'out' | 'database'>,
@@ -48,23 +49,27 @@ export async function pull(
 
   const schemaFile = options.schemaFile ?? join(config.out, 'schema.ts')
   await mkdir(dirname(schemaFile), { recursive: true })
-  await writeFile(schemaFile, renderSchemaModule(introspected))
-
-  // Serializing the emitted module (not the raw introspection) guarantees
-  // the snapshot and the schema file agree, so `generate` sees no diff.
-  const schemaExports = await loadSchemaExports([schemaFile])
-  const ddl = serializeSchema(schemaExports)
-  const { statements } = await diffSnapshots([], ddl)
+  // Stage beside the destination so module resolution uses the same project.
+  const stagedSchema = join(dirname(schemaFile), `.pull-${randomUUID()}.ts`)
+  try {
+    await writeFile(stagedSchema, renderSchemaModule(introspected), { flag: 'wx' })
+    const schemaExports = await loadSchemaExports([stagedSchema])
+    assertSchemaRoundtrip(introspected, serializeSchema(schemaExports))
+    await rename(stagedSchema, schemaFile)
+  } finally {
+    await rm(stagedSchema, { force: true })
+  }
+  const { statements } = await diffSnapshots([], introspected)
   const folder = await writeMigrationFolder(
     config.out,
     formatTimestamp(options.now ?? new Date()),
     options.name ?? 'pull',
     statements,
-    createSnapshot(ddl)
+    createSnapshot(introspected)
   )
   return {
     schemaFile,
     folder,
-    tables: ddl.filter((entity) => entity.entityType === 'tables').length
+    tables: introspected.filter((entity) => entity.entityType === 'tables').length
   }
 }

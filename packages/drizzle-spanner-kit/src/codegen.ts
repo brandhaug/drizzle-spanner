@@ -8,7 +8,45 @@ import {
   type SpannerEntity,
   type TableEntity
 } from './snapshot.js'
-import { bucketEntities, groupByTable, orderTablesParentsFirst } from './entities.js'
+import { bucketEntities, groupByTable } from './entities.js'
+
+/** Extra-config callbacks run during table construction, so every reference must exist. */
+function orderSchemaTables(
+  tables: Array<TableEntity>,
+  fksByTable: Map<string, Array<ForeignKeyEntity>>
+): Array<TableEntity> {
+  const remaining = new Map(tables.map((table) => [table.name, table]))
+  const ordered: Array<TableEntity> = []
+  const visiting = new Set<string>()
+  const visit = (table: TableEntity): void => {
+    if (visiting.has(table.name)) {
+      throw new Error(
+        `drizzle-spanner-kit: cannot emit cyclic table references involving "${table.name}"`
+      )
+    }
+    if (!remaining.has(table.name)) {
+      return
+    }
+    visiting.add(table.name)
+    const dependencies = [
+      ...(table.interleave ? [table.interleave.parent] : []),
+      ...(fksByTable.get(table.name) ?? []).map((fk) => fk.foreignTable)
+    ]
+    for (const name of dependencies) {
+      const dependency = remaining.get(name)
+      if (dependency) {
+        visit(dependency)
+      }
+    }
+    visiting.delete(table.name)
+    remaining.delete(table.name)
+    ordered.push(table)
+  }
+  for (const table of tables) {
+    visit(table)
+  }
+  return ordered
+}
 
 /** `full_name` -> `fullName`; leading digits get a `t` prefix. */
 function camelCase(name: string): string {
@@ -34,7 +72,7 @@ function parseType(
   const arrayMatch = /^ARRAY<(.+)>$/.exec(type)
   const scalar = arrayMatch ? arrayMatch[1]! : type
   const array = arrayMatch !== null
-  const nameArg = `'${name}'`
+  const nameArg = JSON.stringify(name)
   const sized = /^(STRING|BYTES)\((\d+|MAX)\)$/.exec(scalar)
   if (sized) {
     const builder = sized[1] === 'STRING' ? 'string' : 'bytes'
@@ -84,12 +122,12 @@ function renderColumn(column: ColumnEntity, inlinePrimaryKey: boolean): string {
   if (column.generatedIdentity) {
     expression += '.generatedAsIdentity()'
   } else if (column.generated) {
-    expression += `.generatedAlwaysAs(sql\`${column.generated.as}\`)`
+    expression += `.generatedAlwaysAs(sql.raw(${JSON.stringify(column.generated.as)}), { mode: '${column.generated.stored ? 'stored' : 'virtual'}' })`
   } else if (column.default !== null) {
     expression +=
       column.default === 'GENERATE_UUID()'
         ? '.defaultGenerateUuid()'
-        : `.default(sql\`${column.default}\`)`
+        : `.default(sql.raw(${JSON.stringify(column.default)}))`
   }
   if (inlinePrimaryKey) {
     expression += '.primaryKey()'
@@ -130,7 +168,7 @@ function renderExtraConfig(
   }
   for (const index of indexes) {
     imports.add(index.unique ? 'uniqueIndex' : 'index')
-    let line = `${index.unique ? 'uniqueIndex' : 'index'}('${index.name}').on(${index.columns
+    let line = `${index.unique ? 'uniqueIndex' : 'index'}(${JSON.stringify(index.name)}).on(${index.columns
       .map(keyPartRef)
       .join(', ')})`
     if (index.nullFiltered) {
@@ -149,7 +187,7 @@ function renderExtraConfig(
       .join(', ')
     let line =
       'foreignKey({\n' +
-      `      name: '${fk.name}',\n` +
+      `      name: ${JSON.stringify(fk.name)},\n` +
       `      columns: [${fk.columns.map((name) => `t.${camelCase(name)}`).join(', ')}],\n` +
       `      foreignColumns: [${foreignColumns}],\n` +
       '    })'
@@ -161,7 +199,9 @@ function renderExtraConfig(
   for (const check of checks) {
     imports.add('check')
     needsSql = true
-    lines.push(`check('${check.name}', sql\`${check.value}\`),`)
+    lines.push(
+      `check(${JSON.stringify(check.name)}, sql.raw(${JSON.stringify(check.value)})),`
+    )
   }
   return { lines, imports, needsSql }
 }
@@ -185,7 +225,7 @@ export function renderSchemaModule(entities: Array<SpannerEntity>): string {
 
   // Parents (interleave and FK targets) must be declared before their
   // dependents reference them.
-  const ordered = orderTablesParentsFirst(tables, fksByTable)
+  const ordered = orderSchemaTables(tables, fksByTable)
 
   const imports = new Set<string>(['spannerTable'])
   let needsSql = false
@@ -194,7 +234,7 @@ export function renderSchemaModule(entities: Array<SpannerEntity>): string {
   for (const sequence of sequences) {
     imports.add('sequence')
     declarations.push(
-      `export const ${camelCase(sequence.name)} = sequence('${sequence.name}');`
+      `export const ${camelCase(sequence.name)} = sequence(${JSON.stringify(sequence.name)});`
     )
   }
 
@@ -204,7 +244,10 @@ export function renderSchemaModule(entities: Array<SpannerEntity>): string {
     const indexes = indexesByTable.get(table.name) ?? []
     const fks = fksByTable.get(table.name) ?? []
     const checks = checksByTable.get(table.name) ?? []
-    const inlinePk = pk?.columns.length === 1 && pk.columns[0]!.order === 'asc'
+    const inlinePk =
+      pk?.columns.length === 1 &&
+      pk.columns[0]!.order === 'asc' &&
+      columns.some((column) => column.name === pk.columns[0]!.name && column.notNull)
     const inlinePkColumn = inlinePk ? pk.columns[0]!.name : undefined
 
     for (const column of columns) {
@@ -238,14 +281,14 @@ export function renderSchemaModule(entities: Array<SpannerEntity>): string {
     const variable = tableVariables.get(table.name)!
     if (extra.lines.length === 0) {
       declarations.push(
-        `export const ${variable} = spannerTable('${table.name}', {\n${columnLines
+        `export const ${variable} = spannerTable(${JSON.stringify(table.name)}, {\n${columnLines
           .map((line) => `  ${line}`)
           .join('\n')}\n});`
       )
     } else {
       declarations.push(
         `export const ${variable} = spannerTable(\n` +
-          `  '${table.name}',\n` +
+          `  ${JSON.stringify(table.name)},\n` +
           `  {\n${columnLines.map((line) => `    ${line}`).join('\n')}\n  },\n` +
           `  (t) => [\n${extra.lines.map((line) => `    ${line}`).join('\n')}\n  ],\n` +
           `);`

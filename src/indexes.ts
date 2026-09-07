@@ -40,9 +40,7 @@ export class IndexBuilderOn {
         if (is(column, SQL)) {
           return column
         }
-        const indexed = new IndexedColumn(column.name, column.indexConfig.order)
-        column.indexConfig = { order: 'asc' }
-        return indexed
+        return new IndexedColumn(column.name, column.indexConfig.order)
       }),
       this.unique
     )
