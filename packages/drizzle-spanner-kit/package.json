@@ -1,6 +1,6 @@
 {
   "name": "drizzle-spanner-kit",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Migration CLI for drizzle-spanner: generate, migrate, pull and push against Google Cloud Spanner (GoogleSQL)",
   "keywords": [
     "drizzle",
