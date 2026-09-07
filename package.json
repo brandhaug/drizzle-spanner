@@ -2,6 +2,16 @@
   "name": "drizzle-spanner",
   "version": "0.1.0",
   "description": "Google Cloud Spanner (GoogleSQL) dialect for Drizzle ORM v1",
+  "keywords": [
+    "drizzle",
+    "google-cloud",
+    "spanner",
+    "typescript"
+  ],
+  "homepage": "https://github.com/brandhaug/drizzle-spanner#readme",
+  "bugs": {
+    "url": "https://github.com/brandhaug/drizzle-spanner/issues"
+  },
   "license": "MIT",
   "repository": {
     "type": "git",
@@ -34,6 +44,9 @@
     },
     "./package.json": "./package.json"
   },
+  "publishConfig": {
+    "access": "public"
+  },
   "scripts": {
     "build": "tsc -p tsconfig.build.json",
     "typecheck": "tsc --noEmit",
@@ -52,7 +65,8 @@
     "emulator:down": "docker compose down",
     "emulator:bootstrap": "node scripts/emulator-bootstrap.ts",
     "emulator:smoke": "node scripts/emulator-smoke.ts",
-    "prepare": "git config core.hooksPath .githooks"
+    "prepare": "git config core.hooksPath .githooks",
+    "prepublishOnly": "bun run typecheck && bun run test && bun run build"
   },
   "devDependencies": {
     "@arethetypeswrong/cli": "catalog:",

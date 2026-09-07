@@ -1,0 +1,84 @@
+name: Release
+
+on:
+  push:
+    branches: [master]
+  workflow_dispatch:
+    inputs:
+      force-publish:
+        description: Publish the current version again after a partial or failed release
+        type: boolean
+        default: false
+
+concurrency:
+  group: release
+  cancel-in-progress: false
+
+permissions:
+  contents: write
+  pull-requests: write
+  id-token: write
+
+jobs:
+  release-please:
+    runs-on: ubuntu-latest
+    outputs:
+      release_created: ${{ steps.release.outputs.release_created }}
+      tag_name: ${{ steps.release.outputs.tag_name }}
+    steps:
+      - name: Release Please
+        id: release
+        uses: googleapis/release-please-action@v4
+        with:
+          token: ${{ secrets.CI_PAT }}
+
+  publish:
+    needs: release-please
+    if: needs.release-please.outputs.release_created == 'true' || inputs.force-publish
+    runs-on: ubuntu-latest
+    environment: release
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ needs.release-please.outputs.tag_name || github.sha }}
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 'lts/*'
+          registry-url: https://registry.npmjs.org
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 1.4.2
+      - run: bun install --frozen-lockfile
+      - name: Check release versions and changelog
+        run: bun scripts/release-check.ts "v$(node -p 'require("./package.json").version')"
+      - run: bun run lint
+      - run: bun run typecheck
+      - run: bun run test
+      - run: bun run build
+      # Refresh the file: snapshot so the kit resolves the built adapter.
+      - run: bun install
+      - run: bun run --cwd packages/drizzle-spanner-kit build
+      - name: Include shared release notes in the CLI package
+        run: cp CHANGELOG.md packages/drizzle-spanner-kit/CHANGELOG.md
+      - run: bun run check:types
+      - run: bun run check:pack
+      # npm authenticates through each package's trusted publisher. No npm token.
+      - name: Publish both packages
+        shell: bash
+        run: |
+          set -euo pipefail
+          for directory in . packages/drizzle-spanner-kit; do
+            (
+              cd "$directory"
+              package=$(node -p 'require("./package.json").name')
+              version=$(node -p 'require("./package.json").version')
+              if npm view "$package@$version" version --json > /tmp/npm-version.json 2>/tmp/npm-view-error; then
+                echo "$package@$version is already published"
+              elif grep -q 'E404' /tmp/npm-view-error; then
+                npm publish --provenance --access public
+              else
+                cat /tmp/npm-view-error >&2
+                exit 1
+              fi
+            )
+          done

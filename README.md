@@ -15,7 +15,7 @@ dialect. It ships as two packages: `drizzle-spanner` (the ORM adapter) and
 Install the adapter next to `drizzle-orm` and the Spanner driver:
 
 ```bash
-npm install drizzle-spanner drizzle-orm.0.0-rc.4 @google-cloud/spanner
+npm install drizzle-spanner drizzle-orm@1.0.0-rc.4 @google-cloud/spanner
 ```
 
 `@google-cloud/spanner` is an optional peer dependency: the adapter takes the

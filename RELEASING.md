@@ -1,53 +1,59 @@
 # Releasing
 
-Both packages (`drizzle-spanner` and the workspace package
-`drizzle-spanner-kit`) version and release in lockstep from a single
-`v<version>` tag. Versions stay at `0.x` until the drizzle-orm v1 line is
-stable.
+Both `drizzle-spanner` and `drizzle-spanner-kit` release together under one
+`v<version>` tag. Versions stay below 1.0 until Drizzle ORM v1 is stable.
 
-> Why not changesets: the `drizzle-spanner` package **is** the npm-workspace
-> root, and changesets does not version a workspace root package. The
-> equivalent here is lockstep versions, a hand-written `CHANGELOG.md` per
-> package, and `scripts/release-check.ts` enforcing that a tag, both
-> `package.json` versions, and both changelogs agree.
+## Automated releases
 
-## Cutting a release
+The setup follows `brandhaug/effectful-better-auth`:
 
-1. Bump `version` in `package.json` **and**
-   `packages/drizzle-spanner-kit/package.json` to the same value.
-2. Add a `## <version>` entry to `CHANGELOG.md` **and**
-   `packages/drizzle-spanner-kit/CHANGELOG.md`.
-3. Sanity-check locally:
+1. Conventional Commits on `master` update a release-please PR through
+   `.github/workflows/release.yml`, using the repository's `CI_PAT` secret.
+2. The PR updates the root version and changelog, the CLI package version,
+   and `.release-please-manifest.json`.
+3. Merging the release PR creates a GitHub release and tag. The publish job
+   checks versions, lint, types, tests, builds, and package contents.
+4. The job publishes the adapter, then the CLI, with npm provenance through
+   the GitHub `release` environment. Each package needs its own npm trusted
+   publisher configuration. No npm token is stored in GitHub.
 
-```bash
-node scripts/release-check.ts v<version>
-```
+The root `CHANGELOG.md` contains release notes for both packages. Publishing
+copies it into the CLI package. The CLI's checked-in changelog preserves its
+initial release notes.
 
-4. Land those changes on `master` through a PR, then tag:
+Pre-1.0 releases use npm's `latest` tag because there is no stable line yet.
+To retry a partial release, dispatch the Release workflow on `master` with
+`force-publish` enabled. Already-published versions are skipped; other registry
+errors stop the job.
 
-```bash
-git tag v<version>
-git push origin v<version>
-```
+## First publication
 
-5. The tag triggers `.github/workflows/release-dry-run.yml`: release-check, lint,
-   typecheck, unit tests, build, `arethetypeswrong`, pack-contents check, and
-   a **dry-run** publish of both packages. CI never publishes and holds no
-   npm token.
-
-## Publishing (manual, deliberate)
-
-After the release workflow is green on the tag, a maintainer with npm
-permissions publishes from a clean checkout of that tag:
+A maintainer publishes the initial 0.1.0 packages using their npm account.
+Build the adapter before building the CLI, which depends on its output:
 
 ```bash
-git checkout v<version>
-npm ci
-npm run build
-npm run build -w drizzle-spanner-kit
+bun install --frozen-lockfile
+bun run lint
+bun run typecheck
+bun run test
+bun run build
+bun install
+bun run --cwd packages/drizzle-spanner-kit build
+bun scripts/release-check.ts v0.1.0
+bun run check:types
+bun run check:pack
 npm publish --access public
 npm publish --access public --workspace drizzle-spanner-kit
 ```
 
-Pre-1.0 versions publish to the default `latest` dist-tag intentionally:
-there is no stable line to protect yet.
+After the packages exist, configure a GitHub Actions trusted publisher in
+**each package's** npm settings:
+
+- Organization or user: `brandhaug`
+- Repository: `drizzle-spanner`
+- Workflow filename: `release.yml`
+- Environment: `release`
+
+See [npm's trusted publishing documentation](https://docs.npmjs.com/trusted-publishers/).
+Create the initial `v0.1.0` GitHub release at the published commit so that
+release-please starts subsequent changelogs from that release.

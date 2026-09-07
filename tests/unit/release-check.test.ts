@@ -3,7 +3,7 @@ import { describe, expect, it } from 'bun:test'
 import { findReleaseIssues } from '../../scripts/release-check.js'
 
 // Both packages release in lockstep from one v<version> tag. The release
-// workflow runs this check before the dry-run publish.
+// workflow runs this check before publishing.
 const pkg = (name: string, version: string, changelog: string) => ({
   name,
   version,
@@ -26,6 +26,24 @@ describe('findReleaseIssues', () => {
         )
       ])
     ).toEqual([])
+  })
+
+  it('accepts release-please linked version headings', () => {
+    expect(
+      findReleaseIssues('v0.2.0', [
+        pkg(
+          'drizzle-spanner',
+          '0.2.0',
+          '## [0.2.0](https://github.com/brandhaug/drizzle-spanner/compare/v0.1.0...v0.2.0) (2026-09-07)\n'
+        )
+      ])
+    ).toEqual([])
+  })
+
+  it('does not match another version with the same prefix', () => {
+    expect(
+      findReleaseIssues('v0.1.0', [pkg('drizzle-spanner', '0.1.0', '## 0.1.01\n')])
+    ).toHaveLength(1)
   })
 
   it('rejects a tag that is not v<semver>', () => {
