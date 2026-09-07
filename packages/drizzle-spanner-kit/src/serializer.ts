@@ -1,4 +1,5 @@
 import { is } from 'drizzle-orm/entity'
+import { validateSchemaEntities } from './schema-validation.js'
 import { SQL } from 'drizzle-orm/sql'
 import { getTableName } from 'drizzle-orm/table'
 import { getColumns } from 'drizzle-orm/utils'
@@ -227,5 +228,5 @@ export function serializeSchema(
       })
     }
   }
-  return entities
+  return validateSchemaEntities(entities, 'schema exports')
 }

@@ -1,8 +1,10 @@
-import { mkdir, readFile, rm, writeFile } from 'node:fs/promises'
+import { mkdir, rm, writeFile } from 'node:fs/promises'
 import { randomUUID } from 'node:crypto'
 import { join } from 'node:path'
 import { afterAll, beforeAll, describe, expect, it } from 'bun:test'
 import { generate, migrate, pull, push } from '../../src/index.js'
+import { loadSchemaExports } from '../../src/loader.js'
+import { serializeSchema } from '../../src/serializer.js'
 import { type KitEmulatorHarness } from './harness.js'
 import { startKitEmulator } from './harness.js'
 
@@ -113,9 +115,12 @@ describe('generate -> migrate', () => {
 
     const pulledOut = join(workDir, 'pulled')
     const result = await pull({ out: pulledOut, database: config })
-    const emitted = await readFile(result.schemaFile, 'utf8')
-    expect(emitted).toContain("spannerTable(\n  'albums'")
-    expect(emitted).toContain('interleaveInParent(singers')
+    const emitted = serializeSchema(await loadSchemaExports([result.schemaFile]))
+    expect(
+      emitted.find(
+        (entity) => entity.entityType === 'tables' && entity.name === 'albums'
+      )
+    ).toMatchObject({ interleave: { parent: 'singers', onDelete: 'cascade' } })
     expect(result.tables).toBe(2)
 
     const regenerate = await generate({ schema: [result.schemaFile], out: pulledOut })

@@ -71,14 +71,9 @@ export function createTableSql(
   table: TableEntity,
   columns: Array<ColumnEntity>,
   primaryKey: PrimaryKeyEntity,
-  fks: Array<ForeignKeyEntity>,
   checks: Array<CheckEntity>
 ): string {
-  const lines = [
-    ...columns.map(columnDefinitionSql),
-    ...fks.map(foreignKeyConstraintSql),
-    ...checks.map(checkConstraintSql)
-  ]
+  const lines = [...columns.map(columnDefinitionSql), ...checks.map(checkConstraintSql)]
   let statement = `CREATE TABLE ${escapeIdentifier(table.name)} (\n${lines
     .map((line) => `  ${line}`)
     .join(',\n')}\n) PRIMARY KEY (${keyPartsSql(primaryKey.columns)})`

@@ -12,6 +12,7 @@ import { type ColumnBaseConfig } from 'drizzle-orm/column'
 import { Column } from 'drizzle-orm/column'
 import { entityKind } from 'drizzle-orm/entity'
 import { type SQL } from 'drizzle-orm/sql'
+import { type Table } from 'drizzle-orm/table'
 import { type SpannerTable } from '../table.js'
 import { type SpannerTypeHint } from '../type-hints.js'
 import { arrayTypeHint } from '../type-hints.js'
@@ -150,20 +151,27 @@ export class SpannerExtraConfigColumn<TName extends string = string> extends Col
 
   declare protected $name: TName
 
-  indexConfig: { order: 'asc' | 'desc' } = { order: 'asc' }
+  readonly indexConfig: Readonly<{ order: 'asc' | 'desc' }>
+
+  constructor(
+    readonly table: Table,
+    private readonly columnConfig: ColumnBuilderRuntimeConfig<unknown>,
+    order: 'asc' | 'desc' = 'asc'
+  ) {
+    super(table, columnConfig)
+    this.indexConfig = Object.freeze({ order })
+  }
 
   getSQLType(): string {
     return this.columnType
   }
 
-  asc(): this {
-    this.indexConfig.order = 'asc'
-    return this
+  asc(): SpannerExtraConfigColumn<TName> {
+    return new SpannerExtraConfigColumn(this.table, this.columnConfig, 'asc')
   }
 
-  desc(): this {
-    this.indexConfig.order = 'desc'
-    return this
+  desc(): SpannerExtraConfigColumn<TName> {
+    return new SpannerExtraConfigColumn(this.table, this.columnConfig, 'desc')
   }
 }
 

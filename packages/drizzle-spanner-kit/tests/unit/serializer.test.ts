@@ -144,6 +144,35 @@ describe('serializeSchema: columns', () => {
 })
 
 describe('serializeSchema: tables, keys and interleaving', () => {
+  it('keeps key ordering independent across declarations and repeated serialization', () => {
+    const t = spannerTable('ordered', { id: int64('id').notNull() }, (self) => {
+      const descending = self.id.desc()
+      return [
+        primaryKey({ columns: [descending] }),
+        index('ascending').on(self.id),
+        index('descending').on(descending),
+        index('explicit_ascending').on(descending.asc()),
+        index('reused_descending').on(descending)
+      ]
+    })
+    for (let iteration = 0; iteration < 3; iteration++) {
+      const entities = serializeSchema({ t })
+      expect(entities.find((entity) => entity.entityType === 'pks')).toMatchObject({
+        columns: [{ name: 'id', order: 'desc' }]
+      })
+      expect(
+        entities
+          .filter((entity) => entity.entityType === 'indexes')
+          .map((entity) => entity.columns)
+      ).toEqual([
+        [{ name: 'id', order: 'asc' }],
+        [{ name: 'id', order: 'desc' }],
+        [{ name: 'id', order: 'asc' }],
+        [{ name: 'id', order: 'desc' }]
+      ])
+    }
+  })
+
   const singers = spannerTable('singers', {
     id: string('id', { length: 36 }).primaryKey(),
     name: string('name', { length: 'max' }).notNull()

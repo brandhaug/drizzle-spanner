@@ -16,7 +16,8 @@ import {
   foreignKeyConstraintSql,
   renameTableSql
 } from './ddl.js'
-import { bucketEntities, groupByTable, orderTablesParentsFirst } from './entities.js'
+import { bucketEntities, orderTablesParentsFirst } from './entities.js'
+import { validateSchemaEntities } from './schema-validation.js'
 import {
   type CheckEntity,
   type ColumnEntity,
@@ -280,8 +281,8 @@ export async function diffSnapshots(
   curDdl: Array<SpannerEntity>,
   options: DiffOptions = {}
 ): Promise<DiffResult> {
-  const prev = indexEntities(prevDdl)
-  const cur = indexEntities(curDdl)
+  const prev = indexEntities(validateSchemaEntities(prevDdl, 'previous schema'))
+  const cur = indexEntities(validateSchemaEntities(curDdl, 'current schema'))
   const diagnostics: Array<DiffDiagnostic> = []
   const renamesJournal: Array<ResolvedRename> = []
   const buckets: StatementBuckets = {
@@ -373,22 +374,18 @@ export async function diffSnapshots(
       buckets.dropIndexes.push(dropIndexSql(index.name))
     }
   }
-  const fksOfDropped = groupByTable(
-    [...prev.fks.values()].filter((fk) => droppedNames.has(fk.table))
-  )
   buckets.dropTables.push(
-    ...orderTablesParentsFirst(stillDropped, fksOfDropped)
+    ...orderTablesParentsFirst(stillDropped)
       .toReversed()
       .map((table) => dropTableSql(table.name))
   )
 
-  // Created tables: parents before interleaved children and FK targets.
+  // Created tables: interleave parents first; foreign keys are added afterward.
   const createdTables = [...cur.tables.values()].filter(
     (table) => !prev.tables.has(table.name)
   )
   const createdNames = new Set(createdTables.map((table) => table.name))
-  const curFksByTable = groupByTable([...cur.fks.values()])
-  for (const table of orderTablesParentsFirst(createdTables, curFksByTable)) {
+  for (const table of orderTablesParentsFirst(createdTables)) {
     const pk = cur.pks.get(table.name)
     if (!pk) {
       throw new Error(
@@ -400,7 +397,6 @@ export async function diffSnapshots(
         table,
         [...(cur.columns.get(table.name)?.values() ?? [])],
         pk,
-        curFksByTable.get(table.name) ?? [],
         [...cur.checks.values()].filter((check) => check.table === table.name)
       )
     )
@@ -558,20 +554,14 @@ export async function diffSnapshots(
     }
   }
 
-  // Foreign keys and checks on surviving tables.
+  // Drop all removed foreign keys before tables/columns, including cyclic references.
   for (const [key, prevFk] of prev.fks) {
-    if (droppedNames.has(prevFk.table)) {
-      continue
-    }
     const curFk = cur.fks.get(key)
     if (!curFk || !equalJson(prevFk, curFk)) {
       buckets.dropConstraints.push(dropConstraintSql(prevFk.table, prevFk.name))
     }
   }
   for (const [key, curFk] of cur.fks) {
-    if (createdNames.has(curFk.table)) {
-      continue
-    }
     const prevFk = prev.fks.get(key)
     if (!prevFk || !equalJson(prevFk, curFk)) {
       buckets.addConstraints.push(

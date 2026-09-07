@@ -17,12 +17,13 @@ import {
 import { type DriverValueEncoder, type Query, type SQLChunk } from 'drizzle-orm/sql'
 import { Column } from 'drizzle-orm/column'
 import { and } from 'drizzle-orm/sql/expressions'
-import { Param, Placeholder, SQL, sql } from 'drizzle-orm/sql'
+import { Param, SQL, sql } from 'drizzle-orm/sql'
 import { type SelectedFieldsOrdered } from './orm-internal.js'
 import { orderSelectedFields } from './orm-internal.js'
 import { SpannerColumn } from './columns/common.js'
 import { type SpannerTable } from './table.js'
 import { TableColumns } from './symbols.js'
+import { compileWithParamMetadata } from './sql-compiler.js'
 
 export interface SpannerSelectConfig {
   table: SpannerTable | SQL
@@ -82,9 +83,8 @@ export class SpannerDialect {
   }
 
   /**
-   * The type hint each column emits; since rc.4 drizzle no longer carries a
-   * `typings` channel on `Query`, so hints are collected by walking the SQL
-   * tree in parameter-emission order and ride on `SpannerQueryWithTypings`.
+   * Type hints supplement Drizzle's Query, which no longer carries typings
+   * in rc.4. The compiler records them when each parameter is emitted.
    */
   prepareTyping = (encoder: DriverValueEncoder<unknown, unknown>): string => {
     if (is(encoder, SpannerColumn)) {
@@ -93,75 +93,17 @@ export class SpannerDialect {
     return 'none'
   }
 
-  /**
-   * Walks the SQL tree in the same pre-order `SQL.toQuery` emits parameters,
-   * recording each parameter's type hint and source column.
-   */
-  private collectParamInfo(
-    sqlInput: SQL,
-    typings: Array<string>,
-    paramColumns: Array<string | undefined>
-  ): void {
-    const walk = (chunk: unknown): void => {
-      if (chunk === undefined) {
-        return
-      }
-      if (Array.isArray(chunk)) {
-        chunk.forEach(walk)
-        return
-      }
-      if (chunk instanceof Param) {
-        if (is(chunk.value, SQL)) {
-          // Params wrapping SQL expand into the inner statement's params.
-          walk(chunk.value)
-          return
-        }
-        if (is(chunk.encoder, SpannerColumn)) {
-          typings.push(this.prepareTyping(chunk.encoder))
-          paramColumns.push(chunk.encoder.name)
-        } else {
-          typings.push('none')
-          paramColumns.push(undefined)
-        }
-        return
-      }
-      if (is(chunk, Placeholder)) {
-        typings.push('none')
-        paramColumns.push(undefined)
-        return
-      }
-      if (is(chunk, SQL)) {
-        chunk.queryChunks.forEach(walk)
-        return
-      }
-      if (
-        typeof chunk === 'string' ||
-        typeof chunk === 'number' ||
-        typeof chunk === 'boolean' ||
-        typeof chunk === 'bigint' ||
-        chunk === null
-      ) {
-        // Raw values in the sql tag become positional params.
-        typings.push('none')
-        paramColumns.push(undefined)
-      }
-      // Everything else (Name, Column, Table, SQL.Aliased, …) emits no params.
-    }
-    sqlInput.queryChunks.forEach(walk)
-  }
-
   sqlToQuery(sqlInput: SQL, invokeSource?: 'indexes'): SpannerQueryWithTypings {
-    const query = sqlInput.toQuery({
-      // Bound explicitly: toQuery receives these as plain callbacks.
-      escapeName: this.escapeName.bind(this),
-      escapeParam: this.escapeParam.bind(this),
-      escapeString: this.escapeString.bind(this),
-      invokeSource
-    })
-    const typings: Array<string> = []
-    const paramColumns: Array<string | undefined> = []
-    this.collectParamInfo(sqlInput, typings, paramColumns)
-    return { ...query, typings, paramColumns }
+    return compileWithParamMetadata(
+      sqlInput,
+      {
+        escapeName: this.escapeName.bind(this),
+        escapeParam: this.escapeParam.bind(this),
+        escapeString: this.escapeString.bind(this),
+        invokeSource
+      },
+      this.prepareTyping
+    )
   }
 
   private buildSelection(fields: SelectedFieldsOrdered): SQL {

@@ -663,6 +663,48 @@ describe('bufferedMutations transactions', () => {
     expect(fake.mutations).toEqual([])
   })
 
+  it('rejects repeated key predicates without buffering updates or deletes', async () => {
+    for (const secondId of ['a', 'b']) {
+      const fake = fakeMutationDatabase()
+      const db = drizzle(fake.database)
+      const predicate = and(eq(singers.id, 'a'), eq(singers.id, secondId))
+      await expect(
+        db.transaction(
+          async (tx) => {
+            await tx.delete(singers).where(predicate)
+          },
+          { mode: 'bufferedMutations' }
+        )
+      ).rejects.toBeInstanceOf(SpannerInvalidArgumentError)
+      await expect(
+        db.transaction(
+          async (tx) => {
+            await tx.update(singers).set({ name: 'changed' }).where(predicate)
+          },
+          { mode: 'bufferedMutations' }
+        )
+      ).rejects.toBeInstanceOf(SpannerInvalidArgumentError)
+      expect(fake.mutations).toEqual([])
+    }
+  })
+
+  it('rejects unresolved and null key values before buffering a delete', async () => {
+    const fake = fakeMutationDatabase()
+    const db = drizzle(fake.database)
+    for (const value of [null, undefined, sql.placeholder('id'), sql`'a'`]) {
+      const predicate = sql`${singers.id} = ${sql.param(value, singers.id)}`
+      await expect(
+        db.transaction(
+          async (tx) => {
+            await tx.delete(singers).where(predicate)
+          },
+          { mode: 'bufferedMutations' }
+        )
+      ).rejects.toBeInstanceOf(SpannerInvalidArgumentError)
+    }
+    expect(fake.mutations).toEqual([])
+  })
+
   it('compiles delete to key-addressed deleteRows in primary-key order', async () => {
     const fake = fakeMutationDatabase()
     const db = drizzle(fake.database)

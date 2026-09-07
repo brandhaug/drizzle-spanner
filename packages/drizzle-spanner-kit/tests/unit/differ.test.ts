@@ -93,7 +93,7 @@ describe('diffSnapshots: create', () => {
     )
   })
 
-  it('creates sequences before tables and foreign keys inline', async () => {
+  it('creates sequences before tables and adds foreign keys afterward', async () => {
     const seq = sequence('ids')
     const albums = spannerTable(
       'albums',
@@ -111,8 +111,8 @@ describe('diffSnapshots: create', () => {
     expect(statements[0]).toBe(
       "CREATE SEQUENCE `ids` OPTIONS (sequence_kind = 'bit_reversed_positive')"
     )
-    expect(statements[2]).toContain(
-      'CONSTRAINT `fk_albums_singer_id` FOREIGN KEY (`singer_id`) REFERENCES `singers` (`id`) ON DELETE CASCADE'
+    expect(statements[3]).toContain(
+      'ALTER TABLE `albums` ADD CONSTRAINT `fk_albums_singer_id` FOREIGN KEY (`singer_id`) REFERENCES `singers` (`id`) ON DELETE CASCADE'
     )
   })
 
@@ -448,5 +448,100 @@ describe('diffSnapshots: drops', () => {
       'DROP TABLE `c`',
       'DROP TABLE `p`'
     ])
+  })
+})
+
+describe('diffSnapshots: foreign-key dependencies', () => {
+  const tables = ['a', 'b'].map((name) =>
+    spannerTable(name, {
+      id: int64('id').primaryKey()
+    })
+  )
+  const base = ddlOf({ a: tables[0], b: tables[1] })
+  const cycle: Array<SpannerEntity> = [
+    ...base,
+    {
+      entityType: 'fks',
+      table: 'a',
+      name: 'a_b',
+      columns: ['id'],
+      foreignTable: 'b',
+      foreignColumns: ['id'],
+      onDelete: 'noAction'
+    },
+    {
+      entityType: 'fks',
+      table: 'b',
+      name: 'b_a',
+      columns: ['id'],
+      foreignTable: 'a',
+      foreignColumns: ['id'],
+      onDelete: 'noAction'
+    }
+  ]
+
+  it('creates mutually referencing tables before either foreign key', async () => {
+    const { statements } = await diffSnapshots([], cycle)
+    expect(statements).toHaveLength(4)
+    expect(statements[0]).toStartWith('CREATE TABLE `a`')
+    expect(statements[1]).toStartWith('CREATE TABLE `b`')
+    expect(statements[0]).not.toContain('FOREIGN KEY')
+    expect(statements[1]).not.toContain('FOREIGN KEY')
+    expect(statements.slice(2)).toEqual([
+      'ALTER TABLE `a` ADD CONSTRAINT `a_b` FOREIGN KEY (`id`) REFERENCES `b` (`id`)',
+      'ALTER TABLE `b` ADD CONSTRAINT `b_a` FOREIGN KEY (`id`) REFERENCES `a` (`id`)'
+    ])
+  })
+
+  it('drops both foreign keys before dropping mutually referencing tables', async () => {
+    const { statements } = await diffSnapshots(cycle, [])
+    expect(statements).toEqual([
+      'ALTER TABLE `a` DROP CONSTRAINT `a_b`',
+      'ALTER TABLE `b` DROP CONSTRAINT `b_a`',
+      'DROP TABLE `b`',
+      'DROP TABLE `a`'
+    ])
+  })
+
+  it('removes an incoming reference from a surviving table before dropping its target', async () => {
+    const surviving = base.filter((entity) =>
+      entity.entityType === 'tables'
+        ? entity.name === 'a'
+        : 'table' in entity && entity.table === 'a'
+    )
+    const { statements } = await diffSnapshots(cycle, surviving)
+    expect(statements).toEqual([
+      'ALTER TABLE `a` DROP CONSTRAINT `a_b`',
+      'ALTER TABLE `b` DROP CONSTRAINT `b_a`',
+      'DROP TABLE `b`'
+    ])
+  })
+
+  it('adds a new referenced column before a new table foreign key', async () => {
+    const previous = ddlOf({
+      target: spannerTable('target', { id: int64('id').primaryKey() })
+    })
+    const current: Array<SpannerEntity> = [
+      ...ddlOf({
+        target: spannerTable('target', {
+          id: int64('id').primaryKey(),
+          code: int64('code')
+        }),
+        source: spannerTable('source', { id: int64('id').primaryKey() })
+      }),
+      {
+        entityType: 'fks',
+        table: 'source',
+        name: 'source_target',
+        columns: ['id'],
+        foreignTable: 'target',
+        foreignColumns: ['code'],
+        onDelete: 'noAction'
+      }
+    ]
+    const { statements } = await diffSnapshots(previous, current)
+    expect(statements[0]).toStartWith('CREATE TABLE `source`')
+    expect(statements[1]).toBe('ALTER TABLE `target` ADD COLUMN `code` INT64')
+    expect(statements[2]).toStartWith('ALTER TABLE `source` ADD CONSTRAINT')
   })
 })

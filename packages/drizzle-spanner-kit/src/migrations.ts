@@ -1,4 +1,13 @@
-import { mkdir, readdir, readFile, writeFile } from 'node:fs/promises'
+import {
+  lstat,
+  mkdir,
+  mkdtemp,
+  readdir,
+  readFile,
+  rename,
+  rm,
+  writeFile
+} from 'node:fs/promises'
 import { join } from 'node:path'
 import { type SpannerSnapshot } from './snapshot.js'
 import { parseSnapshot } from './snapshot.js'
@@ -72,12 +81,37 @@ export async function writeMigrationFolder(
   statements: Array<string>,
   snapshot: SpannerSnapshot
 ): Promise<string> {
-  const folder = join(out, `${timestamp}_${name}`)
-  await mkdir(folder, { recursive: true })
-  await writeFile(join(folder, 'migration.sql'), renderMigrationSql(statements))
-  await writeFile(
-    join(folder, 'snapshot.json'),
-    `${JSON.stringify(snapshot, null, 2)}\n`
-  )
-  return folder
+  const id = `${timestamp}_${name}`
+  if (!/^\d{14}$/.test(timestamp) || !name || /[/\\\r\n\u2028\u2029]/.test(name)) {
+    throw new Error('drizzle-spanner-kit: invalid migration timestamp or name')
+  }
+  const folder = join(out, id)
+  // Reserve the name across concurrent writers. Hidden staging/lock directories
+  // are never included by listMigrationFolders.
+  await mkdir(out, { recursive: true })
+  const reservation = join(out, `.${id}.lock`)
+  await mkdir(reservation)
+  let staging: string | undefined
+  try {
+    const existing = await lstat(folder).catch((error: unknown) => {
+      if (error instanceof Error && 'code' in error && error.code === 'ENOENT') {
+        return null
+      }
+      throw error
+    })
+    if (existing) {
+      throw new Error(`drizzle-spanner-kit: migration "${id}" already exists`)
+    }
+    const snapshotJson = `${JSON.stringify(snapshot, null, 2)}\n`
+    staging = await mkdtemp(join(out, '.migration-'))
+    await writeFile(join(staging, 'migration.sql'), renderMigrationSql(statements))
+    await writeFile(join(staging, 'snapshot.json'), snapshotJson)
+    await rename(staging, folder)
+    return folder
+  } finally {
+    if (staging) {
+      await rm(staging, { recursive: true, force: true })
+    }
+    await rm(reservation, { recursive: true, force: true })
+  }
 }

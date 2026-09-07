@@ -1,3 +1,4 @@
+import { validateSchemaEntities } from './schema-validation.js'
 import { type KitDriverDatabase } from './connect.js'
 import {
   type ColumnEntity,
@@ -257,5 +258,5 @@ export async function introspectDatabase(
     }
   }
 
-  return entities
+  return validateSchemaEntities(entities, 'database introspection')
 }
