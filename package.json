@@ -106,7 +106,7 @@
     "@google-cloud/spanner": "8.11.0",
     "@types/node": "26.4.1",
     "drizzle-orm": "1.0.0-rc.4",
-    "lint-staged": "17.4.1",
+    "lint-staged": "17.5.0",
     "oxfmt": "0.66.0",
     "oxlint": "1.81.0",
     "oxlint-tsgolint": "7.0.2001",
