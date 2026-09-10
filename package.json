@@ -112,6 +112,6 @@
     "oxlint-tsgolint": "7.0.2001",
     "testcontainers": "12.1.0",
     "typescript": "7.0.2",
-    "ultracite": "7.10.7"
+    "ultracite": "7.11.0"
   }
 }
