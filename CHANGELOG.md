@@ -4,6 +4,20 @@ All notable changes to `drizzle-spanner` are recorded here. Both packages in
 this repository version and release in lockstep from a single `v<version>`
 tag; see [RELEASING.md](RELEASING.md).
 
+## [0.1.1](https://github.com/brandhaug/drizzle-spanner/compare/v0.1.0...v0.1.1) (2026-09-19)
+
+
+### Miscellaneous
+
+* **deps:** bump @google-cloud/spanner from 8.11.0 to 8.12.0 ([#69](https://github.com/brandhaug/drizzle-spanner/issues/69)) ([08c7b23](https://github.com/brandhaug/drizzle-spanner/commit/08c7b236d517ff02f74b3301ce0abd135ef49d1b))
+* **deps:** bump lint-staged from 17.4.1 to 17.5.0 ([#62](https://github.com/brandhaug/drizzle-spanner/issues/62)) ([12482cf](https://github.com/brandhaug/drizzle-spanner/commit/12482cfe93b7987f2a3cea056de40c98b9eb84ce))
+* **deps:** bump lint-staged from 17.5.0 to 17.5.1 ([#68](https://github.com/brandhaug/drizzle-spanner/issues/68)) ([d79b358](https://github.com/brandhaug/drizzle-spanner/commit/d79b3586550b74e177e2d5e0554a8c753690de03))
+* **deps:** bump oxfmt from 0.66.0 to 0.67.0 ([#64](https://github.com/brandhaug/drizzle-spanner/issues/64)) ([9310ab4](https://github.com/brandhaug/drizzle-spanner/commit/9310ab4dc19667a6c7e09a1209d1550466b2b620))
+* **deps:** bump oxlint from 1.81.0 to 1.82.0 ([#65](https://github.com/brandhaug/drizzle-spanner/issues/65)) ([d1f77b4](https://github.com/brandhaug/drizzle-spanner/commit/d1f77b4f11f9ad0fc3f74e26bdb420c8b4653a7c))
+* **deps:** bump ultracite from 7.10.7 to 7.11.0 ([#57](https://github.com/brandhaug/drizzle-spanner/issues/57)) ([0c2f790](https://github.com/brandhaug/drizzle-spanner/commit/0c2f7903d44625e1018739e4b831b3cc1c7d6f17))
+* **deps:** bump ultracite from 7.11.0 to 7.11.1 ([#67](https://github.com/brandhaug/drizzle-spanner/issues/67)) ([2d0094a](https://github.com/brandhaug/drizzle-spanner/commit/2d0094a3325e0dcea2734ab87e4ee908df06710b))
+* **deps:** bump ultracite from 7.11.1 to 7.12.0 ([#74](https://github.com/brandhaug/drizzle-spanner/issues/74)) ([2622de4](https://github.com/brandhaug/drizzle-spanner/commit/2622de49ca9ef0af9b56645859546508adb955c5))
+
 ## 0.1.0
 
 Initial release.
