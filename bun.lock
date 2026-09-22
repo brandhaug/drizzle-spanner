@@ -28,7 +28,7 @@
     },
     "packages/drizzle-spanner-kit": {
       "name": "drizzle-spanner-kit",
-      "version": "0.1.0",
+      "version": "0.1.1",
       "bin": {
         "drizzle-spanner-kit": "./dist/cli.js",
       },
@@ -57,7 +57,7 @@
   "catalog": {
     "@arethetypeswrong/cli": "0.18.5",
     "@google-cloud/spanner": "9.0.0",
-    "@types/node": "26.6.1",
+    "@types/node": "26.6.2",
     "drizzle-orm": "1.0.0-rc.4",
     "lint-staged": "17.5.1",
     "oxfmt": "0.68.0",
@@ -294,7 +294,7 @@
 
     "@types/dockerode": ["@types/dockerode@4.0.1", "", { "dependencies": { "@types/docker-modem": "*", "@types/node": "*", "@types/ssh2": "*" } }, "sha512-cmUpB+dPN955PxBEuXE3f6lKO1hHiIGYJA46IVF3BJpNsZGvtBDcRnlrHYHtOH/B6vtDOyl2kZ2ShAu3mgc27Q=="],
 
-    "@types/node": ["@types/node@26.6.1", "", { "dependencies": { "undici-types": "~8.9.0" } }, "sha512-VqGJBMCtdhqkBUCcBLvywI0NJ+KLuVzgNnlBUNFOQjqVxzo2lxLUNg1DSey8+u2u6ktswSAxg+s68QLzWHNOuA=="],
+    "@types/node": ["@types/node@26.6.2", "", { "dependencies": { "undici-types": "~8.9.0" } }, "sha512-X1P21scMv4zGKLYqjdGjaKa7COa0RKVYYZZN/NfvLQ1JegxFhdhpZG/Lyn8AXx6CDUavKAd11v6BvfpkDByK8g=="],
 
     "@types/ssh2": ["@types/ssh2@0.5.52", "", { "dependencies": { "@types/node": "*", "@types/ssh2-streams": "*" } }, "sha512-lbLLlXxdCZOSJMCInKH2+9V/77ET2J6NPQHpFI0kda61Dd1KglJs+fPQBchizmzYSOJBgdTajhPqBO1xxLywvg=="],
 
