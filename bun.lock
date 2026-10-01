@@ -28,7 +28,7 @@
     },
     "packages/drizzle-spanner-kit": {
       "name": "drizzle-spanner-kit",
-      "version": "0.1.1",
+      "version": "0.1.2",
       "bin": {
         "drizzle-spanner-kit": "./dist/cli.js",
       },
@@ -46,12 +46,6 @@
     },
   },
   "overrides": {
-    "@grpc/grpc-js@>=1.14.0 <1.14.5": {
-      ".": "1.14.5",
-    },
-    "brace-expansion@>=2.0.0 <2.1.5": {
-      ".": "2.1.5",
-    },
     "brace-expansion@>=2.0.0 <2.1.6": {
       ".": "2.1.6",
     },
@@ -59,15 +53,6 @@
       ".": "2.1.7",
     },
     "drizzle-spanner": "file:.",
-    "undici@>=8.0.0 <8.10.2": {
-      ".": "8.10.2",
-    },
-    "undici@>=8.1.0 <8.10.2": {
-      ".": "8.10.2",
-    },
-    "undici@>=8.10.0 <8.10.2": {
-      ".": "8.10.2",
-    },
   },
   "catalog": {
     "@arethetypeswrong/cli": "0.18.5",
@@ -409,7 +394,7 @@
 
     "bl": ["bl@4.1.0", "", { "dependencies": { "buffer": "^5.5.0", "inherits": "^2.0.4", "readable-stream": "^3.4.0" } }, "sha512-1W07cM9gS6DcLperZfFSj+bWLtaPGSOHWhPiGzXmvVJbRLdG82sH/Kn8EtW1VqWVA54AKf2h5k5BbnIbwF3h6w=="],
 
-    "brace-expansion": ["brace-expansion@2.1.5", "", { "dependencies": { "balanced-match": "^1.0.0" } }, "sha512-e0VJ0fmvneQOp40zURtHP5g5Upm5ePrWh9uAOMVq6igutPAEalW2aL38eBYt05XSabFLGZsScw8YpqkwpD5Gvg=="],
+    "brace-expansion": ["brace-expansion@2.1.6", "", { "dependencies": { "balanced-match": "^1.0.0" } }, "sha512-pi/WFpBvCBmB/NsURt7hW5sDvuOqvJaDMDai7CrlT9xoehzWRzo/dhQRKqOhpPvlnicVaTzHCbzGnnTgpvMTFw=="],
 
     "braces": ["braces@3.0.3", "", { "dependencies": { "fill-range": "^7.1.1" } }, "sha512-yQbXgO/OSZVD2IsiLlro+7Hf6Q18EJrKSEsdoMzKePKXct3gvD8oLcOQdIzGupr5Fj+EDe8gO/lxc1BzfMpxvA=="],
 
@@ -853,7 +838,7 @@
 
     "ultracite": ["ultracite@7.12.0", "", { "dependencies": { "@clack/prompts": "^1.7.0", "cli-truncate": "^6.1.1", "commander": "^15.0.0", "deepmerge": "^4.3.1", "empathic": "^2.0.1", "execa": "^10.0.1", "fast-glob": "^3.3.3", "find-workspaces": "^0.3.1", "jsonc-parser": "^3.3.1", "log-update": "^8.0.0", "magicast": "^0.5.4", "nypm": "^0.6.9", "resolve.exports": "^2.0.3", "semver": "^7.8.5", "string-width": "^8.2.2", "yaml": "^2.9.0", "zod": "^4.5.4" }, "peerDependencies": { "@biomejs/biome": "^2.5.0", "eslint": "^10.0.0", "oxfmt": ">=0.40.0", "oxlint": "^1.79.0", "prettier": "^3.0.0", "stylelint": "^17.0.0" }, "optionalPeers": ["@biomejs/biome", "eslint", "oxfmt", "oxlint", "prettier", "stylelint"], "bin": { "ultracite": "dist/index.js" } }, "sha512-thOrO9IMaEcGjQrwp44W5UNm9muLIY/vVD83hVPhQ5wZncSAQB+qWq6U78QgVAoWaD3mDpkZDvfwF+JLSQtZzg=="],
 
-    "undici": ["undici@8.10.2", "", {}, "sha512-/y4/bH9YNU5hi9NIrpOuvGXFcxrj3CMrV+/AYpowAYTpHn8gX/XPFjNy766FPoYY0miQhdW977JFWKGNhBdwyQ=="],
+    "undici": ["undici@8.11.2", "", {}, "sha512-u4UB2/IrKdU6lFxumHmmo1a3fCQO5tzQllRorfoRS63txhrB7xTpSn1PftwC4qEHkOaqP95fCWW4lJzwErwzhQ=="],
 
     "undici-types": ["undici-types@8.9.0", "", {}, "sha512-KTDyRTYX8sWmKXAikPHHSyc63CRPETMctyjKFupcC6OBLXT3xsN0e9aF7m+mIXutFWpUXuedtowG7iLOzp0kQg=="],
 
