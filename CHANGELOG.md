@@ -4,6 +4,18 @@ All notable changes to `drizzle-spanner` are recorded here. Both packages in
 this repository version and release in lockstep from a single `v<version>`
 tag; see [RELEASING.md](RELEASING.md).
 
+## [0.1.3](https://github.com/brandhaug/drizzle-spanner/compare/v0.1.2...v0.1.3) (2026-10-01)
+
+
+### Bug Fixes
+
+* **security:** override 2 vulnerable transitive dependencies ([#85](https://github.com/brandhaug/drizzle-spanner/issues/85)) ([1786e4d](https://github.com/brandhaug/drizzle-spanner/commit/1786e4df3f034b36b1b442b6574f114170a6b3e6))
+
+
+### Miscellaneous
+
+* **deps:** bump ultracite from 7.12.0 to 7.12.1 ([#84](https://github.com/brandhaug/drizzle-spanner/issues/84)) ([1cfd37f](https://github.com/brandhaug/drizzle-spanner/commit/1cfd37f06050eb367a5ea38a34afa80a6e3b44b0))
+
 ## [0.1.2](https://github.com/brandhaug/drizzle-spanner/compare/v0.1.1...v0.1.2) (2026-10-01)
 
 
