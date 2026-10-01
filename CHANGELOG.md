@@ -4,6 +4,23 @@ All notable changes to `drizzle-spanner` are recorded here. Both packages in
 this repository version and release in lockstep from a single `v<version>`
 tag; see [RELEASING.md](RELEASING.md).
 
+## [0.1.2](https://github.com/brandhaug/drizzle-spanner/compare/v0.1.1...v0.1.2) (2026-10-01)
+
+
+### Bug Fixes
+
+* **security:** override 7 vulnerable transitive dependencies ([#81](https://github.com/brandhaug/drizzle-spanner/issues/81)) ([8bec0e7](https://github.com/brandhaug/drizzle-spanner/commit/8bec0e7b5bb7e5803d340c961222488bb2490d9e))
+
+
+### Miscellaneous
+
+* **deps:** bump @types/node from 26.6.1 to 26.6.2 ([#76](https://github.com/brandhaug/drizzle-spanner/issues/76)) ([9328a58](https://github.com/brandhaug/drizzle-spanner/commit/9328a58e43298ecac5b7a6c0a5eba0a672afd63a))
+* **deps:** bump @types/node from 26.6.2 to 26.6.3 ([#82](https://github.com/brandhaug/drizzle-spanner/issues/82)) ([c6ebf71](https://github.com/brandhaug/drizzle-spanner/commit/c6ebf71cd27d4a6a1638aaec0a49e7efcbec0705))
+* **deps:** bump lint-staged from 17.5.1 to 17.6.0 ([#83](https://github.com/brandhaug/drizzle-spanner/issues/83)) ([710ad63](https://github.com/brandhaug/drizzle-spanner/commit/710ad63c5cdafe940db081b4fa8411eb042977d9))
+* **deps:** bump oxfmt from 0.68.0 to 0.70.0 ([#78](https://github.com/brandhaug/drizzle-spanner/issues/78)) ([a9064c5](https://github.com/brandhaug/drizzle-spanner/commit/a9064c5d01ff6ff60c23b59849090e19528e7a29))
+* **deps:** bump oxlint from 1.83.0 to 1.85.0 ([#79](https://github.com/brandhaug/drizzle-spanner/issues/79)) ([4f0cdc2](https://github.com/brandhaug/drizzle-spanner/commit/4f0cdc2f5fa62a1c3c6c8a2aed02553a493c5873))
+* **deps:** bump oxlint-tsgolint from 7.0.2002 to 7.0.2003 ([#80](https://github.com/brandhaug/drizzle-spanner/issues/80)) ([f81a0b8](https://github.com/brandhaug/drizzle-spanner/commit/f81a0b83f69845d5fe9cf5e6e5554ee7f5f64fd0))
+
 ## [0.1.1](https://github.com/brandhaug/drizzle-spanner/compare/v0.1.0...v0.1.1) (2026-09-21)
 
 
