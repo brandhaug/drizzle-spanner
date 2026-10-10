@@ -4,6 +4,18 @@ All notable changes to `drizzle-spanner` are recorded here. Both packages in
 this repository version and release in lockstep from a single `v<version>`
 tag; see [RELEASING.md](RELEASING.md).
 
+## [0.1.6](https://github.com/brandhaug/drizzle-spanner/compare/v0.1.5...v0.1.6) (2026-10-10)
+
+
+### Miscellaneous
+
+* **deps:** bump @types/node from 26.6.3 to 26.6.4 ([#96](https://github.com/brandhaug/drizzle-spanner/issues/96)) ([16998a7](https://github.com/brandhaug/drizzle-spanner/commit/16998a77945f1ee917dd23d8d9ce0a3151b5c05c))
+* **deps:** bump oxlint from 1.86.0 to 1.87.0 ([#99](https://github.com/brandhaug/drizzle-spanner/issues/99)) ([7d7a8a7](https://github.com/brandhaug/drizzle-spanner/commit/7d7a8a7e744b3368862e4a89c40996e5429270a2))
+* **deps:** bump testcontainers from 12.1.0 to 12.2.0 ([#93](https://github.com/brandhaug/drizzle-spanner/issues/93)) ([a0e5ed7](https://github.com/brandhaug/drizzle-spanner/commit/a0e5ed740f2e7aa2a40afd33bf8792d5e62b4e53))
+* **deps:** bump ultracite from 7.12.1 to 7.12.2 ([#94](https://github.com/brandhaug/drizzle-spanner/issues/94)) ([fb2ac44](https://github.com/brandhaug/drizzle-spanner/commit/fb2ac44eea3be3186eb2266ff5ca6276ce890476))
+* **deps:** bump ultracite from 7.12.2 to 7.12.4 ([#100](https://github.com/brandhaug/drizzle-spanner/issues/100)) ([9bf1d00](https://github.com/brandhaug/drizzle-spanner/commit/9bf1d008d6b5ccdec07648cb4c473676a79b27fe))
+* remove repository custom skills ([#97](https://github.com/brandhaug/drizzle-spanner/issues/97)) ([ca79646](https://github.com/brandhaug/drizzle-spanner/commit/ca79646964a8821d90bea8d91fddd53dc823dcbd))
+
 ## [0.1.5](https://github.com/brandhaug/drizzle-spanner/compare/v0.1.4...v0.1.5) (2026-10-01)
 
 
