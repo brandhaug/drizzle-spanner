@@ -109,7 +109,7 @@
     "oxfmt": "0.72.0",
     "oxlint": "1.87.0",
     "oxlint-tsgolint": "7.0.2004",
-    "testcontainers": "12.2.0",
+    "testcontainers": "12.2.1",
     "typescript": "7.0.2",
     "ultracite": "8.0.0"
   }
