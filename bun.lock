@@ -53,7 +53,7 @@
   },
   "catalog": {
     "@arethetypeswrong/cli": "0.18.5",
-    "@google-cloud/spanner": "9.0.0",
+    "@google-cloud/spanner": "9.1.0",
     "@types/node": "26.6.5",
     "drizzle-orm": "1.0.0-rc.4",
     "lint-staged": "17.6.0",
@@ -125,7 +125,7 @@
 
     "@google-cloud/promisify": ["@google-cloud/promisify@6.1.0", "", {}, "sha512-H+Rytzi5zYMyoAmU/zgYLgq7fJ9FY4QQEg4k6gfFx/RY1COJ2xxyIfe8bZ62lqEbWM1DJH7IYETqTFmqNtuUhQ=="],
 
-    "@google-cloud/spanner": ["@google-cloud/spanner@9.0.0", "", { "dependencies": { "@babel/core": "7.27.7", "@babel/helpers": "7.27.6", "@babel/traverse": "7.27.7", "@google-cloud/common": "^8.0.0", "@google-cloud/monitoring": "^6.0.0", "@google-cloud/precise-date": "^6.0.0", "@google-cloud/promisify": "^6.0.0", "@google-cloud/spanner-api": "^0.4.0", "@grpc/grpc-js": "^1.13.2", "@grpc/proto-loader": "^0.8.0", "@opentelemetry/api": "^1.9.0", "@opentelemetry/context-async-hooks": "^2.0.0", "@opentelemetry/core": "^2.0.0", "@opentelemetry/resource-detector-gcp": "^0.57.0", "@opentelemetry/resources": "^2.11.0", "@opentelemetry/sdk-metrics": "^2.11.0", "@opentelemetry/semantic-conventions": "^1.30.0", "@types/big.js": "^6.2.2", "@types/stack-trace": "^0.0.33", "big.js": "^7.0.0", "duplexify": "^4.1.3", "extend": "^3.0.2", "google-auth-library": "^11.0.0", "google-gax": "^6.0.0", "grpc-gcp": "^1.0.1", "lodash.snakecase": "^4.1.1", "p-queue": "^6.0.2", "protobufjs": "^7.4.0", "retry-request": "^9.0.0", "stack-trace": "0.0.10", "stream-events": "^1.0.5", "teeny-request": "^11.0.0", "through2": "^4.0.2" } }, "sha512-YiccycBahw7xfOmJs7HGYXgxYi/1DWRNHF5KWUwgufIRENG9M5/b0d8eRXHUkFLDlVdrbbVIQnddQFotS2KF8A=="],
+    "@google-cloud/spanner": ["@google-cloud/spanner@9.1.0", "", { "dependencies": { "@babel/core": "7.27.7", "@babel/helpers": "7.27.6", "@babel/traverse": "7.27.7", "@google-cloud/common": "^8.0.0", "@google-cloud/monitoring": "^6.0.0", "@google-cloud/precise-date": "^6.0.0", "@google-cloud/promisify": "^6.0.0", "@google-cloud/spanner-api": "^0.4.0", "@grpc/grpc-js": "^1.13.2", "@grpc/proto-loader": "^0.8.0", "@opentelemetry/api": "^1.9.0", "@opentelemetry/context-async-hooks": "^2.0.0", "@opentelemetry/core": "^2.0.0", "@opentelemetry/resource-detector-gcp": "^0.57.0", "@opentelemetry/resources": "^2.11.0", "@opentelemetry/sdk-metrics": "^2.11.0", "@opentelemetry/semantic-conventions": "^1.30.0", "@types/big.js": "^6.2.2", "big.js": "^7.0.0", "duplexify": "^4.1.3", "extend": "^3.0.2", "google-auth-library": "^11.0.0", "google-gax": "^6.0.0", "grpc-gcp": "^1.0.1", "lodash.snakecase": "^4.1.1", "protobufjs": "^7.4.0", "retry-request": "^9.0.0", "stream-events": "^1.0.5", "teeny-request": "^11.0.0", "through2": "^4.0.2" } }, "sha512-JW4QtfHNameq+R0F/8MvmefAdMJfAliuKRdeamQSKiiPuZmHVapRJhORDp7UWKITAGdAwz/i0dYRlR/jDPKCYg=="],
 
     "@google-cloud/spanner-api": ["@google-cloud/spanner-api@0.4.0", "", { "dependencies": { "google-gax": "^6.0.0" } }, "sha512-W4i/M9+rg/CqeH3fWd9mJfrA+QuYkyMZfJTDYVmQ/6B5lfQhvhK7DkOkz1/yp9+lh+wDJCL+S6J515R+ciNSaQ=="],
 
@@ -296,8 +296,6 @@
     "@types/ssh2": ["@types/ssh2@1.15.6", "", { "dependencies": { "@types/node": "^18.11.18" } }, "sha512-oGdxhBqcRTwSTKFm+9EiKzkNVYRLEFkcW44lhguvBalGJbWfGnDt/ezwSUZc+SF9m9bMc3VyklNAtp7zICjS5w=="],
 
     "@types/ssh2-streams": ["@types/ssh2-streams@0.1.13", "", { "dependencies": { "@types/node": "*" } }, "sha512-faHyY3brO9oLEA0QlcO8N2wT7R0+1sHWZvQ+y3rMLwdY1ZyS1z0W3t65j9PqT4HmQ6ALzNe7RZlNuCNE0wBSWA=="],
-
-    "@types/stack-trace": ["@types/stack-trace@0.0.33", "", {}, "sha512-O7in6531Bbvlb2KEsJ0dq0CHZvc3iWSR5ZYMtvGgnHA56VgriAN/AU2LorfmcvAl2xc9N5fbCTRyMRRl8nd74g=="],
 
     "@typescript/typescript-aix-ppc64": ["@typescript/typescript-aix-ppc64@7.0.2", "", { "os": "aix", "cpu": "ppc64" }, "sha512-MTKKkWB7p/0E9xi1d1tHtZ5PiLkGEMIq88pK2CubZjOsLtYTLqhgIgi6zepFa+9GHZ6h05NMCkQxGKiPXMxXtQ=="],
 
@@ -493,8 +491,6 @@
 
     "event-target-shim": ["event-target-shim@5.0.1", "", {}, "sha512-i/2XbnSz/uxRCU6+NdVJgKWDTM427+MqYbkQzD321DuCQJUqOuJKIA0IM2+W2xtYHdKOmZ4dR6fExsd4SXL+WQ=="],
 
-    "eventemitter3": ["eventemitter3@4.0.7", "", {}, "sha512-8guHBZCwKnFhYdHr2ysuRWErTwhoN2X8XELRlrRwpmfeY2jjuUN4taQMsULKUVo1K4DvZl+0pgfyoysHxvmvEw=="],
-
     "events": ["events@3.3.0", "", {}, "sha512-mQw+2fkQbALzQ7V0MY0IqdnXNOeTtP4r0lN9z7AAawCXgqea7bDii20AYrIBrFd/Hx0M2Ocz6S111CaFkUcb0Q=="],
 
     "events-universal": ["events-universal@1.0.1", "", { "dependencies": { "bare-events": "^2.7.0" } }, "sha512-LUd5euvbMLpwOF8m6ivPCbhQeSiYVNb8Vs0fQ8QjXo0JTkEHpz8pxdQf0gStltaPpw0Cca8b39KxvK9cfKRiAw=="],
@@ -683,12 +679,6 @@
 
     "oxlint-tsgolint": ["oxlint-tsgolint@7.0.2004", "", { "optionalDependencies": { "@oxlint-tsgolint/darwin-arm64": "7.0.2004", "@oxlint-tsgolint/darwin-x64": "7.0.2004", "@oxlint-tsgolint/linux-arm64": "7.0.2004", "@oxlint-tsgolint/linux-x64": "7.0.2004", "@oxlint-tsgolint/win32-arm64": "7.0.2004", "@oxlint-tsgolint/win32-x64": "7.0.2004" }, "bin": { "tsgolint": "./bin/tsgolint.js" } }, "sha512-vQ9WDF3fiZJvRdSDosNOflerOCOpwol6vWzVDxW76RcU19cjTh7engvkHLvmv+tzedR8fAiJUVUGr6IVZdkzXQ=="],
 
-    "p-finally": ["p-finally@1.0.0", "", {}, "sha512-LICb2p9CB7FS+0eR1oqWnHhp0FljGLZCWBE9aix0Uye9W8LTQPwMTYVGWQWIw9RdQiDg4+epXQODwIYJtSJaow=="],
-
-    "p-queue": ["p-queue@6.6.2", "", { "dependencies": { "eventemitter3": "^4.0.4", "p-timeout": "^3.2.0" } }, "sha512-RwFpb72c/BhQLEXIZ5K2e+AhgNVmIejGlTgiB9MzZ0e93GRvqZ7uSi0dvRF7/XIXDeNkra2fNHBxTyPDGySpjQ=="],
-
-    "p-timeout": ["p-timeout@3.2.0", "", { "dependencies": { "p-finally": "^1.0.0" } }, "sha512-rhIwUycgwwKcP9yTOOFK/AKsAopjjCakVqLHePO3CC6Mir1Z99xT+R63jZxAT5lFZLa2inS5h+ZS2GvR99/FBg=="],
-
     "package-json-from-dist": ["package-json-from-dist@1.0.1", "", {}, "sha512-UEZIS3/by4OC8vL3P2dTXRETpebLI2NiI5vIrjaD/5UtrkFX/tNbwjTSRAGC/+7CAo2pIcBaRgWmcBBHcsaCIw=="],
 
     "parse-ms": ["parse-ms@4.0.0", "", {}, "sha512-TXfryirbmq34y8QBwgqCVLi+8oA3oWx2eAnSn62ITyEhEYaWRlVZ2DvMM9eZbMs/RfxPu/PK/aBLyGj4IrqMHw=="],
@@ -772,8 +762,6 @@
     "ssh-remote-port-forward": ["ssh-remote-port-forward@1.0.4", "", { "dependencies": { "@types/ssh2": "^0.5.48", "ssh2": "^1.4.0" } }, "sha512-x0LV1eVDwjf1gmG7TTnfqIzf+3VPRz7vrNIjX6oYLbeCrf/PeVY6hkT68Mg+q02qXxQhrLjB0jfgvhevoCRmLQ=="],
 
     "ssh2": ["ssh2@1.17.0", "", { "dependencies": { "asn1": "^0.2.6", "bcrypt-pbkdf": "^1.0.2" }, "optionalDependencies": { "cpu-features": "~0.0.10", "nan": "^2.23.0" } }, "sha512-wPldCk3asibAjQ/kziWQQt1Wh3PgDFpC0XpwclzKcdT1vql6KeYxf5LIt4nlFkUeR8WuphYMKqUA56X4rjbfgQ=="],
-
-    "stack-trace": ["stack-trace@0.0.10", "", {}, "sha512-KGzahc7puUKkzyMt+IqAep+TVNbKP+k2Lmwhub39m1AsTSkaDutx56aDCo+HLDzf/D26BIHTJWNiTG1KAJiQCg=="],
 
     "stream-events": ["stream-events@1.0.5", "", { "dependencies": { "stubs": "^3.0.0" } }, "sha512-E1GUzBSgvct8Jsb3v2X15pjzN1tYebtbLaMg+eBOUOAxgbLoSbT2NS91ckc5lJD1KfLjId+jXJRgo0qnV5Nerg=="],
 
