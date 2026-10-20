@@ -138,7 +138,7 @@ through.
   this mode the insert, update, and delete builders compile to Spanner
   mutations buffered until commit; reads and `.returning()` throw typed
   errors. Model: `ruby-spanner-activerecord`'s `isolation:
-:buffered_mutations`. There is no `db.mutate` namespace in v1. The open
+  :buffered_mutations`. There is no `db.mutate` namespace in v1. The open
   item on `INSERT OR UPDATE` availability is resolved: it is available,
   including with `THEN RETURN` (see `docs/adr/0002-upsert-via-insert-or-update.md`);
   the upsert API ships after milestone 2.

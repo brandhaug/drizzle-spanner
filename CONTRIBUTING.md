@@ -27,9 +27,12 @@ npm run build -w drizzle-spanner-kit
 | `npm run lint`                 | oxlint over the workspace (`npm run lint:fix` applies fixes)        |
 | `npm run format`               | oxfmt over the workspace (`npm run format:check` in CI)             |
 | `npm run check`                | typecheck + lint + format check + unit tests                        |
-| `npm run typecheck`            | `tsc --noEmit` over the whole workspace                             |
+| `npm run typecheck`            | `bun --check` over the whole workspace, requires Bun 1.4.3          |
 | `npm run check:types`          | `arethetypeswrong` against the packed tarballs                      |
 | `npm run check:pack`           | `npm pack` contents match the dist-only whitelist                   |
+
+`bun --check` invokes Bun's native type checker without selecting this repo's
+`check` script. Both package builds still use `tsc` to emit JavaScript and declarations.
 
 All tests run under `bun test`. Integration tests expect a running emulator
 (`bun test` runs every file in one process, so it cannot manage per-file
