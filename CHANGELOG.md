@@ -4,6 +4,13 @@ All notable changes to `drizzle-spanner` are recorded here. Both packages in
 this repository version and release in lockstep from a single `v<version>`
 tag; see [RELEASING.md](RELEASING.md).
 
+## [0.1.7](https://github.com/brandhaug/drizzle-spanner/compare/v0.1.6...v0.1.7) (2026-10-20)
+
+
+### Miscellaneous
+
+* **deps:** group coupled catalog updates ([#110](https://github.com/brandhaug/drizzle-spanner/issues/110)) ([6c09425](https://github.com/brandhaug/drizzle-spanner/commit/6c09425111b27a58cc27f036597a323fc59bcccd))
+
 ## [0.1.6](https://github.com/brandhaug/drizzle-spanner/compare/v0.1.5...v0.1.6) (2026-10-20)
 
 
