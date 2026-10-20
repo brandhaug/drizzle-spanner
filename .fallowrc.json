@@ -36,5 +36,6 @@
       "policyViolations": 0
     }
   },
-  "ignoreDependencies": ["ultracite", "drizzle-spanner", "dependency-cruiser"]
+  "ignorePatterns": ["vendor/**"],
+  "ignoreDependencies": ["drizzle-spanner", "dependency-cruiser"]
 }

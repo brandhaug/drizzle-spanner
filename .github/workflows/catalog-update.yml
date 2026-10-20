@@ -33,5 +33,6 @@ jobs:
 
       - uses: brandhaug/catalog-update-action@v1
         with:
+          bun-version: '1.4.3'
           config: '.catalog-updaterc.json'
           token: ${{ secrets.CI_PAT }}

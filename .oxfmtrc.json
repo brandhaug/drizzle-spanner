@@ -4,5 +4,12 @@
   "trailingComma": "none",
   "printWidth": 88,
   "indentStyle": "tab",
-  "ignorePatterns": ["**/dist/**", "**/*.d.ts", "agent/**", ".agents/**", ".claude/**"]
+  "ignorePatterns": [
+    "**/dist/**",
+    "**/*.d.ts",
+    "agent/**",
+    ".agents/**",
+    ".claude/**",
+    "vendor/**"
+  ]
 }

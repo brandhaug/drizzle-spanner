@@ -6,65 +6,58 @@ tag; see [RELEASING.md](RELEASING.md).
 
 ## [0.1.5](https://github.com/brandhaug/drizzle-spanner/compare/v0.1.4...v0.1.5) (2026-10-01)
 
-
 ### Miscellaneous
 
-* **deps:** bump oxfmt from 0.70.0 to 0.71.0 ([#90](https://github.com/brandhaug/drizzle-spanner/issues/90)) ([7d64a2d](https://github.com/brandhaug/drizzle-spanner/commit/7d64a2de7f23fcc227901c242b2155233fd61323))
-* **deps:** bump oxlint from 1.85.0 to 1.86.0 ([#91](https://github.com/brandhaug/drizzle-spanner/issues/91)) ([c66c532](https://github.com/brandhaug/drizzle-spanner/commit/c66c532e93c85fec8717eca64540b237c63791a2))
+- **deps:** bump oxfmt from 0.70.0 to 0.71.0 ([#90](https://github.com/brandhaug/drizzle-spanner/issues/90)) ([7d64a2d](https://github.com/brandhaug/drizzle-spanner/commit/7d64a2de7f23fcc227901c242b2155233fd61323))
+- **deps:** bump oxlint from 1.85.0 to 1.86.0 ([#91](https://github.com/brandhaug/drizzle-spanner/issues/91)) ([c66c532](https://github.com/brandhaug/drizzle-spanner/commit/c66c532e93c85fec8717eca64540b237c63791a2))
 
 ## [0.1.4](https://github.com/brandhaug/drizzle-spanner/compare/v0.1.3...v0.1.4) (2026-10-01)
 
-
 ### Bug Fixes
 
-* **security:** override 1 vulnerable transitive dependency ([#88](https://github.com/brandhaug/drizzle-spanner/issues/88)) ([8d9e3e5](https://github.com/brandhaug/drizzle-spanner/commit/8d9e3e5398a4976775775a7d48e6403855709033))
+- **security:** override 1 vulnerable transitive dependency ([#88](https://github.com/brandhaug/drizzle-spanner/issues/88)) ([8d9e3e5](https://github.com/brandhaug/drizzle-spanner/commit/8d9e3e5398a4976775775a7d48e6403855709033))
 
 ## [0.1.3](https://github.com/brandhaug/drizzle-spanner/compare/v0.1.2...v0.1.3) (2026-10-01)
 
-
 ### Bug Fixes
 
-* **security:** override 2 vulnerable transitive dependencies ([#85](https://github.com/brandhaug/drizzle-spanner/issues/85)) ([1786e4d](https://github.com/brandhaug/drizzle-spanner/commit/1786e4df3f034b36b1b442b6574f114170a6b3e6))
-
+- **security:** override 2 vulnerable transitive dependencies ([#85](https://github.com/brandhaug/drizzle-spanner/issues/85)) ([1786e4d](https://github.com/brandhaug/drizzle-spanner/commit/1786e4df3f034b36b1b442b6574f114170a6b3e6))
 
 ### Miscellaneous
 
-* **deps:** bump ultracite from 7.12.0 to 7.12.1 ([#84](https://github.com/brandhaug/drizzle-spanner/issues/84)) ([1cfd37f](https://github.com/brandhaug/drizzle-spanner/commit/1cfd37f06050eb367a5ea38a34afa80a6e3b44b0))
+- **deps:** bump ultracite from 7.12.0 to 7.12.1 ([#84](https://github.com/brandhaug/drizzle-spanner/issues/84)) ([1cfd37f](https://github.com/brandhaug/drizzle-spanner/commit/1cfd37f06050eb367a5ea38a34afa80a6e3b44b0))
 
 ## [0.1.2](https://github.com/brandhaug/drizzle-spanner/compare/v0.1.1...v0.1.2) (2026-10-01)
 
-
 ### Bug Fixes
 
-* **security:** override 7 vulnerable transitive dependencies ([#81](https://github.com/brandhaug/drizzle-spanner/issues/81)) ([8bec0e7](https://github.com/brandhaug/drizzle-spanner/commit/8bec0e7b5bb7e5803d340c961222488bb2490d9e))
-
+- **security:** override 7 vulnerable transitive dependencies ([#81](https://github.com/brandhaug/drizzle-spanner/issues/81)) ([8bec0e7](https://github.com/brandhaug/drizzle-spanner/commit/8bec0e7b5bb7e5803d340c961222488bb2490d9e))
 
 ### Miscellaneous
 
-* **deps:** bump @types/node from 26.6.1 to 26.6.2 ([#76](https://github.com/brandhaug/drizzle-spanner/issues/76)) ([9328a58](https://github.com/brandhaug/drizzle-spanner/commit/9328a58e43298ecac5b7a6c0a5eba0a672afd63a))
-* **deps:** bump @types/node from 26.6.2 to 26.6.3 ([#82](https://github.com/brandhaug/drizzle-spanner/issues/82)) ([c6ebf71](https://github.com/brandhaug/drizzle-spanner/commit/c6ebf71cd27d4a6a1638aaec0a49e7efcbec0705))
-* **deps:** bump lint-staged from 17.5.1 to 17.6.0 ([#83](https://github.com/brandhaug/drizzle-spanner/issues/83)) ([710ad63](https://github.com/brandhaug/drizzle-spanner/commit/710ad63c5cdafe940db081b4fa8411eb042977d9))
-* **deps:** bump oxfmt from 0.68.0 to 0.70.0 ([#78](https://github.com/brandhaug/drizzle-spanner/issues/78)) ([a9064c5](https://github.com/brandhaug/drizzle-spanner/commit/a9064c5d01ff6ff60c23b59849090e19528e7a29))
-* **deps:** bump oxlint from 1.83.0 to 1.85.0 ([#79](https://github.com/brandhaug/drizzle-spanner/issues/79)) ([4f0cdc2](https://github.com/brandhaug/drizzle-spanner/commit/4f0cdc2f5fa62a1c3c6c8a2aed02553a493c5873))
-* **deps:** bump oxlint-tsgolint from 7.0.2002 to 7.0.2003 ([#80](https://github.com/brandhaug/drizzle-spanner/issues/80)) ([f81a0b8](https://github.com/brandhaug/drizzle-spanner/commit/f81a0b83f69845d5fe9cf5e6e5554ee7f5f64fd0))
+- **deps:** bump @types/node from 26.6.1 to 26.6.2 ([#76](https://github.com/brandhaug/drizzle-spanner/issues/76)) ([9328a58](https://github.com/brandhaug/drizzle-spanner/commit/9328a58e43298ecac5b7a6c0a5eba0a672afd63a))
+- **deps:** bump @types/node from 26.6.2 to 26.6.3 ([#82](https://github.com/brandhaug/drizzle-spanner/issues/82)) ([c6ebf71](https://github.com/brandhaug/drizzle-spanner/commit/c6ebf71cd27d4a6a1638aaec0a49e7efcbec0705))
+- **deps:** bump lint-staged from 17.5.1 to 17.6.0 ([#83](https://github.com/brandhaug/drizzle-spanner/issues/83)) ([710ad63](https://github.com/brandhaug/drizzle-spanner/commit/710ad63c5cdafe940db081b4fa8411eb042977d9))
+- **deps:** bump oxfmt from 0.68.0 to 0.70.0 ([#78](https://github.com/brandhaug/drizzle-spanner/issues/78)) ([a9064c5](https://github.com/brandhaug/drizzle-spanner/commit/a9064c5d01ff6ff60c23b59849090e19528e7a29))
+- **deps:** bump oxlint from 1.83.0 to 1.85.0 ([#79](https://github.com/brandhaug/drizzle-spanner/issues/79)) ([4f0cdc2](https://github.com/brandhaug/drizzle-spanner/commit/4f0cdc2f5fa62a1c3c6c8a2aed02553a493c5873))
+- **deps:** bump oxlint-tsgolint from 7.0.2002 to 7.0.2003 ([#80](https://github.com/brandhaug/drizzle-spanner/issues/80)) ([f81a0b8](https://github.com/brandhaug/drizzle-spanner/commit/f81a0b83f69845d5fe9cf5e6e5554ee7f5f64fd0))
 
 ## [0.1.1](https://github.com/brandhaug/drizzle-spanner/compare/v0.1.0...v0.1.1) (2026-09-21)
 
-
 ### Miscellaneous
 
-* **deps:** bump @google-cloud/spanner from 8.11.0 to 8.12.0 ([#69](https://github.com/brandhaug/drizzle-spanner/issues/69)) ([08c7b23](https://github.com/brandhaug/drizzle-spanner/commit/08c7b236d517ff02f74b3301ce0abd135ef49d1b))
-* **deps:** bump @types/node from 26.4.1 to 26.6.1 ([#71](https://github.com/brandhaug/drizzle-spanner/issues/71)) ([2367dd3](https://github.com/brandhaug/drizzle-spanner/commit/2367dd3afe96b37631a8158edb6e62feb0cb6351))
-* **deps:** bump lint-staged from 17.4.1 to 17.5.0 ([#62](https://github.com/brandhaug/drizzle-spanner/issues/62)) ([12482cf](https://github.com/brandhaug/drizzle-spanner/commit/12482cfe93b7987f2a3cea056de40c98b9eb84ce))
-* **deps:** bump lint-staged from 17.5.0 to 17.5.1 ([#68](https://github.com/brandhaug/drizzle-spanner/issues/68)) ([d79b358](https://github.com/brandhaug/drizzle-spanner/commit/d79b3586550b74e177e2d5e0554a8c753690de03))
-* **deps:** bump oxfmt from 0.66.0 to 0.67.0 ([#64](https://github.com/brandhaug/drizzle-spanner/issues/64)) ([9310ab4](https://github.com/brandhaug/drizzle-spanner/commit/9310ab4dc19667a6c7e09a1209d1550466b2b620))
-* **deps:** bump oxfmt from 0.67.0 to 0.68.0 ([#72](https://github.com/brandhaug/drizzle-spanner/issues/72)) ([c43f219](https://github.com/brandhaug/drizzle-spanner/commit/c43f21970e0bca2f24588fc6aaed06ade0981c74))
-* **deps:** bump oxlint from 1.81.0 to 1.82.0 ([#65](https://github.com/brandhaug/drizzle-spanner/issues/65)) ([d1f77b4](https://github.com/brandhaug/drizzle-spanner/commit/d1f77b4f11f9ad0fc3f74e26bdb420c8b4653a7c))
-* **deps:** bump oxlint from 1.82.0 to 1.83.0 ([#73](https://github.com/brandhaug/drizzle-spanner/issues/73)) ([f0bd084](https://github.com/brandhaug/drizzle-spanner/commit/f0bd084f5197c85cd44b2210d8d001fd508c5ec7))
-* **deps:** bump oxlint-tsgolint from 7.0.2001 to 7.0.2002 ([#75](https://github.com/brandhaug/drizzle-spanner/issues/75)) ([a57f92d](https://github.com/brandhaug/drizzle-spanner/commit/a57f92d8a945e9463ff8360cd57fb94de5765764))
-* **deps:** bump ultracite from 7.10.7 to 7.11.0 ([#57](https://github.com/brandhaug/drizzle-spanner/issues/57)) ([0c2f790](https://github.com/brandhaug/drizzle-spanner/commit/0c2f7903d44625e1018739e4b831b3cc1c7d6f17))
-* **deps:** bump ultracite from 7.11.0 to 7.11.1 ([#67](https://github.com/brandhaug/drizzle-spanner/issues/67)) ([2d0094a](https://github.com/brandhaug/drizzle-spanner/commit/2d0094a3325e0dcea2734ab87e4ee908df06710b))
-* **deps:** bump ultracite from 7.11.1 to 7.12.0 ([#74](https://github.com/brandhaug/drizzle-spanner/issues/74)) ([2622de4](https://github.com/brandhaug/drizzle-spanner/commit/2622de49ca9ef0af9b56645859546508adb955c5))
+- **deps:** bump @google-cloud/spanner from 8.11.0 to 8.12.0 ([#69](https://github.com/brandhaug/drizzle-spanner/issues/69)) ([08c7b23](https://github.com/brandhaug/drizzle-spanner/commit/08c7b236d517ff02f74b3301ce0abd135ef49d1b))
+- **deps:** bump @types/node from 26.4.1 to 26.6.1 ([#71](https://github.com/brandhaug/drizzle-spanner/issues/71)) ([2367dd3](https://github.com/brandhaug/drizzle-spanner/commit/2367dd3afe96b37631a8158edb6e62feb0cb6351))
+- **deps:** bump lint-staged from 17.4.1 to 17.5.0 ([#62](https://github.com/brandhaug/drizzle-spanner/issues/62)) ([12482cf](https://github.com/brandhaug/drizzle-spanner/commit/12482cfe93b7987f2a3cea056de40c98b9eb84ce))
+- **deps:** bump lint-staged from 17.5.0 to 17.5.1 ([#68](https://github.com/brandhaug/drizzle-spanner/issues/68)) ([d79b358](https://github.com/brandhaug/drizzle-spanner/commit/d79b3586550b74e177e2d5e0554a8c753690de03))
+- **deps:** bump oxfmt from 0.66.0 to 0.67.0 ([#64](https://github.com/brandhaug/drizzle-spanner/issues/64)) ([9310ab4](https://github.com/brandhaug/drizzle-spanner/commit/9310ab4dc19667a6c7e09a1209d1550466b2b620))
+- **deps:** bump oxfmt from 0.67.0 to 0.68.0 ([#72](https://github.com/brandhaug/drizzle-spanner/issues/72)) ([c43f219](https://github.com/brandhaug/drizzle-spanner/commit/c43f21970e0bca2f24588fc6aaed06ade0981c74))
+- **deps:** bump oxlint from 1.81.0 to 1.82.0 ([#65](https://github.com/brandhaug/drizzle-spanner/issues/65)) ([d1f77b4](https://github.com/brandhaug/drizzle-spanner/commit/d1f77b4f11f9ad0fc3f74e26bdb420c8b4653a7c))
+- **deps:** bump oxlint from 1.82.0 to 1.83.0 ([#73](https://github.com/brandhaug/drizzle-spanner/issues/73)) ([f0bd084](https://github.com/brandhaug/drizzle-spanner/commit/f0bd084f5197c85cd44b2210d8d001fd508c5ec7))
+- **deps:** bump oxlint-tsgolint from 7.0.2001 to 7.0.2002 ([#75](https://github.com/brandhaug/drizzle-spanner/issues/75)) ([a57f92d](https://github.com/brandhaug/drizzle-spanner/commit/a57f92d8a945e9463ff8360cd57fb94de5765764))
+- **deps:** bump ultracite from 7.10.7 to 7.11.0 ([#57](https://github.com/brandhaug/drizzle-spanner/issues/57)) ([0c2f790](https://github.com/brandhaug/drizzle-spanner/commit/0c2f7903d44625e1018739e4b831b3cc1c7d6f17))
+- **deps:** bump ultracite from 7.11.0 to 7.11.1 ([#67](https://github.com/brandhaug/drizzle-spanner/issues/67)) ([2d0094a](https://github.com/brandhaug/drizzle-spanner/commit/2d0094a3325e0dcea2734ab87e4ee908df06710b))
+- **deps:** bump ultracite from 7.11.1 to 7.12.0 ([#74](https://github.com/brandhaug/drizzle-spanner/issues/74)) ([2622de4](https://github.com/brandhaug/drizzle-spanner/commit/2622de49ca9ef0af9b56645859546508adb955c5))
 
 ## 0.1.0
 
