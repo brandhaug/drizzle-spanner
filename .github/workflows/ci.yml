@@ -55,10 +55,12 @@ jobs:
       - run: bun run --cwd packages/drizzle-spanner-kit build
       - run: bun run check:types
       - run: bun run check:pack
-      - name: Dry-run publish drizzle-spanner
-        run: npm publish --dry-run
-      - name: Dry-run publish drizzle-spanner-kit
-        run: npm publish --dry-run
+      # Packing checks the payload without requiring an unpublished version.
+      # npm publish --dry-run rejects versions already present in the registry.
+      - name: Dry-run pack drizzle-spanner
+        run: npm pack --dry-run
+      - name: Dry-run pack drizzle-spanner-kit
+        run: npm pack --dry-run
         working-directory: packages/drizzle-spanner-kit
 
   # Every supported drizzle-orm beta crossed with the shared emulator: a
