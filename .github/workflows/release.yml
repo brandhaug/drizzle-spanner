@@ -47,7 +47,7 @@ jobs:
           registry-url: https://registry.npmjs.org
       - uses: oven-sh/setup-bun@v2
         with:
-          bun-version: 1.4.3
+          bun-version: 1.4.4
       - run: bun install --frozen-lockfile
       - name: Check release versions and changelog
         run: bun scripts/release-check.ts "v$(node -p 'require("./package.json").version')"
