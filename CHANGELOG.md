@@ -4,6 +4,13 @@ All notable changes to `drizzle-spanner` are recorded here. Both packages in
 this repository version and release in lockstep from a single `v<version>`
 tag; see [RELEASING.md](RELEASING.md).
 
+## [0.1.8](https://github.com/brandhaug/drizzle-spanner/compare/v0.1.7...v0.1.8) (2026-10-22)
+
+
+### Miscellaneous
+
+* **tooling:** upgrade Bun to 1.4.4 ([#112](https://github.com/brandhaug/drizzle-spanner/issues/112)) ([2769d78](https://github.com/brandhaug/drizzle-spanner/commit/2769d785af41da40a5e28856a7f35bfbea1ca2c8))
+
 ## [0.1.7](https://github.com/brandhaug/drizzle-spanner/compare/v0.1.6...v0.1.7) (2026-10-20)
 
 
