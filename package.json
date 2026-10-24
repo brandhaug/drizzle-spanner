@@ -91,9 +91,8 @@
     }
   },
   "overrides": {
-    "@babel/core@>=7.0.0 <=7.29.0": "7.29.7",
-    "brace-expansion@>=2.0.0 <2.1.7": "2.1.7",
-    "drizzle-spanner": "file:."
+    "drizzle-spanner": "file:.",
+    "undici@>=8.0.0 <8.12.2": "8.12.2"
   },
   "engines": {
     "bun": ">=1.4.4",
