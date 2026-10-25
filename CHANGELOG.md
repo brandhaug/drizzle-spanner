@@ -6,43 +6,39 @@ tag; see [RELEASING.md](RELEASING.md).
 
 ## [0.1.8](https://github.com/brandhaug/drizzle-spanner/compare/v0.1.7...v0.1.8) (2026-10-22)
 
-
 ### Miscellaneous
 
-* **tooling:** upgrade Bun to 1.4.4 ([#112](https://github.com/brandhaug/drizzle-spanner/issues/112)) ([2769d78](https://github.com/brandhaug/drizzle-spanner/commit/2769d785af41da40a5e28856a7f35bfbea1ca2c8))
+- **tooling:** upgrade Bun to 1.4.4 ([#112](https://github.com/brandhaug/drizzle-spanner/issues/112)) ([2769d78](https://github.com/brandhaug/drizzle-spanner/commit/2769d785af41da40a5e28856a7f35bfbea1ca2c8))
 
 ## [0.1.7](https://github.com/brandhaug/drizzle-spanner/compare/v0.1.6...v0.1.7) (2026-10-20)
 
-
 ### Miscellaneous
 
-* **deps:** group coupled catalog updates ([#110](https://github.com/brandhaug/drizzle-spanner/issues/110)) ([6c09425](https://github.com/brandhaug/drizzle-spanner/commit/6c09425111b27a58cc27f036597a323fc59bcccd))
+- **deps:** group coupled catalog updates ([#110](https://github.com/brandhaug/drizzle-spanner/issues/110)) ([6c09425](https://github.com/brandhaug/drizzle-spanner/commit/6c09425111b27a58cc27f036597a323fc59bcccd))
 
 ## [0.1.6](https://github.com/brandhaug/drizzle-spanner/compare/v0.1.5...v0.1.6) (2026-10-20)
 
-
 ### Bug Fixes
 
-* **security:** update vulnerable Spanner development dependencies ([#109](https://github.com/brandhaug/drizzle-spanner/issues/109)) ([a8aa9d6](https://github.com/brandhaug/drizzle-spanner/commit/a8aa9d6e59c2ab760f30489207f46e61251f90a8))
-
+- **security:** update vulnerable Spanner development dependencies ([#109](https://github.com/brandhaug/drizzle-spanner/issues/109)) ([a8aa9d6](https://github.com/brandhaug/drizzle-spanner/commit/a8aa9d6e59c2ab760f30489207f46e61251f90a8))
 
 ### Miscellaneous
 
-* **deps:** bump @google-cloud/spanner from 9.0.0 to 9.1.0 ([#107](https://github.com/brandhaug/drizzle-spanner/issues/107)) ([7fc4ffe](https://github.com/brandhaug/drizzle-spanner/commit/7fc4ffe89b0d02f85dc6c2d0c265e0df50c5ec74))
-* **deps:** bump @types/node from 26.6.3 to 26.6.4 ([#96](https://github.com/brandhaug/drizzle-spanner/issues/96)) ([16998a7](https://github.com/brandhaug/drizzle-spanner/commit/16998a77945f1ee917dd23d8d9ce0a3151b5c05c))
-* **deps:** bump @types/node from 26.6.4 to 26.6.5 ([#101](https://github.com/brandhaug/drizzle-spanner/issues/101)) ([7e666b1](https://github.com/brandhaug/drizzle-spanner/commit/7e666b1e225c16f104c86ece811b2414104b0286))
-* **deps:** bump oxfmt from 0.71.0 to 0.72.0 ([#98](https://github.com/brandhaug/drizzle-spanner/issues/98)) ([fa9fded](https://github.com/brandhaug/drizzle-spanner/commit/fa9fded0ece020edd5ba6ecd1fce7b4d835606ea))
-* **deps:** bump oxfmt from 0.72.0 to 0.73.0 ([#104](https://github.com/brandhaug/drizzle-spanner/issues/104)) ([21834de](https://github.com/brandhaug/drizzle-spanner/commit/21834de66e577cdacb98f19466ea20fcb7180907))
-* **deps:** bump oxlint from 1.86.0 to 1.87.0 ([#99](https://github.com/brandhaug/drizzle-spanner/issues/99)) ([7d7a8a7](https://github.com/brandhaug/drizzle-spanner/commit/7d7a8a7e744b3368862e4a89c40996e5429270a2))
-* **deps:** bump oxlint from 1.87.0 to 1.88.0 ([#105](https://github.com/brandhaug/drizzle-spanner/issues/105)) ([8c47b36](https://github.com/brandhaug/drizzle-spanner/commit/8c47b36b68d4802184660521dff9e40ad5ada19f))
-* **deps:** bump oxlint-tsgolint from 7.0.2003 to 7.0.2004 ([#102](https://github.com/brandhaug/drizzle-spanner/issues/102)) ([7932238](https://github.com/brandhaug/drizzle-spanner/commit/7932238b831e4f55b3c28213dd9440c1c4f37834))
-* **deps:** bump testcontainers from 12.1.0 to 12.2.0 ([#93](https://github.com/brandhaug/drizzle-spanner/issues/93)) ([a0e5ed7](https://github.com/brandhaug/drizzle-spanner/commit/a0e5ed740f2e7aa2a40afd33bf8792d5e62b4e53))
-* **deps:** bump testcontainers from 12.2.0 to 12.2.1 ([#106](https://github.com/brandhaug/drizzle-spanner/issues/106)) ([02dc2d6](https://github.com/brandhaug/drizzle-spanner/commit/02dc2d6bde1fee1e603045e0411f39260e98a882))
-* **deps:** bump ultracite from 7.12.1 to 7.12.2 ([#94](https://github.com/brandhaug/drizzle-spanner/issues/94)) ([fb2ac44](https://github.com/brandhaug/drizzle-spanner/commit/fb2ac44eea3be3186eb2266ff5ca6276ce890476))
-* **deps:** bump ultracite from 7.12.2 to 7.12.4 ([#100](https://github.com/brandhaug/drizzle-spanner/issues/100)) ([9bf1d00](https://github.com/brandhaug/drizzle-spanner/commit/9bf1d008d6b5ccdec07648cb4c473676a79b27fe))
-* **deps:** bump ultracite from 7.12.4 to 8.0.0 ([#103](https://github.com/brandhaug/drizzle-spanner/issues/103)) ([f115d16](https://github.com/brandhaug/drizzle-spanner/commit/f115d1683bab36cbec842fc65247088d63407aba))
-* **deps:** bump ultracite from 8.0.0 to 8.0.1 ([#108](https://github.com/brandhaug/drizzle-spanner/issues/108)) ([60f6421](https://github.com/brandhaug/drizzle-spanner/commit/60f6421ae2ef14a61c6d017938ae7fa2076cb302))
-* remove repository custom skills ([#97](https://github.com/brandhaug/drizzle-spanner/issues/97)) ([ca79646](https://github.com/brandhaug/drizzle-spanner/commit/ca79646964a8821d90bea8d91fddd53dc823dcbd))
+- **deps:** bump @google-cloud/spanner from 9.0.0 to 9.1.0 ([#107](https://github.com/brandhaug/drizzle-spanner/issues/107)) ([7fc4ffe](https://github.com/brandhaug/drizzle-spanner/commit/7fc4ffe89b0d02f85dc6c2d0c265e0df50c5ec74))
+- **deps:** bump @types/node from 26.6.3 to 26.6.4 ([#96](https://github.com/brandhaug/drizzle-spanner/issues/96)) ([16998a7](https://github.com/brandhaug/drizzle-spanner/commit/16998a77945f1ee917dd23d8d9ce0a3151b5c05c))
+- **deps:** bump @types/node from 26.6.4 to 26.6.5 ([#101](https://github.com/brandhaug/drizzle-spanner/issues/101)) ([7e666b1](https://github.com/brandhaug/drizzle-spanner/commit/7e666b1e225c16f104c86ece811b2414104b0286))
+- **deps:** bump oxfmt from 0.71.0 to 0.72.0 ([#98](https://github.com/brandhaug/drizzle-spanner/issues/98)) ([fa9fded](https://github.com/brandhaug/drizzle-spanner/commit/fa9fded0ece020edd5ba6ecd1fce7b4d835606ea))
+- **deps:** bump oxfmt from 0.72.0 to 0.73.0 ([#104](https://github.com/brandhaug/drizzle-spanner/issues/104)) ([21834de](https://github.com/brandhaug/drizzle-spanner/commit/21834de66e577cdacb98f19466ea20fcb7180907))
+- **deps:** bump oxlint from 1.86.0 to 1.87.0 ([#99](https://github.com/brandhaug/drizzle-spanner/issues/99)) ([7d7a8a7](https://github.com/brandhaug/drizzle-spanner/commit/7d7a8a7e744b3368862e4a89c40996e5429270a2))
+- **deps:** bump oxlint from 1.87.0 to 1.88.0 ([#105](https://github.com/brandhaug/drizzle-spanner/issues/105)) ([8c47b36](https://github.com/brandhaug/drizzle-spanner/commit/8c47b36b68d4802184660521dff9e40ad5ada19f))
+- **deps:** bump oxlint-tsgolint from 7.0.2003 to 7.0.2004 ([#102](https://github.com/brandhaug/drizzle-spanner/issues/102)) ([7932238](https://github.com/brandhaug/drizzle-spanner/commit/7932238b831e4f55b3c28213dd9440c1c4f37834))
+- **deps:** bump testcontainers from 12.1.0 to 12.2.0 ([#93](https://github.com/brandhaug/drizzle-spanner/issues/93)) ([a0e5ed7](https://github.com/brandhaug/drizzle-spanner/commit/a0e5ed740f2e7aa2a40afd33bf8792d5e62b4e53))
+- **deps:** bump testcontainers from 12.2.0 to 12.2.1 ([#106](https://github.com/brandhaug/drizzle-spanner/issues/106)) ([02dc2d6](https://github.com/brandhaug/drizzle-spanner/commit/02dc2d6bde1fee1e603045e0411f39260e98a882))
+- **deps:** bump ultracite from 7.12.1 to 7.12.2 ([#94](https://github.com/brandhaug/drizzle-spanner/issues/94)) ([fb2ac44](https://github.com/brandhaug/drizzle-spanner/commit/fb2ac44eea3be3186eb2266ff5ca6276ce890476))
+- **deps:** bump ultracite from 7.12.2 to 7.12.4 ([#100](https://github.com/brandhaug/drizzle-spanner/issues/100)) ([9bf1d00](https://github.com/brandhaug/drizzle-spanner/commit/9bf1d008d6b5ccdec07648cb4c473676a79b27fe))
+- **deps:** bump ultracite from 7.12.4 to 8.0.0 ([#103](https://github.com/brandhaug/drizzle-spanner/issues/103)) ([f115d16](https://github.com/brandhaug/drizzle-spanner/commit/f115d1683bab36cbec842fc65247088d63407aba))
+- **deps:** bump ultracite from 8.0.0 to 8.0.1 ([#108](https://github.com/brandhaug/drizzle-spanner/issues/108)) ([60f6421](https://github.com/brandhaug/drizzle-spanner/commit/60f6421ae2ef14a61c6d017938ae7fa2076cb302))
+- remove repository custom skills ([#97](https://github.com/brandhaug/drizzle-spanner/issues/97)) ([ca79646](https://github.com/brandhaug/drizzle-spanner/commit/ca79646964a8821d90bea8d91fddd53dc823dcbd))
 
 ## [0.1.5](https://github.com/brandhaug/drizzle-spanner/compare/v0.1.4...v0.1.5) (2026-10-01)
 
