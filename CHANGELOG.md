@@ -4,6 +4,18 @@ All notable changes to `drizzle-spanner` are recorded here. Both packages in
 this repository version and release in lockstep from a single `v<version>`
 tag; see [RELEASING.md](RELEASING.md).
 
+## [0.1.9](https://github.com/brandhaug/drizzle-spanner/compare/v0.1.8...v0.1.9) (2026-10-25)
+
+
+### Bug Fixes
+
+* **security:** override 1 vulnerable transitive dependency ([#115](https://github.com/brandhaug/drizzle-spanner/issues/115)) ([632fe7a](https://github.com/brandhaug/drizzle-spanner/commit/632fe7a895710bf1359fac388c21023f119e85b1))
+
+
+### Miscellaneous
+
+* **deps:** bump oxc dependencies ([#114](https://github.com/brandhaug/drizzle-spanner/issues/114)) ([91e2a35](https://github.com/brandhaug/drizzle-spanner/commit/91e2a351a415808f86505818a225a5c08a8a4d89))
+
 ## [0.1.8](https://github.com/brandhaug/drizzle-spanner/compare/v0.1.7...v0.1.8) (2026-10-22)
 
 ### Miscellaneous
