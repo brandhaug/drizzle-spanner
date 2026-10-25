@@ -275,7 +275,7 @@ describe('error taxonomy', () => {
     )
     expect(failure).toBeInstanceOf(SpannerConstraintError)
     if (!(failure instanceof SpannerConstraintError)) {
-      throw new Error('expected SpannerConstraintError')
+      throw new TypeError('expected SpannerConstraintError')
     }
     expect(failure.code).toBe(GrpcStatus.ALREADY_EXISTS)
     expect(failure.query!.sql).toContain('select')
@@ -293,7 +293,7 @@ describe('error taxonomy', () => {
     const failure = await rejectionOf(db.select().from(singers).execute())
     expect(failure).toBeInstanceOf(SpannerInvalidArgumentError)
     if (!(failure instanceof SpannerInvalidArgumentError)) {
-      throw new Error('expected SpannerInvalidArgumentError')
+      throw new TypeError('expected SpannerInvalidArgumentError')
     }
     expect(failure.message).toContain('type hint')
   })
@@ -311,7 +311,7 @@ describe('error taxonomy', () => {
     )
     expect(failure).toBeInstanceOf(SpannerInvalidArgumentError)
     if (!(failure instanceof SpannerInvalidArgumentError)) {
-      throw new Error('expected SpannerInvalidArgumentError')
+      throw new TypeError('expected SpannerInvalidArgumentError')
     }
     expect(failure.message).toContain('parameter @p0 binds column "plays"')
   })
@@ -326,7 +326,7 @@ describe('error taxonomy', () => {
     const failure = await rejectionOf(db.select().from(singers).execute())
     expect(failure).toBeInstanceOf(SpannerUnavailableError)
     if (!(failure instanceof SpannerUnavailableError)) {
-      throw new Error('expected SpannerUnavailableError')
+      throw new TypeError('expected SpannerUnavailableError')
     }
     expect(failure.kind).toBe('unavailable')
     expect(failure.code).toBe(code)
@@ -351,7 +351,7 @@ describe('error taxonomy', () => {
       db.insert(singers).values({ id: secret, name: secret }).execute()
     )
     if (!(failure instanceof SpannerError)) {
-      throw new Error('expected SpannerError')
+      throw new TypeError('expected SpannerError')
     }
     expect(failure.message).not.toContain(secret)
     expect(failure.query!.sql).not.toContain(secret)
