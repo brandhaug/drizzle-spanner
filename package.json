@@ -105,8 +105,8 @@
     "@types/node": "26.6.5",
     "drizzle-orm": "1.0.0-rc.4",
     "lint-staged": "17.6.0",
-    "oxfmt": "0.74.0",
-    "oxlint": "1.89.0",
+    "oxfmt": "0.75.0",
+    "oxlint": "1.90.0",
     "oxlint-tsgolint": "7.0.2005",
     "testcontainers": "12.2.1",
     "typescript": "7.0.2"
