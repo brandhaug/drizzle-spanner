@@ -4,6 +4,14 @@ All notable changes to `drizzle-spanner` are recorded here. Both packages in
 this repository version and release in lockstep from a single `v<version>`
 tag; see [RELEASING.md](RELEASING.md).
 
+## [0.1.10](https://github.com/brandhaug/drizzle-spanner/compare/v0.1.9...v0.1.10) (2026-10-31)
+
+
+### Miscellaneous
+
+* **deps:** bump oxc dependencies ([#120](https://github.com/brandhaug/drizzle-spanner/issues/120)) ([4ac56ae](https://github.com/brandhaug/drizzle-spanner/commit/4ac56ae77175614f02b23f050bff05fb42b09739))
+* **deps:** bump oxlint-tsgolint from 7.0.2004 to 7.0.2005 ([#118](https://github.com/brandhaug/drizzle-spanner/issues/118)) ([d6464cf](https://github.com/brandhaug/drizzle-spanner/commit/d6464cf1d457e1dcbda1391f1f4c1f2a4f961080))
+
 ## [0.1.9](https://github.com/brandhaug/drizzle-spanner/compare/v0.1.8...v0.1.9) (2026-10-25)
 
 
