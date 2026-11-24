@@ -1,3 +1,4 @@
+import { type Database } from '@google-cloud/spanner'
 import { type AnyRelations, type EmptyRelations } from 'drizzle-orm/relations'
 import { type DrizzleConfig } from 'drizzle-orm/utils'
 import { type Logger } from 'drizzle-orm/logger'
@@ -27,9 +28,12 @@ function resolveLogger(logger: SpannerDrizzleConfig['logger']): Logger | undefin
  * `relations` (from `defineRelations`) powers `db.query`.
  */
 export function drizzle<TRelations extends AnyRelations = EmptyRelations>(
-  client: SpannerDriverDatabase,
+  database: Database | SpannerDriverDatabase,
   config: SpannerDrizzleConfig<TRelations> = {}
 ): SpannerDatabase<TRelations> {
+  // The driver types `run`'s rows as `Row | Json`; the adapter never sets
+  // `json: true`, so they are always `Row`.
+  const client = database as SpannerDriverDatabase
   const dialect = new SpannerDialect()
   const session = createDatabaseSession(client, dialect, {
     logger: resolveLogger(config.logger)
