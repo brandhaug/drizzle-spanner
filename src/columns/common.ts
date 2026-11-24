@@ -74,11 +74,13 @@ export abstract class SpannerColumnBuilder<
   /**
    * Wraps the column in `ARRAY<T>`. Spanner arrays cannot nest. The element's
    * NOT NULL and default do not carry over: the array column takes its own.
+   * Elements are nullable because a Spanner array can hold NULL elements
+   * whatever its column's constraint; `$type<Array<T>>()` narrows them.
    */
   array(): SpannerArrayBuilder<{
     dataType: 'array'
-    data: Array<T extends { $type: infer U } ? U : T['data']>
-    driverParam: Array<T['driverParam']>
+    data: Array<(T extends { $type: infer U } ? U : T['data']) | null>
+    driverParam: Array<T['driverParam'] | null>
   }> {
     return new SpannerArrayBuilder(
       this.config.name,
@@ -232,7 +234,7 @@ export class SpannerArray extends SpannerColumn<ColumnBaseConfig<'array'>> {
       return null
     }
     return (value as Array<unknown>).map((element) =>
-      this.baseColumn.mapFromDriverValue(element)
+      element === null ? null : this.baseColumn.mapFromDriverValue(element)
     )
   }
 
