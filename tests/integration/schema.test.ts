@@ -222,10 +222,32 @@ describe('NOT NULL array columns', () => {
     const [layer] = await db.select().from(layers).where(eq(layers.id, 'layer-1'))
     const fieldsType: Equal<
       typeof layer,
-      { id: string; fields: Array<string> } | undefined
+      { id: string; fields: Array<string | null> } | undefined
     > = true
     void fieldsType
     expect(layer).toEqual({ id: 'layer-1', fields: ['name', 'country'] })
+  })
+})
+
+describe('NULL array elements', () => {
+  it('writes and reads NULL elements, which Spanner arrays hold', async () => {
+    const { db } = harness
+    await db.insert(everyType).values({
+      id: 'row-null-elements',
+      tags: ['a', null, 'b'],
+      nums: [null, 2]
+    })
+    const [selected] = await db
+      .select({ tags: everyType.tags, nums: everyType.nums })
+      .from(everyType)
+      .where(eq(everyType.id, 'row-null-elements'))
+    const elementTypes: Equal<
+      typeof selected,
+      | { tags: Array<string | null> | null; nums: Array<number | null> | null }
+      | undefined
+    > = true
+    void elementTypes
+    expect(selected).toEqual({ tags: ['a', null, 'b'], nums: [null, 2] })
   })
 })
 

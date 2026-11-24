@@ -61,6 +61,10 @@ builders use Spanner-native type names, so schema code mirrors DDL one to one.
   `bool`, `date`, `timestamp`, `json`, `array`, `tokenlist`. `string` and
   `bytes` require `{ length: n | 'max' }`. The full GoogleSQL mapping table is
   in `docs/research/spanner-googlesql-surface.md`.
+- **Arrays:** `.array()` wraps any non-array column in `ARRAY<T>`. Elements
+  type as `T | null`, because a Spanner array can hold NULL elements even when
+  the column is NOT NULL; `.$type<Array<T>>()` narrows them where the data
+  guarantees none.
 - **INT64:** `int64('n')` maps to `number` and surfaces a typed error when the
   driver decodes a value past 2^53−1. `int64('n', { mode: 'bigint' })` maps to
   `bigint` for the full range.
