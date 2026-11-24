@@ -176,10 +176,12 @@ export async function introspectDatabase(
       columns: keyPartsOf('PRIMARY_KEY')
     })
 
+    // Only secondary indexes are modelled: the primary key is read above, and
+    // SEARCH and VECTOR indexes have no schema builder, so pull leaves them out.
     for (const indexRow of indexes) {
       if (
         text(indexRow, 'TABLE_NAME') !== tableName ||
-        text(indexRow, 'INDEX_TYPE') === 'PRIMARY_KEY'
+        text(indexRow, 'INDEX_TYPE') !== 'INDEX'
       ) {
         continue
       }

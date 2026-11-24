@@ -26,14 +26,14 @@ export function assertSchemaRoundtrip(
     const received = actual.get(key)
     if (!isDeepStrictEqual(normalize(expected), normalize(received))) {
       throw new Error(
-        `drizzle-spanner-kit: generated schema does not preserve introspected entity ${key}; refusing to publish a pull baseline`
+        `drizzle-spanner-kit: generated schema does not preserve introspected entity ${key}; refusing to publish a pull baseline. Introspected: ${JSON.stringify(expected)}. Generated: ${JSON.stringify(received ?? null)}`
       )
     }
     actual.delete(key)
   }
   if (actual.size > 0) {
     throw new Error(
-      `drizzle-spanner-kit: generated schema contains entities absent from introspection; refusing to publish a pull baseline`
+      `drizzle-spanner-kit: generated schema contains entities absent from introspection (${[...actual.keys()].join(', ')}); refusing to publish a pull baseline`
     )
   }
 }

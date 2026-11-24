@@ -54,6 +54,49 @@ function camelCase(name: string): string {
   return /^\d/.test(camel) ? `t${camel}` : camel
 }
 
+/** The schema property key of a column, per table: `(table, column) => key`. */
+type ColumnKeys = (table: string, column: string) => string
+
+/**
+ * Gives each column a distinct property key. A column whose name is already
+ * its camelCase form keeps it; the others take the camelCase form while it is
+ * free, so `merged_into_user_id` next to `mergedIntoUserId` keeps its own
+ * name instead of overwriting its neighbour.
+ */
+function columnKeys(columnsByTable: Map<string, Array<ColumnEntity>>): ColumnKeys {
+  const keys = new Map<string, Map<string, string>>()
+  for (const [table, columns] of columnsByTable) {
+    const byColumn = new Map<string, string>()
+    const taken = new Set<string>()
+    for (const column of columns) {
+      if (camelCase(column.name) === column.name) {
+        byColumn.set(column.name, column.name)
+        taken.add(column.name)
+      }
+    }
+    for (const column of columns) {
+      if (byColumn.has(column.name)) {
+        continue
+      }
+      let key = taken.has(camelCase(column.name)) ? column.name : camelCase(column.name)
+      for (let suffix = 2; taken.has(key); suffix++) {
+        key = `${column.name}_${suffix}`
+      }
+      byColumn.set(column.name, key)
+      taken.add(key)
+    }
+    keys.set(table, byColumn)
+  }
+  return (table, column) => keys.get(table)?.get(column) ?? camelCase(column)
+}
+
+const IDENTIFIER = /^[A-Za-z_$][\w$]*$/
+
+/** `object.key`, or `object["key"]` when the key is not an identifier. */
+function member(object: string, key: string): string {
+  return IDENTIFIER.test(key) ? `${object}.${key}` : `${object}[${JSON.stringify(key)}]`
+}
+
 function lengthLiteral(length: string): string {
   return length === 'MAX' ? "'max'" : length
 }
@@ -110,7 +153,11 @@ function parseType(
   return { builder, args: [nameArg], array }
 }
 
-function renderColumn(column: ColumnEntity, inlinePrimaryKey: boolean): string {
+function renderColumn(
+  column: ColumnEntity,
+  inlinePrimaryKey: boolean,
+  key: string
+): string {
   const parsed = parseType(column.type, column.allowCommitTimestamp, column.name)
   let expression = `${parsed.builder}(${parsed.args.join(', ')})`
   if (parsed.array) {
@@ -132,11 +179,11 @@ function renderColumn(column: ColumnEntity, inlinePrimaryKey: boolean): string {
   if (inlinePrimaryKey) {
     expression += '.primaryKey()'
   }
-  return `${camelCase(column.name)}: ${expression},`
+  return `${IDENTIFIER.test(key) ? key : JSON.stringify(key)}: ${expression},`
 }
 
-function keyPartRef(part: KeyPart): string {
-  return `t.${camelCase(part.name)}${part.order === 'desc' ? '.desc()' : ''}`
+function keyPartRef(part: KeyPart, column: (name: string) => string): string {
+  return `${column(part.name)}${part.order === 'desc' ? '.desc()' : ''}`
 }
 
 function renderExtraConfig(
@@ -146,15 +193,18 @@ function renderExtraConfig(
   tableVariables: Map<string, string>,
   indexes: Array<IndexEntity>,
   fks: Array<ForeignKeyEntity>,
-  checks: Array<CheckEntity>
+  checks: Array<CheckEntity>,
+  keyOf: ColumnKeys
 ): { lines: Array<string>; imports: Set<string>; needsSql: boolean } {
+  const column = (name: string): string => member('t', keyOf(table.name, name))
+  const keyPart = (part: KeyPart): string => keyPartRef(part, column)
   const lines: Array<string> = []
   const imports = new Set<string>()
   let needsSql = false
 
   if (pk && !inlinePk) {
     imports.add('primaryKey')
-    lines.push(`primaryKey({ columns: [${pk.columns.map(keyPartRef).join(', ')}] }),`)
+    lines.push(`primaryKey({ columns: [${pk.columns.map(keyPart).join(', ')}] }),`)
   }
   if (table.interleave) {
     imports.add('interleaveInParent')
@@ -169,13 +219,13 @@ function renderExtraConfig(
   for (const index of indexes) {
     imports.add(index.unique ? 'uniqueIndex' : 'index')
     let line = `${index.unique ? 'uniqueIndex' : 'index'}(${JSON.stringify(index.name)}).on(${index.columns
-      .map(keyPartRef)
+      .map(keyPart)
       .join(', ')})`
     if (index.nullFiltered) {
       line += '.nullFiltered()'
     }
     if (index.storing.length > 0) {
-      line += `.storing(${index.storing.map((name) => `t.${camelCase(name)}`).join(', ')})`
+      line += `.storing(${index.storing.map(column).join(', ')})`
     }
     lines.push(`${line},`)
   }
@@ -183,12 +233,12 @@ function renderExtraConfig(
     imports.add('foreignKey')
     const foreignVariable = tableVariables.get(fk.foreignTable) ?? fk.foreignTable
     const foreignColumns = fk.foreignColumns
-      .map((name) => `${foreignVariable}.${camelCase(name)}`)
+      .map((name) => member(foreignVariable, keyOf(fk.foreignTable, name)))
       .join(', ')
     let line =
       'foreignKey({\n' +
       `      name: ${JSON.stringify(fk.name)},\n` +
-      `      columns: [${fk.columns.map((name) => `t.${camelCase(name)}`).join(', ')}],\n` +
+      `      columns: [${fk.columns.map(column).join(', ')}],\n` +
       `      foreignColumns: [${foreignColumns}],\n` +
       '    })'
     if (fk.onDelete === 'cascade') {
@@ -219,6 +269,7 @@ export function renderSchemaModule(entities: Array<SpannerEntity>): string {
   const fksByTable = groupByTable(buckets.fks)
   const checksByTable = groupByTable(buckets.checks)
 
+  const keyOf = columnKeys(columnsByTable)
   const tableVariables = new Map(
     tables.map((table) => [table.name, camelCase(table.name)])
   )
@@ -262,7 +313,11 @@ export function renderSchemaModule(entities: Array<SpannerEntity>): string {
     }
 
     const columnLines = columns.map((column) =>
-      renderColumn(column, column.name === inlinePkColumn)
+      renderColumn(
+        column,
+        column.name === inlinePkColumn,
+        keyOf(table.name, column.name)
+      )
     )
     const extra = renderExtraConfig(
       pk,
@@ -271,7 +326,8 @@ export function renderSchemaModule(entities: Array<SpannerEntity>): string {
       tableVariables,
       indexes,
       fks,
-      checks
+      checks,
+      keyOf
     )
     for (const name of extra.imports) {
       imports.add(name)

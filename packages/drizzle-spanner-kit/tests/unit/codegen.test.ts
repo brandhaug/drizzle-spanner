@@ -273,3 +273,41 @@ describe('renderSchemaModule', () => {
     await roundtrip(entities)
   })
 })
+
+describe('renderSchemaModule column keys', () => {
+  const column = (table: string, name: string): SpannerEntity => ({
+    entityType: 'columns',
+    table,
+    name,
+    type: 'STRING(MAX)',
+    notNull: name === 'id',
+    default: null,
+    generated: null,
+    generatedIdentity: false,
+    allowCommitTimestamp: false
+  })
+
+  it('keeps both columns whose names camelCase to the same key', async () => {
+    const entities: Array<SpannerEntity> = [
+      { entityType: 'tables', name: 'user', interleave: null },
+      column('user', 'id'),
+      column('user', 'merged_into_user_id'),
+      column('user', 'mergedIntoUserId'),
+      { entityType: 'pks', table: 'user', columns: [{ name: 'id', order: 'asc' }] },
+      {
+        entityType: 'indexes',
+        table: 'user',
+        name: 'user_by_merged',
+        columns: [{ name: 'merged_into_user_id', order: 'asc' }],
+        unique: false,
+        nullFiltered: false,
+        storing: ['mergedIntoUserId']
+      }
+    ]
+    const module = renderSchemaModule(entities)
+    expect(module).toContain('merged_into_user_id: string("merged_into_user_id"')
+    expect(module).toContain('mergedIntoUserId: string("mergedIntoUserId"')
+    expect(module).toContain('.on(t.merged_into_user_id).storing(t.mergedIntoUserId)')
+    await roundtrip(entities)
+  })
+})
