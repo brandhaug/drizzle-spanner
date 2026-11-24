@@ -13,23 +13,12 @@ import {
   spannerTable,
   string
 } from '../../src/index.js'
+import { rejectionOf } from '../rejection.js'
 import {
   type SpannerDriverDatabase,
   type SpannerDriverTransaction,
   type SpannerSqlRequest
 } from '../../src/index.js'
-
-// Captures a promise's rejection reason. Catch-clause params are `unknown`
-// by spec; `.catch((error) => error)` would trip use-unknown-in-catch-callback
-// without preserving a usable type.
-async function rejectionOf(promise: Promise<unknown>): Promise<unknown> {
-  try {
-    await promise
-  } catch (error) {
-    return error
-  }
-  throw new Error('expected promise to reject, but it resolved')
-}
 
 const singers = spannerTable('singers', {
   id: string('id', { length: 36 }).primaryKey(),

@@ -2,6 +2,8 @@ import { afterAll, beforeAll, describe, expect, it } from 'bun:test'
 import { eq, gt } from 'drizzle-orm/sql/expressions'
 import { sql } from 'drizzle-orm/sql'
 import { int64, spannerTable, string, timestamp } from '../../src/index.js'
+import { TransactionRollbackError } from 'drizzle-orm/errors'
+import { rejectionOf } from '../rejection.js'
 import { type EmulatorHarness } from './harness.js'
 import { startEmulator } from './harness.js'
 
@@ -125,12 +127,13 @@ describe('CRUD round-trip (the spike scenarios)', () => {
   it('propagates tx.rollback() and leaves no writes behind', async () => {
     const { db } = harness
     const before = await db.$count(singers)
-    await expect(
+    const error = await rejectionOf(
       db.transaction(async (tx) => {
         await tx.insert(singers).values({ name: 'Ghost' })
         tx.rollback()
       })
-    ).rejects.toThrow(/[Rr]ollback/)
+    )
+    expect(error).toBeInstanceOf(TransactionRollbackError)
     expect(await db.$count(singers)).toBe(before)
   })
 })
