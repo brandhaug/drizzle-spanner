@@ -74,6 +74,7 @@ export {
 } from './query-builders/query-base.js'
 export type { SpannerDmlConfig } from './query-builders/query-base.js'
 export * from './query-builders/query.js'
+export * from './query-builders/raw.js'
 export * from './query-builders/select.js'
 export * from './query-builders/update.js'
 export * from './sequence.js'
