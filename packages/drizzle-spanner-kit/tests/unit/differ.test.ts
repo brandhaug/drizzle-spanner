@@ -21,12 +21,17 @@ async function rejectsMatching<T>(
   promise: Promise<T>,
   predicate: (error: unknown) => boolean
 ): Promise<void> {
-  const rejection = await promise.then(
-    () => {
-      throw new Error('expected promise to reject, but it resolved')
-    },
-    (error: unknown) => error
-  )
+  let rejection: unknown
+  let rejected = false
+  try {
+    await promise
+  } catch (error) {
+    rejection = error
+    rejected = true
+  }
+  if (!rejected) {
+    throw new Error('expected promise to reject, but it resolved')
+  }
   if (!predicate(rejection)) {
     throw new Error(`rejected value did not match predicate: ${String(rejection)}`)
   }
