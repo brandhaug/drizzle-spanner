@@ -83,6 +83,13 @@ export abstract class SpannerQueryBase<TResult>
   /** The selection rows map through; undefined for DML without `.returning()`. */
   protected abstract selection(): SelectedFieldsOrdered | undefined
 
+  /** Maps rows of `fields` when the default mapping does not fit; a join's nullable tables need one. */
+  protected rowsMapper(
+    _fields: SelectedFieldsOrdered
+  ): ((rows: Array<Array<unknown>>) => TResult) | undefined {
+    return undefined
+  }
+
   toSQL(): Query {
     const { sql, params } = this.dialect.sqlToQuery(this.getSQL())
     return { sql, params }
@@ -97,7 +104,7 @@ export abstract class SpannerQueryBase<TResult>
     return this.session.prepareQuery<TResult>(
       this.dialect.sqlToQuery(this.getSQL()),
       fields,
-      fields ? undefined : () => undefined as TResult,
+      fields ? this.rowsMapper(fields) : () => undefined as TResult,
       {
         type: this.queryType,
         staleness: this.requestState.staleness,

@@ -27,6 +27,11 @@ interface InternalUtils {
     fields: SelectedFields,
     pathPrefix?: Array<string>
   ) => SelectedFieldsOrdered
+  /** The selection paths of nullable joined tables, which read as null when all their columns are. */
+  resolveNullableObjectPaths: (
+    columns: SelectedFieldsOrdered,
+    joinsNotNullableMap: Record<string, boolean> | undefined
+  ) => Array<string> | undefined
   makeDefaultQueryMapper: <TResult>(
     columns: SelectedFieldsOrdered,
     nullableObjectPaths: Array<string> | undefined
@@ -37,3 +42,4 @@ const internal = utils as unknown as InternalUtils
 
 export const orderSelectedFields = internal.orderSelectedFields
 export const makeDefaultQueryMapper = internal.makeDefaultQueryMapper
+export const resolveNullableObjectPaths = internal.resolveNullableObjectPaths
