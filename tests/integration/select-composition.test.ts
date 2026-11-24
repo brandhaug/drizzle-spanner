@@ -3,6 +3,7 @@ import { eq, isNotNull } from 'drizzle-orm/sql/expressions'
 import { sql } from 'drizzle-orm/sql'
 import { bool, inUnnest, spannerTable, string, timestamp } from '../../src/index.js'
 import { type EmulatorHarness } from './harness.js'
+import { rejectionOf } from '../rejection.js'
 import { startEmulator } from './harness.js'
 
 const current = spannerTable('current_entities', {
@@ -168,8 +169,8 @@ describe('select composition on Spanner', () => {
     ])
     const controller = new AbortController()
     const pending = read(controller.signal).execute()
-    controller.abort(new Error('caller gave up'))
-    expect(pending).rejects.toThrow('caller gave up')
-    await pending.catch(() => undefined)
+    const reason = new Error('caller gave up')
+    controller.abort(reason)
+    expect(await rejectionOf(pending)).toBe(reason)
   })
 })

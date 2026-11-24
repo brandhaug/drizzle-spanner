@@ -10,6 +10,7 @@ import {
 } from '../../src/index.js'
 import { type SpannerDatabase } from '../../src/index.js'
 import { type EmulatorHarness } from './harness.js'
+import { rejectionOf } from '../rejection.js'
 import { startEmulator } from './harness.js'
 
 const singers = spannerTable('singers', {
@@ -94,16 +95,18 @@ describe('read-only transactions', () => {
 
   it('throws a typed error on DML inside the snapshot', async () => {
     const { db } = harness
-    await expect(
-      db.transaction(
-        async (tx) => {
-          await (tx as unknown as SpannerDatabase)
-            .insert(singers)
-            .values({ id: 'x', name: 'y' })
-        },
-        { readOnly: true }
+    expect(
+      await rejectionOf(
+        db.transaction(
+          async (tx) => {
+            await (tx as unknown as SpannerDatabase)
+              .insert(singers)
+              .values({ id: 'x', name: 'y' })
+          },
+          { readOnly: true }
+        )
       )
-    ).rejects.toBeInstanceOf(SpannerInvalidArgumentError)
+    ).toBeInstanceOf(SpannerInvalidArgumentError)
   })
 })
 
@@ -182,26 +185,30 @@ describe('bufferedMutations transactions', () => {
   it('throws typed errors on reads and returning, discarding buffered writes', async () => {
     const { db } = harness
 
-    await expect(
-      db.transaction(
-        async (tx) => {
-          await tx.insert(singers).values({ id: 'mut-2', name: 'Ghost' })
-          await (tx as unknown as SpannerDatabase).select().from(singers)
-        },
-        { mode: 'bufferedMutations' }
+    expect(
+      await rejectionOf(
+        db.transaction(
+          async (tx) => {
+            await tx.insert(singers).values({ id: 'mut-2', name: 'Ghost' })
+            await (tx as unknown as SpannerDatabase).select().from(singers)
+          },
+          { mode: 'bufferedMutations' }
+        )
       )
-    ).rejects.toBeInstanceOf(SpannerInvalidArgumentError)
+    ).toBeInstanceOf(SpannerInvalidArgumentError)
     // The failed transaction rolled back; the buffered insert never committed.
     expect(await db.$count(singers, eq(singers.id, 'mut-2'))).toBe(0)
 
-    await expect(
-      db.transaction(
-        async (tx) => {
-          await tx.insert(singers).values({ id: 'mut-3', name: 'Ghost' }).returning()
-        },
-        { mode: 'bufferedMutations' }
+    expect(
+      await rejectionOf(
+        db.transaction(
+          async (tx) => {
+            await tx.insert(singers).values({ id: 'mut-3', name: 'Ghost' }).returning()
+          },
+          { mode: 'bufferedMutations' }
+        )
       )
-    ).rejects.toBeInstanceOf(SpannerInvalidArgumentError)
+    ).toBeInstanceOf(SpannerInvalidArgumentError)
     expect(await db.$count(singers, eq(singers.id, 'mut-3'))).toBe(0)
   })
 })
