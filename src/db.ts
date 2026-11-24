@@ -99,12 +99,6 @@ class DatabaseRunner {
     if (!isDml && signal) {
       return readOnSnapshot(this.database, request, staleness, signal)
     }
-    if (signal) {
-      throw new SpannerInvalidArgumentError({
-        message:
-          'withSignal cancels reads only; a DML statement commits in its own transaction and cannot be cancelled'
-      })
-    }
     if (!isDml) {
       const [rows] = staleness
         ? await this.database.run(request, staleness)
@@ -142,12 +136,32 @@ async function readOnSnapshot(
         'withSignal reads on a read-only snapshot, which takes an exact staleness or a read timestamp; maxStaleness and minReadTimestamp are single-use bounds'
     })
   }
-  signal.throwIfAborted()
-  const [snapshot] = await database.getSnapshot(staleness)
+  const snapshot = await openSnapshot(database, staleness, signal)
   try {
     return await readStream(snapshot.runStream(request), signal)
   } finally {
     snapshot.end()
+  }
+}
+
+/** A snapshot, or the signal's reason as soon as it aborts; a snapshot that opens after that is ended. */
+async function openSnapshot(
+  database: SpannerDriverDatabase,
+  staleness: SpannerTimestampBounds | undefined,
+  signal: AbortSignal
+): Promise<SpannerDriverSnapshot> {
+  signal.throwIfAborted()
+  const opening = database.getSnapshot(staleness).then(([snapshot]) => snapshot)
+  const { promise: aborted, reject } = Promise.withResolvers<never>()
+  const onAbort = (): void => {
+    reject(signal.reason)
+    opening.then((late) => late.end()).catch(() => undefined)
+  }
+  signal.addEventListener('abort', onAbort, { once: true })
+  try {
+    return await Promise.race([opening, aborted])
+  } finally {
+    signal.removeEventListener('abort', onAbort)
   }
 }
 

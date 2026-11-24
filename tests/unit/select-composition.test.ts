@@ -268,6 +268,31 @@ describe('request options and cancellation', () => {
     expect(fake.snapshots).toEqual({ opened: 1, ended: 1 })
   })
 
+  it('rejects as soon as the signal aborts while the snapshot is opening, and ends it once open', async () => {
+    const fake = fakeDatabase()
+    const opening = Promise.withResolvers<undefined>()
+    const open = fake.database.getSnapshot.bind(fake.database)
+    fake.database.getSnapshot = async (bounds) => {
+      await opening.promise
+      return open(bounds)
+    }
+    const controller = new AbortController()
+    const read = drizzle(fake.database)
+      .select({ id: current.id })
+      .from(current)
+      .withSignal(controller.signal)
+      .execute()
+    await streamOpened()
+    controller.abort(new Error('deadline'))
+    expect(read).rejects.toThrow('deadline')
+    await read.catch(() => undefined)
+    expect(fake.snapshots).toEqual({ opened: 0, ended: 0 })
+    opening.resolve(undefined)
+    await streamOpened()
+    expect(fake.snapshots).toEqual({ opened: 1, ended: 1 })
+    expect(fake.requests).toHaveLength(0)
+  })
+
   it('rejects at once for a signal that already aborted, without a snapshot', async () => {
     const fake = fakeDatabase()
     const controller = new AbortController()
