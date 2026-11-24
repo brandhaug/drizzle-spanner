@@ -6,18 +6,14 @@ import { describe, expect, it } from 'bun:test'
 import { drizzle, SpannerDdlError } from '../../src/index.js'
 import { migrate } from '../../src/migrator.js'
 import { type SpannerDriverRow, type SpannerSqlRequest } from '../../src/index.js'
+import { rejectionOf } from '../rejection.js'
 
 // bun:test has no .rejects.toSatisfy(); assert the rejection with a predicate.
 async function rejectsMatching<T>(
   promise: Promise<T>,
   predicate: (error: unknown) => boolean
 ): Promise<void> {
-  const rejection = await promise.then(
-    () => {
-      throw new Error('expected promise to reject, but it resolved')
-    },
-    (error: unknown) => error
-  )
+  const rejection = await rejectionOf(promise)
   if (!predicate(rejection)) {
     throw new Error(`rejected value did not match predicate: ${String(rejection)}`)
   }
