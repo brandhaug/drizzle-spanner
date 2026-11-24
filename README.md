@@ -127,10 +127,12 @@ const found = await db
 `withRequestOptions` sets Spanner's request tag, which names the statement in
 query statistics, and its CPU priority. `withSignal` makes a read on the
 database cancellable: aborting the signal cancels the gRPC stream and the
-query rejects with the signal's reason. A cancellable read runs on a read-only
-snapshot, which costs one BeginTransaction round trip and takes an exact
-staleness or a read timestamp, not `maxStaleness` or `minReadTimestamp`.
-Inside a transaction the driver may retry the whole callback, so `withSignal`
+query rejects with the signal's reason. On multiplexed sessions, which
+`@google-cloud/spanner` always uses from 9.1, a cancellable read is single-use
+like any other read and takes every staleness bound. With pooled sessions it
+runs on a read-only snapshot instead, which costs one BeginTransaction round
+trip and takes an exact staleness or a read timestamp, not `maxStaleness` or
+`minReadTimestamp`. Inside a transaction the driver may retry the whole callback, so `withSignal`
 is not offered there.
 
 ```ts

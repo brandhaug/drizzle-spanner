@@ -35,6 +35,8 @@ export type {
   SpannerDriverDatabase,
   SpannerDriverRowStream,
   SpannerDriverRunTransactionOptions,
+  SpannerDriverSession,
+  SpannerDriverSessionFactory,
   SpannerDriverSnapshot,
   SpannerDriverTransaction,
   SpannerMutationTransaction,
