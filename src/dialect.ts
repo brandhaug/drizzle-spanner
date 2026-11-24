@@ -34,8 +34,18 @@ import { TableColumns } from './symbols.js'
 import { compileWithParamMetadata } from './sql-compiler.js'
 import { SpannerArrayParamEncoder } from './expressions.js'
 
+/** The GoogleSQL joins that take an `on` condition. */
+export type SpannerConditionalJoinType = 'inner' | 'left' | 'right' | 'full'
+
+export type SpannerJoinType = SpannerConditionalJoinType | 'cross'
+
+export type SpannerJoin =
+  | { table: SpannerTable | Subquery; joinType: 'cross' }
+  | { table: SpannerTable | Subquery; joinType: SpannerConditionalJoinType; on: SQL }
+
 export interface SpannerSelectConfig {
   table: SpannerTable | Subquery | SQL
+  joins?: Array<SpannerJoin>
   fields: Record<string, unknown>
   fieldsFlat?: SelectedFieldsOrdered
   where?: SQL
@@ -187,16 +197,21 @@ export class SpannerDialect {
   }
 
   buildSelectQuery(config: SpannerSelectConfig): SQL {
-    const { fields, fieldsFlat, where, table, groupBy, having } = config
+    const { fields, fieldsFlat, where, table, joins, groupBy, having } = config
     const fieldsList = fieldsFlat ?? orderSelectedFields(fields)
     const selection = this.buildSelection(fieldsList)
+    const joinsSql = joins?.map((join) =>
+      join.joinType === 'cross'
+        ? sql` cross join ${join.table}`
+        : sql` ${sql.raw(join.joinType)} join ${join.table} on ${join.on}`
+    )
     const whereSql = where ? sql` where ${where}` : undefined
     const groupBySql =
       groupBy && groupBy.length > 0
         ? sql` group by ${sql.join(groupBy, sql`, `)}`
         : undefined
     const havingSql = having ? sql` having ${having}` : undefined
-    return sql`select ${selection} from ${table}${whereSql}${groupBySql}${havingSql}${this.buildOrderLimitOffset(config)}`
+    return sql`select ${selection} from ${table}${joinsSql && sql.join(joinsSql)}${whereSql}${groupBySql}${havingSql}${this.buildOrderLimitOffset(config)}`
   }
 
   /**

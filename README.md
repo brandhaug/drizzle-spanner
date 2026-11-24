@@ -86,8 +86,8 @@ preference:
 
 ## Composing selects
 
-Selects take `groupBy` and `having`, combine with set operators, and nest as
-subqueries:
+Selects join tables and subqueries, take `groupBy` and `having`, combine with
+set operators, and nest as subqueries:
 
 ```ts
 import { max } from 'drizzle-orm'
@@ -114,6 +114,17 @@ const latest = db
   .groupBy(albums.singerId)
   .as('latest')
 const rows = await db.select().from(latest).where(eq(latest.singerId, id))
+
+// innerJoin, leftJoin, rightJoin, fullJoin and crossJoin. Without named
+// fields each row holds one object per table; a table the join can leave
+// without a row reads as null and is typed `| null`.
+const withAlbums = await db
+  .select()
+  .from(singers)
+  .leftJoin(albums, eq(albums.singerId, singers.id))
+// Array<{ singers: Singer; albums: Album | null }>
+// The condition can also be a callback over the joined selection:
+// .leftJoin(albums, (t) => eq(t.albums.singerId, t.singers.id))
 
 // Full-text search over a TOKENLIST column.
 const found = await db
