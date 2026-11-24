@@ -17,6 +17,7 @@ import {
   type SpannerDriverRow,
   type SpannerSqlRequest
 } from '../../src/index.js'
+import { rejectionOf } from '../rejection.js'
 
 const current = spannerTable('current_entities', {
   id: string('id', { length: 'max' }).primaryKey(),
@@ -169,11 +170,40 @@ function row(id: string): SpannerDriverRow {
   return [{ name: 'id', value: id }]
 }
 
-function fakeDatabase() {
+const QUERY_OPTIONS = { optimizerVersion: '7' }
+
+/**
+ * A driver database. With `sessions: 'multiplexed'` it has the session factory
+ * of a driver whose sessions are multiplexed (9.1 and later always are);
+ * `'pooled'` has a factory whose sessions come from a pool; `'none'` has no
+ * factory, like driver 7.
+ */
+function fakeDatabase({
+  sessions = 'multiplexed'
+}: { sessions?: 'multiplexed' | 'pooled' | 'none' } = {}) {
   const requests: Array<SpannerSqlRequest> = []
   const streams: Array<PassThrough> = []
-  const snapshots = { opened: 0, ended: 0 }
+  const snapshots = { opened: 0, ended: 0, begun: 0 }
+  const singleUseOptions: Array<{ bounds: unknown; queryOptions: unknown }> = []
+  let sessionsRequested = 0
+  let sessionError: Error | undefined
+  let sessionGate: Promise<unknown> = Promise.resolve()
+  const snapshot = () => ({
+    async run(): Promise<never> {
+      throw new Error('not used')
+    },
+    runStream(request: SpannerSqlRequest) {
+      requests.push(request)
+      const stream = new PassThrough({ objectMode: true })
+      streams.push(stream)
+      return stream
+    },
+    end() {
+      snapshots.ended += 1
+    }
+  })
   const database: SpannerDriverDatabase = {
+    queryOptions_: QUERY_OPTIONS,
     async run(request) {
       requests.push(request)
       return [[row('ran')]]
@@ -183,25 +213,47 @@ function fakeDatabase() {
     },
     async getSnapshot() {
       snapshots.opened += 1
-      return [
-        {
-          async run() {
-            throw new Error('not used')
-          },
-          runStream(request: SpannerSqlRequest) {
-            requests.push(request)
-            const stream = new PassThrough({ objectMode: true })
-            streams.push(stream)
-            return stream
-          },
-          end() {
-            snapshots.ended += 1
-          }
-        }
-      ] as const
+      snapshots.begun += 1
+      return [snapshot()] as const
     }
   }
-  return { database, requests, streams, snapshots }
+  if (sessions !== 'none') {
+    database.sessionFactory_ = {
+      isMultiplexedEnabled: () => sessions === 'multiplexed',
+      getSession(callback) {
+        sessionsRequested += 1
+        const deliver = async (): Promise<void> => {
+          await sessionGate
+          if (sessionError) {
+            callback(sessionError)
+            return
+          }
+          callback(null, {
+            snapshot(bounds, queryOptions) {
+              snapshots.opened += 1
+              singleUseOptions.push({ bounds, queryOptions })
+              return snapshot()
+            }
+          })
+        }
+        void deliver()
+      }
+    }
+  }
+  return {
+    database,
+    requests,
+    streams,
+    snapshots,
+    singleUseOptions,
+    sessionsRequested: () => sessionsRequested,
+    failSessions(error: Error) {
+      sessionError = error
+    },
+    holdSessions(gate: Promise<unknown>) {
+      sessionGate = gate
+    }
+  }
 }
 
 // Until the read has opened its snapshot and asked for the stream.
@@ -237,8 +289,10 @@ describe('request options and cancellation', () => {
       priority: 'PRIORITY_LOW'
     })
   })
+})
 
-  it("reads through a snapshot's row stream when given a signal, and ends the snapshot", async () => {
+describe('cancellable reads on a multiplexed session', () => {
+  it('stream single-use, with no BeginTransaction, and end the snapshot', async () => {
     const fake = fakeDatabase()
     const read = drizzle(fake.database)
       .select({ id: current.id })
@@ -248,10 +302,27 @@ describe('request options and cancellation', () => {
     await streamOpened()
     fake.streams[0]!.end(row('streamed'))
     expect(await read).toEqual([{ id: 'streamed' }])
-    expect(fake.snapshots).toEqual({ opened: 1, ended: 1 })
+    expect(fake.snapshots).toEqual({ opened: 1, ended: 1, begun: 0 })
+    expect(fake.singleUseOptions).toEqual([
+      { bounds: undefined, queryOptions: QUERY_OPTIONS }
+    ])
   })
 
-  it('destroys the stream, ends the snapshot and rejects with the reason when the signal aborts', async () => {
+  it('take the single-use bounds maxStaleness and minReadTimestamp', async () => {
+    const fake = fakeDatabase()
+    const read = drizzle(fake.database)
+      .select({ id: current.id })
+      .from(current)
+      .withStaleness({ maxStaleness: '10s' })
+      .withSignal(new AbortController().signal)
+      .execute()
+    await streamOpened()
+    fake.streams[0]!.end()
+    expect(await read).toEqual([])
+    expect(fake.singleUseOptions[0]?.bounds).toEqual({ maxStaleness: 10_000 })
+  })
+
+  it('destroy the stream, end the snapshot and reject with the reason when the signal aborts', async () => {
     const fake = fakeDatabase()
     const controller = new AbortController()
     const read = drizzle(fake.database)
@@ -262,20 +333,15 @@ describe('request options and cancellation', () => {
     await streamOpened()
     const reason = new Error('client went away')
     controller.abort(reason)
-    expect(read).rejects.toBe(reason)
-    await read.catch(() => undefined)
+    expect(await rejectionOf(read)).toBe(reason)
     expect(fake.streams[0]!.destroyed).toBe(true)
-    expect(fake.snapshots).toEqual({ opened: 1, ended: 1 })
+    expect(fake.snapshots).toEqual({ opened: 1, ended: 1, begun: 0 })
   })
 
-  it('rejects as soon as the signal aborts while the snapshot is opening, and ends it once open', async () => {
+  it('reject as soon as the signal aborts while the session is pending, and never run the query', async () => {
     const fake = fakeDatabase()
-    const opening = Promise.withResolvers<undefined>()
-    const open = fake.database.getSnapshot.bind(fake.database)
-    fake.database.getSnapshot = async (bounds) => {
-      await opening.promise
-      return open(bounds)
-    }
+    const gate = Promise.withResolvers<undefined>()
+    fake.holdSessions(gate.promise)
     const controller = new AbortController()
     const read = drizzle(fake.database)
       .select({ id: current.id })
@@ -284,16 +350,14 @@ describe('request options and cancellation', () => {
       .execute()
     await streamOpened()
     controller.abort(new Error('deadline'))
-    expect(read).rejects.toThrow('deadline')
-    await read.catch(() => undefined)
-    expect(fake.snapshots).toEqual({ opened: 0, ended: 0 })
-    opening.resolve(undefined)
+    expect(await rejectionOf(read)).toEqual(new Error('deadline'))
+    gate.resolve(undefined)
     await streamOpened()
-    expect(fake.snapshots).toEqual({ opened: 1, ended: 1 })
     expect(fake.requests).toHaveLength(0)
+    expect(fake.snapshots.opened).toBe(0)
   })
 
-  it('rejects at once for a signal that already aborted, without a snapshot', async () => {
+  it('reject at once for a signal that already aborted, without asking for a session', async () => {
     const fake = fakeDatabase()
     const controller = new AbortController()
     controller.abort(new Error('gone'))
@@ -302,26 +366,97 @@ describe('request options and cancellation', () => {
       .from(current)
       .withSignal(controller.signal)
       .execute()
-    expect(read).rejects.toThrow('gone')
-    await read.catch(() => undefined)
+    expect(await rejectionOf(read)).toEqual(new Error('gone'))
+    expect(fake.sessionsRequested()).toBe(0)
+  })
+
+  it('reject with the driver error when no session can be had', async () => {
+    const fake = fakeDatabase()
+    fake.failSessions(Object.assign(new Error('no session'), { code: 14 }))
+    const read = drizzle(fake.database)
+      .select({ id: current.id })
+      .from(current)
+      .withSignal(new AbortController().signal)
+      .execute()
+    const error = await rejectionOf(read)
+    expect(error).toBeInstanceOf(Error)
+    expect((error as Error).message).toContain('no session')
     expect(fake.snapshots.opened).toBe(0)
   })
 
-  it('refuses a single-use staleness bound on a cancellable read', async () => {
+  it('reject with the driver error and end the snapshot when the stream fails', async () => {
     const fake = fakeDatabase()
     const read = drizzle(fake.database)
       .select({ id: current.id })
       .from(current)
-      .withStaleness({ maxStaleness: '10s' })
       .withSignal(new AbortController().signal)
       .execute()
-    expect(read).rejects.toThrow(
-      'maxStaleness and minReadTimestamp are single-use bounds'
-    )
-    await read.catch(() => undefined)
-    expect(fake.snapshots.opened).toBe(0)
+    await streamOpened()
+    fake.streams[0]!.destroy(Object.assign(new Error('stream broke'), { code: 13 }))
+    const error = await rejectionOf(read)
+    expect((error as Error).message).toContain('stream broke')
+    expect(fake.snapshots).toEqual({ opened: 1, ended: 1, begun: 0 })
   })
+})
 
+describe.each(['pooled', 'none'] as const)(
+  'cancellable reads without multiplexed sessions (%s)',
+  (sessions) => {
+    it("read through a read-only snapshot's row stream, and end the snapshot", async () => {
+      const fake = fakeDatabase({ sessions })
+      const read = drizzle(fake.database)
+        .select({ id: current.id })
+        .from(current)
+        .withSignal(new AbortController().signal)
+        .execute()
+      await streamOpened()
+      fake.streams[0]!.end(row('streamed'))
+      expect(await read).toEqual([{ id: 'streamed' }])
+      expect(fake.snapshots).toEqual({ opened: 1, ended: 1, begun: 1 })
+      expect(fake.sessionsRequested()).toBe(0)
+    })
+
+    it('reject as soon as the signal aborts while the snapshot is opening, and end it once open', async () => {
+      const fake = fakeDatabase({ sessions })
+      const opening = Promise.withResolvers<undefined>()
+      const open = fake.database.getSnapshot.bind(fake.database)
+      fake.database.getSnapshot = async (bounds) => {
+        await opening.promise
+        return open(bounds)
+      }
+      const controller = new AbortController()
+      const read = drizzle(fake.database)
+        .select({ id: current.id })
+        .from(current)
+        .withSignal(controller.signal)
+        .execute()
+      await streamOpened()
+      controller.abort(new Error('deadline'))
+      expect(await rejectionOf(read)).toEqual(new Error('deadline'))
+      expect(fake.snapshots.opened).toBe(0)
+      opening.resolve(undefined)
+      await streamOpened()
+      expect(fake.snapshots).toEqual({ opened: 1, ended: 1, begun: 1 })
+      expect(fake.requests).toHaveLength(0)
+    })
+
+    it('refuse a single-use staleness bound', async () => {
+      const fake = fakeDatabase({ sessions })
+      const read = drizzle(fake.database)
+        .select({ id: current.id })
+        .from(current)
+        .withStaleness({ maxStaleness: '10s' })
+        .withSignal(new AbortController().signal)
+        .execute()
+      expect(String(await rejectionOf(read))).toContain(
+        'maxStaleness and minReadTimestamp are single-use bounds'
+      )
+      expect(fake.snapshots.opened).toBe(0)
+    })
+  }
+)
+
+describe('DML', () => {
   it('offers no signal on DML', () => {
     const fake = fakeDatabase()
     const write = drizzle(fake.database)

@@ -70,7 +70,27 @@ export interface SpannerDriverRowStream extends AsyncIterable<SpannerDriverRow> 
   on(event: 'error', listener: (error: Error) => void): unknown
 }
 
+/** A driver session (`Session`). A snapshot made on it and never begun reads single-use. */
+export interface SpannerDriverSession {
+  snapshot(
+    bounds?: SpannerTimestampBounds,
+    queryOptions?: unknown
+  ): SpannerDriverSnapshot
+}
+
+/** The driver's session source, `database.sessionFactory_` (driver 8 and later). */
+export interface SpannerDriverSessionFactory {
+  getSession(
+    callback: (error: Error | null, session?: SpannerDriverSession | null) => void
+  ): void
+  /** True when `getSession` hands out the shared multiplexed session, which is never released. */
+  isMultiplexedEnabled?(): boolean
+}
+
 export interface SpannerDriverDatabase {
+  /** Database-level query options the driver sends with every read. */
+  queryOptions_?: unknown
+  sessionFactory_?: SpannerDriverSessionFactory
   run(
     request: SpannerSqlRequest,
     bounds?: SpannerTimestampBounds
@@ -97,7 +117,7 @@ class DatabaseRunner {
     { staleness, signal }: SpannerRunOptions = {}
   ): Promise<Array<SpannerDriverRow>> {
     if (!isDml && signal) {
-      return readOnSnapshot(this.database, request, staleness, signal)
+      return readCancellable(this.database, request, staleness, signal)
     }
     if (!isDml) {
       const [rows] = staleness
@@ -116,27 +136,17 @@ class DatabaseRunner {
 }
 
 /**
- * A cancellable read. It runs on a read-only snapshot because the snapshot's row
- * stream cancels its gRPC call when destroyed; the stream `database.runStream`
- * returns is a proxy whose destruction leaves the call running. A snapshot is a
- * multi-use transaction, so it takes no single-use staleness bound.
+ * A cancellable read. It streams from a driver snapshot because destroying a
+ * snapshot's row stream cancels its gRPC call; the stream `database.runStream`
+ * returns is a proxy whose destruction leaves the call running.
  */
-async function readOnSnapshot(
+async function readCancellable(
   database: SpannerDriverDatabase,
   request: SpannerSqlRequest,
   staleness: SpannerTimestampBounds | undefined,
   signal: AbortSignal
 ): Promise<Array<SpannerDriverRow>> {
-  if (
-    staleness?.maxStaleness !== undefined ||
-    staleness?.minReadTimestamp !== undefined
-  ) {
-    throw new SpannerInvalidArgumentError({
-      message:
-        'withSignal reads on a read-only snapshot, which takes an exact staleness or a read timestamp; maxStaleness and minReadTimestamp are single-use bounds'
-    })
-  }
-  const snapshot = await openSnapshot(database, staleness, signal)
+  const snapshot = await openCancellableSnapshot(database, staleness, signal)
   try {
     return await readStream(snapshot.runStream(request), signal)
   } finally {
@@ -144,22 +154,68 @@ async function readOnSnapshot(
   }
 }
 
-/** A snapshot, or the signal's reason as soon as it aborts; a snapshot that opens after that is ended. */
-async function openSnapshot(
+/**
+ * On a multiplexed session (always, from driver 9.1) the snapshot is never
+ * begun, so the read is single-use, as `database.run` reads: no BeginTransaction
+ * round trip, and every staleness bound applies. A pooled session would have to
+ * go back to the driver's pool, which it does not expose, so without
+ * multiplexing the read runs on `database.getSnapshot`: a read-only transaction
+ * that costs one BeginTransaction and takes no single-use bound.
+ */
+async function openCancellableSnapshot(
   database: SpannerDriverDatabase,
   staleness: SpannerTimestampBounds | undefined,
   signal: AbortSignal
 ): Promise<SpannerDriverSnapshot> {
-  signal.throwIfAborted()
+  const sessions = database.sessionFactory_
+  if (sessions?.isMultiplexedEnabled?.()) {
+    const session = await untilAborted(multiplexedSession(sessions), signal)
+    return session.snapshot(staleness, database.queryOptions_)
+  }
+  if (
+    staleness?.maxStaleness !== undefined ||
+    staleness?.minReadTimestamp !== undefined
+  ) {
+    throw new SpannerInvalidArgumentError({
+      message:
+        'withSignal reads on a read-only snapshot unless the driver uses multiplexed sessions; a snapshot takes an exact staleness or a read timestamp, and maxStaleness and minReadTimestamp are single-use bounds'
+    })
+  }
   const opening = database.getSnapshot(staleness).then(([snapshot]) => snapshot)
+  return untilAborted(opening, signal, (late) => late.end())
+}
+
+function multiplexedSession(
+  sessions: SpannerDriverSessionFactory
+): Promise<SpannerDriverSession> {
+  const { promise, resolve, reject } = Promise.withResolvers<SpannerDriverSession>()
+  sessions.getSession((error, session) => {
+    if (error || !session) {
+      reject(error ?? new Error('The driver returned no session'))
+      return
+    }
+    resolve(session)
+  })
+  return promise
+}
+
+/**
+ * `pending`, or the signal's reason as soon as it aborts. `release` disposes of
+ * a value that arrives after the abort.
+ */
+async function untilAborted<T>(
+  pending: Promise<T>,
+  signal: AbortSignal,
+  release?: (late: T) => void
+): Promise<T> {
   const { promise: aborted, reject } = Promise.withResolvers<never>()
   const onAbort = (): void => {
     reject(signal.reason)
-    opening.then((late) => late.end()).catch(() => undefined)
+    pending.then(release).catch(() => undefined)
   }
   signal.addEventListener('abort', onAbort, { once: true })
   try {
-    return await Promise.race([opening, aborted])
+    return await Promise.race([pending, aborted])
   } finally {
     signal.removeEventListener('abort', onAbort)
   }

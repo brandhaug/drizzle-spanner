@@ -1,4 +1,4 @@
-import { afterAll, beforeAll, describe, expect, it } from 'bun:test'
+import { afterAll, beforeAll, describe, expect, it, spyOn } from 'bun:test'
 import { eq, isNotNull } from 'drizzle-orm/sql/expressions'
 import { sql } from 'drizzle-orm/sql'
 import { bool, inUnnest, spannerTable, string, timestamp } from '../../src/index.js'
@@ -172,5 +172,21 @@ describe('select composition on Spanner', () => {
     const reason = new Error('caller gave up')
     controller.abort(reason)
     expect(await rejectionOf(pending)).toBe(reason)
+  })
+
+  it('reads single-use when cancellable: no read-only transaction, and single-use bounds apply', async () => {
+    const getSnapshot = spyOn(harness.database, 'getSnapshot')
+    try {
+      const rows = await harness.db
+        .select({ id: current.id })
+        .from(current)
+        .orderBy(current.id)
+        .withStaleness({ maxStaleness: '10s' })
+        .withSignal(new AbortController().signal)
+      expect(rows).toEqual([{ id: 'E1' }, { id: 'E2' }])
+      expect(getSnapshot).not.toHaveBeenCalled()
+    } finally {
+      getSnapshot.mockRestore()
+    }
   })
 })
