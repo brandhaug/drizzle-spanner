@@ -107,7 +107,7 @@
     "lint-staged": "17.6.1",
     "oxfmt": "0.79.0",
     "oxlint": "1.94.0",
-    "oxlint-tsgolint": "7.0.2007",
+    "oxlint-tsgolint": "7.0.2008",
     "testcontainers": "12.2.2",
     "typescript": "7.0.2"
   }
