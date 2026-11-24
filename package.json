@@ -104,11 +104,11 @@
     "@google-cloud/spanner": "9.1.0",
     "@types/node": "26.6.6",
     "drizzle-orm": "1.0.0-rc.6",
-    "lint-staged": "17.6.0",
+    "lint-staged": "17.6.1",
     "oxfmt": "0.77.0",
     "oxlint": "1.92.0",
     "oxlint-tsgolint": "7.0.2006",
-    "testcontainers": "12.2.1",
+    "testcontainers": "12.2.2",
     "typescript": "7.0.2"
   }
 }
