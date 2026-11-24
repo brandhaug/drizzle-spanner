@@ -2,61 +2,35 @@ import { is } from 'drizzle-orm/entity'
 import {
   type BuildQueryConfig,
   type DriverValueEncoder,
-  type Query,
-  type SQLChunk,
   Param,
   SQL
 } from 'drizzle-orm/sql'
 import { SpannerColumn } from './columns/common.js'
 import { type SpannerQueryWithTypings } from './dialect.js'
 
+type CollectBoundValue = (
+  this: SQL,
+  value: unknown,
+  encoder: DriverValueEncoder<unknown, unknown>,
+  ...rest: Array<unknown>
+) => void
+
 /**
- * Drizzle rc.4 removed Query.typings. Observe its recursive compiler at the
- * escapeParam boundary instead of independently interpreting the SQL tree.
- * Each recursive call replaces the observer with the current chunk's encoder,
- * so wrappers and encoder-produced SQL use their own emitted parameters.
- * Keep this compatibility adapter covered when updating drizzle-orm.
+ * drizzle-orm's private per-value hook: `collectSQL` calls it on the root SQL
+ * with the encoder of every bound parameter right before `escapeParam`. It is
+ * not part of the published types; `tests/unit/sql-compiler.test.ts` guards it
+ * across drizzle-orm updates.
  */
-class SQLWithParamMetadata extends SQL {
-  readonly typings: Array<string> = []
-  readonly paramColumns: Array<string | undefined> = []
+const collectBoundValue = (
+  SQL.prototype as unknown as { collectBoundValue?: CollectBoundValue }
+).collectBoundValue
 
-  constructor(
-    input: SQL,
-    private readonly escapeParameter: BuildQueryConfig['escapeParam'],
-    private readonly prepareTyping: (
-      encoder: DriverValueEncoder<unknown, unknown>
-    ) => string
-  ) {
-    super([input])
-  }
-
-  override buildQueryFromSourceParams(
-    chunks: Array<SQLChunk>,
-    config: BuildQueryConfig
-  ): Query {
-    const paramStartIndex = config.paramStartIndex ?? { value: 0 }
-    const result: Query = { sql: '', params: [] }
-    for (const chunk of chunks) {
-      const query = super.buildQueryFromSourceParams([chunk], {
-        ...config,
-        paramStartIndex,
-        escapeParam: (index, value) => {
-          const encoder = is(chunk, Param) ? chunk.encoder : undefined
-          this.typings[index] = encoder ? this.prepareTyping(encoder) : 'none'
-          this.paramColumns[index] = is(encoder, SpannerColumn)
-            ? encoder.name
-            : undefined
-          return this.escapeParameter(index, value)
-        }
-      })
-      result.sql += query.sql
-      result.params.push(...query.params)
-    }
-    return result
-  }
-}
-
+/**
+ * Drizzle's Query carries no parameter typings. Observe its compiler at the
+ * escapeParam boundary instead of independently interpreting the SQL tree:
+ * the encoder of the value being bound is tracked on a stack, so encoders that
+ * map to SQL with their own parameters report those parameters' encoders.
+ */
 export function compileWithParamMetadata(
   input: SQL,
   config: Pick<
@@ -65,7 +39,40 @@ export function compileWithParamMetadata(
   >,
   prepareTyping: (encoder: DriverValueEncoder<unknown, unknown>) => string
 ): SpannerQueryWithTypings {
-  const compiler = new SQLWithParamMetadata(input, config.escapeParam, prepareTyping)
-  const query = compiler.toQuery(config)
-  return { ...query, typings: compiler.typings, paramColumns: compiler.paramColumns }
+  if (typeof collectBoundValue !== 'function') {
+    throw new TypeError(
+      'drizzle-spanner: this drizzle-orm version has no SQL.collectBoundValue; parameter type hints cannot be collected'
+    )
+  }
+  const typings: Array<string> = []
+  const paramColumns: Array<string | undefined> = []
+  const encoders: Array<DriverValueEncoder<unknown, unknown>> = []
+  const root = new SQL([input])
+  // collectSQL recurses on the root, so an own property shadows the prototype hook for this compilation only.
+  Object.defineProperty(root, 'collectBoundValue', {
+    value(
+      this: SQL,
+      value: unknown,
+      encoder: DriverValueEncoder<unknown, unknown>,
+      ...rest: Array<unknown>
+    ): void {
+      encoders.push(encoder)
+      try {
+        collectBoundValue.call(this, value, encoder, ...rest)
+      } finally {
+        encoders.pop()
+      }
+    }
+  })
+  const query = root.toQuery({
+    ...config,
+    escapeParam: (index, value) => {
+      // A placeholder reaches escapeParam as its Param chunk, outside collectBoundValue.
+      const encoder = is(value, Param) ? value.encoder : encoders.at(-1)
+      typings[index] = encoder ? prepareTyping(encoder) : 'none'
+      paramColumns[index] = is(encoder, SpannerColumn) ? encoder.name : undefined
+      return config.escapeParam(index, value)
+    }
+  })
+  return { ...query, typings, paramColumns }
 }

@@ -23,7 +23,7 @@ owns every dialect class and extends only exported drizzle-orm base modules.
 
 - **Packages:** `drizzle-spanner` (ORM adapter) and `drizzle-spanner-kit`
   (migration CLI), in one repository.
-- **Peer dependencies:** `"drizzle-orm": ">=1.0.0-rc.4 <1.0.0"`, and
+- **Peer dependencies:** `"drizzle-orm": ">=1.0.0-rc.6 <1.0.0"`, and
   `@google-cloud/spanner` as an **optional** peer — the runtime takes the
   driver's `Database` structurally and never hard-imports the package, so
   `drizzle.mock()` and SQL-generation use need no driver install — with a
@@ -116,7 +116,7 @@ const albums = spannerTable(
 Resolved in [#10](https://github.com/brandhaug/drizzle-spanner/issues/10). The
 entry point follows the drizzle idiom: `drizzle(client)` takes a constructed
 `@google-cloud/spanner` `Database`; session-pool configuration belongs to the
-client; `DrizzleConfig` keys (`logger`, `casing`, `relations`, `cache`) pass
+client; `DrizzleConfig` keys (`logger`, `casing`, `relations`) pass
 through.
 
 - **Read-write transactions:** `db.transaction(async (tx) => { ... })` runs

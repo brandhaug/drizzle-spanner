@@ -83,8 +83,8 @@ export class SpannerDialect {
   }
 
   /**
-   * Type hints supplement Drizzle's Query, which no longer carries typings
-   * in rc.4. The compiler records them when each parameter is emitted.
+   * Type hints supplement Drizzle's Query, which carries no typings since
+   * rc.4. The compiler records them when each parameter is emitted.
    */
   prepareTyping = (encoder: DriverValueEncoder<unknown, unknown>): string => {
     if (is(encoder, SpannerColumn)) {
@@ -238,7 +238,7 @@ export class SpannerDialect {
     const columnIdentifiers: Array<SQL> = []
     const pushColumn = (key: string, column: SpannerColumn<any>): void => {
       columnIdentifiers.push(this.buildRqbColumn(table, column, key))
-      selection.push({ key, field: column })
+      selection.push({ key, field: column, fieldType: 'Column' })
     }
     if (columnsConfig) {
       const entries = Object.entries(columnsConfig).filter(
@@ -290,14 +290,23 @@ export class SpannerDialect {
 
     const limit = isSingle ? 1 : params?.limit
     const offset = params?.offset
-    const filter = params?.where
-      ? relationsFilterToSQL(table, params.where, tableConfig.relations, schema)
+    const filterChunks = params?.where
+      ? relationsFilterToSQL(
+          table,
+          params.where,
+          tableConfig.relations,
+          schema,
+          undefined
+        ).sql
       : undefined
+    const filter = filterChunks ? new SQL(filterChunks) : undefined
     const where =
       filter && relationWhere ? and(filter, relationWhere) : (filter ?? relationWhere)
-    const order = params?.orderBy
-      ? relationsOrderToSQL(table, params.orderBy)
+    const orderChunks = params?.orderBy
+      ? // `as never`: the loose internal config does not carry drizzle's OrderBy type.
+        relationsOrderToSQL(table, params.orderBy as never)
       : undefined
+    const order = orderChunks ? new SQL(orderChunks) : undefined
 
     const columns = this.buildRqbColumns(table, selection, queryConfig)
     const extras = params?.extras
@@ -307,6 +316,7 @@ export class SpannerDialect {
     if (extras) {
       selection.push(...extras.selection)
     }
+    const extrasSql = extras?.sql ? new SQL(extras.sql) : undefined
 
     const selectionArr: Array<SQL> = columns ? [columns] : []
     const withEntries = params?.with
@@ -326,14 +336,14 @@ export class SpannerDialect {
         : undefined
       const built = relationToSQL(relation, table, targetTable, throughTable)
       const innerThroughJoin = throughTable
-        ? sql` inner join ${getTableAsAliasSQL(throughTable)} on ${built.joinCondition}`
+        ? sql` inner join ${new SQL(getTableAsAliasSQL(throughTable))} on ${new SQL(built.joinCondition ?? [])}`
         : undefined
       const innerQuery = this.buildRelationalQuery({
         schema,
         table: targetTable,
         tableConfig: schema[relation.targetTableName]!,
         queryConfig: join as SpannerRelationalQueryConfigEntry,
-        relationWhere: built.filter,
+        relationWhere: new SQL(built.filter),
         mode: isSingleRelation ? 'first' : 'many',
         errorPath: `${currentPath.length > 0 ? `${currentPath}.` : ''}${key}`,
         depth: currentDepth + 1,
@@ -341,6 +351,7 @@ export class SpannerDialect {
       })
       selection.push({
         field: targetTable,
+        fieldType: 'Nested',
         key,
         selection: innerQuery.selection,
         isArray: !isSingleRelation,
@@ -353,8 +364,8 @@ export class SpannerDialect {
       // 'first'); the decoder unwraps the single element.
       selectionArr.push(sql`array(${innerQuery.sql}) as ${sql.identifier(key)}`)
     }
-    if (extras?.sql) {
-      selectionArr.push(extras.sql)
+    if (extrasSql) {
+      selectionArr.push(extrasSql)
     }
     if (selectionArr.length === 0) {
       throw new DrizzleError({
@@ -364,7 +375,7 @@ export class SpannerDialect {
 
     const selectKeyword = currentDepth ? sql`select as struct ` : sql`select `
     return {
-      sql: sql`${selectKeyword}${sql.join(selectionArr, sql`, `)} from ${getTableAsAliasSQL(table)}${throughJoin}${sql` where ${where}`.if(where)}${sql` order by ${order}`.if(order)}${sql` limit ${limit}`.if(limit !== undefined)}${sql` offset ${offset}`.if(offset !== undefined)}`,
+      sql: sql`${selectKeyword}${sql.join(selectionArr, sql`, `)} from ${new SQL(getTableAsAliasSQL(table))}${throughJoin}${sql` where ${where}`.if(where)}${sql` order by ${order}`.if(order)}${sql` limit ${limit}`.if(limit !== undefined)}${sql` offset ${offset}`.if(offset !== undefined)}`,
       selection
     }
   }

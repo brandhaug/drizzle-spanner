@@ -5,12 +5,17 @@ import { SpannerInvalidArgumentError } from './errors.js'
 import { type SpannerTable, getPrimaryKeyColumns } from './table.js'
 import { TableName } from './symbols.js'
 
-function isNoiseChunk(chunk: unknown): boolean {
-  return is(chunk, StringChunk) && ['', '(', ')'].includes(chunk.value.join('').trim())
+/**
+ * A string chunk's text without grouping parentheses: drizzle emits `and()` as
+ * `((`, a predicate, `) and (`, a predicate, `))`, so the parentheses carry no
+ * meaning for the equality shapes read here.
+ */
+function chunkText(chunk: unknown): string | undefined {
+  return is(chunk, StringChunk) ? chunk.value.replaceAll(/[()\s]/g, '') : undefined
 }
 
-function chunkText(chunk: unknown): string | undefined {
-  return is(chunk, StringChunk) ? chunk.value.join('').trim() : undefined
+function isNoiseChunk(chunk: unknown): boolean {
+  return chunkText(chunk) === ''
 }
 
 /**
