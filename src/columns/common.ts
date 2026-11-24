@@ -71,13 +71,14 @@ export abstract class SpannerColumnBuilder<
     return this as HasGenerated<this, { type: 'always' }>
   }
 
-  /** Wraps the column in `ARRAY<T>`. Spanner arrays cannot nest. */
+  /**
+   * Wraps the column in `ARRAY<T>`. Spanner arrays cannot nest. The element's
+   * NOT NULL and default do not carry over: the array column takes its own.
+   */
   array(): SpannerArrayBuilder<{
     dataType: 'array'
     data: Array<T extends { $type: infer U } ? U : T['data']>
     driverParam: Array<T['driverParam']>
-    notNull: false
-    hasDefault: false
   }> {
     return new SpannerArrayBuilder(
       this.config.name,

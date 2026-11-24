@@ -19,6 +19,7 @@ import {
 } from '../../src/index.js'
 import { type EmulatorHarness } from './harness.js'
 import { startEmulator } from './harness.js'
+import { type Equal } from '../type-equal.js'
 
 const everyType = spannerTable('every_type', {
   id: string('id', { length: 36 }).primaryKey(),
@@ -35,6 +36,11 @@ const everyType = spannerTable('every_type', {
   doc: json('doc'),
   tags: string('tags', { length: 'max' }).array(),
   nums: int64('nums').array()
+})
+
+const layers = spannerTable('layers', {
+  id: string('id', { length: 36 }).primaryKey(),
+  fields: string('fields', { length: 'max' }).array().notNull()
 })
 
 const events = spannerTable('events', {
@@ -81,6 +87,10 @@ beforeAll(async () => {
       doc JSON,
       tags ARRAY<STRING(MAX)>,
       nums ARRAY<INT64>
+    ) PRIMARY KEY (id)`,
+    `CREATE TABLE layers (
+      id STRING(36) NOT NULL,
+      fields ARRAY<STRING(MAX)> NOT NULL
     ) PRIMARY KEY (id)`,
     `CREATE TABLE events (
       id STRING(36) NOT NULL,
@@ -198,6 +208,24 @@ describe('column type round-trips', () => {
       .where(eq(everyType.id, 'row-empty'))
     expect(selected!.tags).toEqual([])
     expect(selected!.nums).toEqual([])
+  })
+})
+
+describe('NOT NULL array columns', () => {
+  it('requires the array on insert and reads it back as an array', async () => {
+    const { db } = harness
+    await db.insert(layers).values({ id: 'layer-1', fields: ['name', 'country'] })
+    // @ts-expect-error — a NOT NULL array column has no default, so insert requires it
+    const missing = db.insert(layers).values({ id: 'layer-2' })
+    void missing
+
+    const [layer] = await db.select().from(layers).where(eq(layers.id, 'layer-1'))
+    const fieldsType: Equal<
+      typeof layer,
+      { id: string; fields: Array<string> } | undefined
+    > = true
+    void fieldsType
+    expect(layer).toEqual({ id: 'layer-1', fields: ['name', 'country'] })
   })
 })
 
