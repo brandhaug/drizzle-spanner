@@ -83,6 +83,7 @@ const PUBLIC_EXPORTS = [
   'SpannerPrecisionError',
   'SpannerPreparedQuery',
   'SpannerQueryBase',
+  'SpannerRaw',
   'SpannerRelationalQuery',
   'SpannerRelationalQueryBuilder',
   'SpannerSelect',

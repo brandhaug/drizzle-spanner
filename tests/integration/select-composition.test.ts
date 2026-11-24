@@ -2,6 +2,7 @@ import { afterAll, beforeAll, describe, expect, it, spyOn } from 'bun:test'
 import { eq, isNotNull } from 'drizzle-orm/sql/expressions'
 import { sql } from 'drizzle-orm/sql'
 import { bool, inUnnest, spannerTable, string, timestamp } from '../../src/index.js'
+import { type SpannerSqlRequest } from '../../src/index.js'
 import { type EmulatorHarness } from './harness.js'
 import { rejectionOf } from '../rejection.js'
 import { startEmulator } from './harness.js'
@@ -188,5 +189,73 @@ describe('select composition on Spanner', () => {
     } finally {
       getSnapshot.mockRestore()
     }
+  })
+})
+
+describe('raw SQL on Spanner', () => {
+  it('sends the request options of a raw read', async () => {
+    const run = spyOn(harness.database, 'run')
+    try {
+      const rows = await harness.db
+        .execute<Array<{ id: string }>>(
+          sql`SELECT id FROM current_entities ORDER BY id`
+        )
+        .withRequestOptions({ requestTag: 'raw_read', priority: 'low' })
+      expect(rows).toEqual([{ id: 'E1' }, { id: 'E2' }])
+      expect(
+        (run.mock.calls[0]?.[0] as SpannerSqlRequest | undefined)?.requestOptions
+      ).toEqual({
+        requestTag: 'raw_read',
+        priority: 'PRIORITY_LOW'
+      })
+    } finally {
+      run.mockRestore()
+    }
+  })
+
+  it('cancels a raw read when its signal aborts', async () => {
+    const read = (signal: AbortSignal) =>
+      harness.db
+        .execute<Array<{ id: string }>>(
+          sql`SELECT id FROM current_entities ORDER BY id`
+        )
+        .withSignal(signal)
+    expect(await read(new AbortController().signal)).toEqual([
+      { id: 'E1' },
+      { id: 'E2' }
+    ])
+    const controller = new AbortController()
+    const pending = read(controller.signal).execute()
+    const reason = new Error('caller gave up')
+    controller.abort(reason)
+    expect(await rejectionOf(pending)).toBe(reason)
+  })
+
+  it('refuses a signal on raw DML, which could commit after the abort, and runs nothing', async () => {
+    const error = await rejectionOf(
+      harness.db
+        .execute(sql`INSERT INTO current_entities (id) VALUES ('E9')`)
+        .withSignal(new AbortController().signal)
+        .execute()
+    )
+    expect(String(error)).toContain('withSignal cancels reads')
+    expect(await harness.db.$count(current, eq(current.id, 'E9'))).toBe(0)
+  })
+
+  it('tags raw SQL in a transaction, where no signal is offered', async () => {
+    const rows = await harness.db.transaction(
+      async (tx) => {
+        const read = tx.execute<Array<{ id: string }>>(
+          sql`SELECT id FROM current_entities WHERE id = 'E1'`
+        )
+        // @ts-expect-error — the driver retries a transaction callback, so it is cancelled as a whole
+        void read.withSignal
+        const asPromise: Promise<Array<{ id: string }>> = read
+        void asPromise
+        return read.withRequestOptions({ requestTag: 'raw_in_transaction' })
+      },
+      { readOnly: true }
+    )
+    expect(rows).toEqual([{ id: 'E1' }])
   })
 })

@@ -284,6 +284,16 @@ const mockDb = drizzle.mock()
 const { sql: text, params } = mockDb.select().from(singers).toSQL()
 ```
 
+Raw SQL takes the same request options as the builders, and a raw read takes a
+signal. Raw DML refuses a signal, because it could commit after the abort:
+
+```ts
+const page = await db
+  .execute<Array<{ id: string }>>(sql`SELECT id FROM singers`)
+  .withRequestOptions({ requestTag: 'singer_ids' })
+  .withSignal(AbortSignal.timeout(5_000))
+```
+
 ## Upsert
 
 Spanner has no `ON CONFLICT`. `.orUpdate()` and `.orIgnore()` compile to

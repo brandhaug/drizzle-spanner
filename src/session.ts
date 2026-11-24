@@ -5,7 +5,7 @@ import { type PreparedQuery } from 'drizzle-orm/session'
 import { type Query, type SQL } from 'drizzle-orm/sql'
 import { fillPlaceholders } from 'drizzle-orm/sql'
 import { type SpannerDialect, type SpannerQueryWithTypings } from './dialect.js'
-import { wrapSpannerError } from './errors.js'
+import { SpannerInvalidArgumentError, wrapSpannerError } from './errors.js'
 import { type SpannerMutationSink } from './mutations.js'
 import { type SpannerTimestampBounds } from './staleness.js'
 import { type SelectedFieldsOrdered } from './orm-internal.js'
@@ -108,7 +108,8 @@ export interface SpannerSessionOptions {
 }
 
 export interface SpannerQueryMetadata {
-  type: 'select' | 'insert' | 'update' | 'delete'
+  /** Absent for raw SQL, whose statement kind is read from its text. */
+  type?: 'select' | 'insert' | 'update' | 'delete'
   /** Encoded timestamp bound of a `withStaleness` single-use read. */
   staleness?: SpannerTimestampBounds
   /** Set by `withRequestOptions`. */
@@ -177,12 +178,17 @@ export class SpannerPreparedQuery<T = unknown> implements PreparedQuery {
     if (requestOptions) {
       request.requestOptions = requestOptions
     }
-    const isDml = this.queryMetadata
-      ? this.queryMetadata.type !== 'select'
-      : DML_PATTERN.test(this.queryWithTypings.sql)
+    const type = this.queryMetadata?.type
+    const isDml = type ? type !== 'select' : DML_PATTERN.test(this.queryWithTypings.sql)
 
     let rawRows: Array<SpannerDriverRow>
     const signal = this.queryMetadata?.signal
+    if (isDml && signal) {
+      throw new SpannerInvalidArgumentError({
+        message:
+          'withSignal cancels reads; DML could commit after the abort, so it takes no signal'
+      })
+    }
     signal?.throwIfAborted()
     try {
       rawRows = await this.runner.run(request, isDml, {
@@ -267,7 +273,16 @@ export class SpannerSession {
     )
   }
 
-  execute<T = unknown>(query: SQL): Promise<T> {
-    return this.prepareQuery<T>(this.dialect.sqlToQuery(query), undefined).execute()
+  /** Raw SQL: rows arrive as the driver's `toJSON()` objects. */
+  execute<T = unknown>(
+    query: SQL,
+    options: Pick<SpannerQueryMetadata, 'requestOptions' | 'signal'> = {}
+  ): Promise<T> {
+    return this.prepareQuery<T>(
+      this.dialect.sqlToQuery(query),
+      undefined,
+      undefined,
+      options
+    ).execute()
   }
 }

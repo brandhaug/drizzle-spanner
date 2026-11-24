@@ -27,6 +27,8 @@ import { unwrapDriverWrapper } from './columns/common.js'
 import { SpannerDelete } from './query-builders/delete.js'
 import { SpannerInsertBuilder } from './query-builders/insert.js'
 import { SpannerRelationalQueryBuilder } from './query-builders/query.js'
+import { type SpannerTransactionRaw } from './query-builders/raw.js'
+import { SpannerRaw } from './query-builders/raw.js'
 import {
   type SpannerSelectedFields,
   type SpannerTransactionSelectBuilder
@@ -373,7 +375,7 @@ export interface SpannerReadOnlyTransaction<
     fields: TSelection
   ): SpannerTransactionSelectBuilder<TSelection>
   $count(table: AnySpannerTable | SQL, where?: SQL): Promise<number>
-  execute<T = Array<Record<string, unknown>>>(query: SQL): Promise<T>
+  execute<T = Array<Record<string, unknown>>>(query: SQL): SpannerTransactionRaw<T>
   query: SpannerRelationalQueries<TRelations>
 }
 
@@ -396,16 +398,18 @@ export interface SpannerMutationTransaction {
 
 /**
  * The surface a read-write transaction callback receives. Identical to
- * `SpannerTransaction` except that its select type omits `withStaleness`
- * (single-use bounded reads cannot run on an open transaction).
+ * `SpannerTransaction` except that its selects omit `withStaleness` (single-use
+ * bounded reads cannot run on an open transaction), and its selects and raw SQL
+ * omit `withSignal` (the driver retries the whole callback).
  */
 export type SpannerReadWriteTransaction<
   TRelations extends AnyRelations = EmptyRelations
-> = Omit<SpannerTransaction<TRelations>, 'select'> & {
+> = Omit<SpannerTransaction<TRelations>, 'select' | 'execute'> & {
   select(): SpannerTransactionSelectBuilder<undefined>
   select<TSelection extends SpannerSelectedFields>(
     fields: TSelection
   ): SpannerTransactionSelectBuilder<TSelection>
+  execute<T = Array<Record<string, unknown>>>(query: SQL): SpannerTransactionRaw<T>
 }
 
 /**
@@ -474,8 +478,8 @@ export class SpannerDatabaseCore<TRelations extends AnyRelations = EmptyRelation
   }
 
   /** Raw SQL escape hatch; rows arrive as the driver's `toJSON()` objects. */
-  execute<T = Array<Record<string, unknown>>>(query: SQL): Promise<T> {
-    return this.session.execute<T>(query)
+  execute<T = Array<Record<string, unknown>>>(query: SQL): SpannerRaw<T> {
+    return new SpannerRaw<T>(query, this.session, this.dialect)
   }
 }
 
