@@ -1,6 +1,6 @@
 {
   "name": "drizzle-spanner",
-  "version": "0.3.0",
+  "version": "0.3.1",
   "description": "Google Cloud Spanner (GoogleSQL) dialect for Drizzle ORM v1",
   "keywords": [
     "drizzle",
