@@ -17,6 +17,7 @@ import { toTimestampBounds } from './staleness.js'
 import {
   type SpannerDriverRow,
   type SpannerQueryRunner,
+  type SpannerRunOptions,
   type SpannerSqlRequest
 } from './session.js'
 import { NO_CLIENT_MESSAGE, SpannerSession } from './session.js'
@@ -58,7 +59,15 @@ export interface SpannerDriverRunTransactionOptions {
 /** A read-only snapshot from `database.getSnapshot`. */
 export interface SpannerDriverSnapshot {
   run(request: SpannerSqlRequest): Promise<[Array<SpannerDriverRow>, ...Array<unknown>]>
+  /** Used for reads given a signal: destroying the stream cancels the gRPC call. */
+  runStream(request: SpannerSqlRequest): SpannerDriverRowStream
   end(): void
+}
+
+/** The driver's row stream (`PartialResultStream`): async-iterable and destroyable. */
+export interface SpannerDriverRowStream extends AsyncIterable<SpannerDriverRow> {
+  destroy(error?: Error): unknown
+  on(event: 'error', listener: (error: Error) => void): unknown
 }
 
 export interface SpannerDriverDatabase {
@@ -85,8 +94,17 @@ class DatabaseRunner {
   async run(
     request: SpannerSqlRequest,
     isDml: boolean,
-    staleness?: SpannerTimestampBounds
+    { staleness, signal }: SpannerRunOptions = {}
   ): Promise<Array<SpannerDriverRow>> {
+    if (!isDml && signal) {
+      return readOnSnapshot(this.database, request, staleness, signal)
+    }
+    if (signal) {
+      throw new SpannerInvalidArgumentError({
+        message:
+          'withSignal cancels reads only; a DML statement commits in its own transaction and cannot be cancelled'
+      })
+    }
     if (!isDml) {
       const [rows] = staleness
         ? await this.database.run(request, staleness)
@@ -103,14 +121,74 @@ class DatabaseRunner {
   }
 }
 
-/** A single-use bounded read cannot run on an open transaction of any kind. */
-function rejectStalenessInTransaction(
-  staleness: SpannerTimestampBounds | undefined
-): void {
+/**
+ * A cancellable read. It runs on a read-only snapshot because the snapshot's row
+ * stream cancels its gRPC call when destroyed; the stream `database.runStream`
+ * returns is a proxy whose destruction leaves the call running. A snapshot is a
+ * multi-use transaction, so it takes no single-use staleness bound.
+ */
+async function readOnSnapshot(
+  database: SpannerDriverDatabase,
+  request: SpannerSqlRequest,
+  staleness: SpannerTimestampBounds | undefined,
+  signal: AbortSignal
+): Promise<Array<SpannerDriverRow>> {
+  if (
+    staleness?.maxStaleness !== undefined ||
+    staleness?.minReadTimestamp !== undefined
+  ) {
+    throw new SpannerInvalidArgumentError({
+      message:
+        'withSignal reads on a read-only snapshot, which takes an exact staleness or a read timestamp; maxStaleness and minReadTimestamp are single-use bounds'
+    })
+  }
+  signal.throwIfAborted()
+  const [snapshot] = await database.getSnapshot(staleness)
+  try {
+    return await readStream(snapshot.runStream(request), signal)
+  } finally {
+    snapshot.end()
+  }
+}
+
+/** Collects a row stream; aborting the signal destroys it. */
+async function readStream(
+  stream: SpannerDriverRowStream,
+  signal: AbortSignal
+): Promise<Array<SpannerDriverRow>> {
+  // An error the stream emits before iteration attaches its own listener must not go unhandled.
+  stream.on('error', () => undefined)
+  const cancel = (): void => {
+    stream.destroy(
+      signal.reason instanceof Error ? signal.reason : new Error('aborted')
+    )
+  }
+  if (signal.aborted) {
+    cancel()
+  }
+  signal.addEventListener('abort', cancel, { once: true })
+  try {
+    return await Array.fromAsync(stream)
+  } finally {
+    signal.removeEventListener('abort', cancel)
+  }
+}
+
+/** A single-use bounded read or a cancellable read cannot run on an open transaction of any kind. */
+function rejectSingleUseOptionsInTransaction({
+  staleness,
+  signal
+}: SpannerRunOptions): void {
   if (staleness) {
     throw new SpannerInvalidArgumentError({
       message:
         'withStaleness is a single-use bounded read and cannot run inside a transaction; run it on the database, or give the read-only transaction a staleness bound instead'
+    })
+  }
+  if (signal) {
+    throw new SpannerInvalidArgumentError({
+      message:
+        'withSignal cancels single-use reads on the database; inside a transaction the driver retries the whole callback, so cancel the transaction instead'
     })
   }
 }
@@ -122,9 +200,9 @@ class TransactionRunner {
   async run(
     request: SpannerSqlRequest,
     _isDml: boolean,
-    staleness?: SpannerTimestampBounds
+    options: SpannerRunOptions = {}
   ): Promise<Array<SpannerDriverRow>> {
-    rejectStalenessInTransaction(staleness)
+    rejectSingleUseOptionsInTransaction(options)
     const [rows] = await this.transaction.run(request)
     return rows
   }
@@ -137,7 +215,7 @@ class SnapshotRunner {
   async run(
     request: SpannerSqlRequest,
     isDml: boolean,
-    staleness?: SpannerTimestampBounds
+    options: SpannerRunOptions = {}
   ): Promise<Array<SpannerDriverRow>> {
     if (isDml) {
       throw new SpannerInvalidArgumentError({
@@ -145,7 +223,7 @@ class SnapshotRunner {
           'DML is not allowed in a read-only transaction; use a read-write db.transaction for writes'
       })
     }
-    rejectStalenessInTransaction(staleness)
+    rejectSingleUseOptionsInTransaction(options)
     const [rows] = await this.snapshot.run(request)
     return rows
   }

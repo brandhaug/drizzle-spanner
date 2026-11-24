@@ -15,12 +15,58 @@ import { toDriverParamType } from './type-hints.js'
 export const NO_CLIENT_MESSAGE =
   'Cannot execute a query on a mock database: no client is attached'
 
+/** Spanner's request priority, as the driver's `requestOptions.priority` names it. */
+export type SpannerDriverPriority = 'PRIORITY_LOW' | 'PRIORITY_MEDIUM' | 'PRIORITY_HIGH'
+
 /** Minimal surface of `@google-cloud/spanner`'s request this adapter sends. */
 export interface SpannerSqlRequest {
   sql: string
   params: Record<string, unknown>
   types: Record<string, unknown>
   json?: boolean
+  requestOptions?: { requestTag?: string; priority?: SpannerDriverPriority }
+}
+
+/** Per-request options a query builder can set: `withRequestOptions`. */
+export interface SpannerRequestOptions {
+  /** Shows in Spanner's query statistics and lock insights as `request_tag`. */
+  requestTag?: string
+  /** Spanner's CPU scheduling priority for the request; Spanner's default is high. */
+  priority?: 'low' | 'medium' | 'high'
+}
+
+/** How one statement runs besides its SQL: a single-use staleness bound and a cancellation signal. */
+export interface SpannerRunOptions {
+  staleness?: SpannerTimestampBounds
+  signal?: AbortSignal
+}
+
+const DRIVER_PRIORITY: Record<
+  NonNullable<SpannerRequestOptions['priority']>,
+  SpannerDriverPriority
+> = {
+  low: 'PRIORITY_LOW',
+  medium: 'PRIORITY_MEDIUM',
+  high: 'PRIORITY_HIGH'
+}
+
+export function toDriverRequestOptions(
+  options: SpannerRequestOptions | undefined
+): SpannerSqlRequest['requestOptions'] {
+  if (
+    !options ||
+    (options.requestTag === undefined && options.priority === undefined)
+  ) {
+    return undefined
+  }
+  const driverOptions: NonNullable<SpannerSqlRequest['requestOptions']> = {}
+  if (options.requestTag !== undefined) {
+    driverOptions.requestTag = options.requestTag
+  }
+  if (options.priority !== undefined) {
+    driverOptions.priority = DRIVER_PRIORITY[options.priority]
+  }
+  return driverOptions
 }
 
 /** A driver row in array mode: one `{ name, value }` cell per selected field. */
@@ -45,14 +91,15 @@ export function driverRowToObject(row: SpannerDriverRow): Record<string, unknown
  * Where a statement executes. Reads run on `database.run`; DML must run inside
  * `runTransactionAsync` (the Node client's `run` is read-only). Inside
  * `db.transaction` both run on the one open driver transaction. A staleness
- * bound turns a read into a single-use bounded read — only the plain database
- * runner accepts one; transaction runners throw typed errors.
+ * bound turns a read into a single-use bounded read, and a signal makes it
+ * cancellable — only the plain database runner accepts either; transaction
+ * runners throw typed errors.
  */
 export interface SpannerQueryRunner {
   run(
     request: SpannerSqlRequest,
     isDml: boolean,
-    staleness?: SpannerTimestampBounds
+    options?: SpannerRunOptions
   ): Promise<Array<SpannerDriverRow>>
 }
 
@@ -64,6 +111,10 @@ export interface SpannerQueryMetadata {
   type: 'select' | 'insert' | 'update' | 'delete'
   /** Encoded timestamp bound of a `withStaleness` single-use read. */
   staleness?: SpannerTimestampBounds
+  /** Set by `withRequestOptions`. */
+  requestOptions?: SpannerRequestOptions
+  /** Set by `withSignal`: aborting cancels the read. */
+  signal?: AbortSignal
 }
 
 /** Converts drizzle's positional params to Spanner named params plus type hints. */
@@ -117,19 +168,31 @@ export class SpannerPreparedQuery<T = unknown> implements PreparedQuery {
       params,
       this.queryWithTypings.typings as Array<string> | undefined
     )
+    const requestOptions = toDriverRequestOptions(this.queryMetadata?.requestOptions)
     const request: SpannerSqlRequest = {
       sql: this.queryWithTypings.sql,
       params: named,
       types
+    }
+    if (requestOptions) {
+      request.requestOptions = requestOptions
     }
     const isDml = this.queryMetadata
       ? this.queryMetadata.type !== 'select'
       : DML_PATTERN.test(this.queryWithTypings.sql)
 
     let rawRows: Array<SpannerDriverRow>
+    const signal = this.queryMetadata?.signal
+    signal?.throwIfAborted()
     try {
-      rawRows = await this.runner.run(request, isDml, this.queryMetadata?.staleness)
+      rawRows = await this.runner.run(request, isDml, {
+        staleness: this.queryMetadata?.staleness,
+        signal: this.queryMetadata?.signal
+      })
     } catch (error) {
+      if (signal?.aborted) {
+        throw signal.reason
+      }
       throw wrapSpannerError(error, {
         sql: this.queryWithTypings.sql,
         paramNames: Object.keys(named),

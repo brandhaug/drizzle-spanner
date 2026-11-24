@@ -33,6 +33,7 @@ export { SpannerDatabase, SpannerDatabaseCore, SpannerTransaction } from './db.j
 export type {
   SpannerDatabaseOptions,
   SpannerDriverDatabase,
+  SpannerDriverRowStream,
   SpannerDriverRunTransactionOptions,
   SpannerDriverSnapshot,
   SpannerDriverTransaction,
@@ -45,6 +46,7 @@ export type {
   SpannerTransactionOptions
 } from './db.js'
 export * from './dialect.js'
+export { inUnnest, search } from './expressions.js'
 export * from './driver.js'
 export {
   GrpcStatus,
@@ -78,6 +80,8 @@ export type {
   SpannerDriverRow,
   SpannerQueryMetadata,
   SpannerQueryRunner,
+  SpannerRequestOptions,
+  SpannerRunOptions,
   SpannerSessionOptions,
   SpannerSqlRequest
 } from './session.js'

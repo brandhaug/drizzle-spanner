@@ -14,22 +14,44 @@ import {
   relationsOrderToSQL,
   relationToSQL
 } from 'drizzle-orm/relations'
-import { type DriverValueEncoder, type Query, type SQLChunk } from 'drizzle-orm/sql'
 import { Column } from 'drizzle-orm/column'
 import { and } from 'drizzle-orm/sql/expressions'
-import { Param, SQL, sql } from 'drizzle-orm/sql'
+import {
+  type DriverValueEncoder,
+  Param,
+  type Query,
+  SQL,
+  type SQLChunk,
+  type SQLWrapper,
+  sql
+} from 'drizzle-orm/sql'
+import { type Subquery } from 'drizzle-orm/subquery'
 import { type SelectedFieldsOrdered } from './orm-internal.js'
 import { orderSelectedFields } from './orm-internal.js'
 import { SpannerColumn } from './columns/common.js'
 import { type SpannerTable } from './table.js'
 import { TableColumns } from './symbols.js'
 import { compileWithParamMetadata } from './sql-compiler.js'
+import { SpannerArrayParamEncoder } from './expressions.js'
 
 export interface SpannerSelectConfig {
-  table: SpannerTable | SQL
+  table: SpannerTable | Subquery | SQL
   fields: Record<string, unknown>
   fieldsFlat?: SelectedFieldsOrdered
   where?: SQL
+  groupBy?: Array<SpannerColumn<any> | SQL | SQL.Aliased>
+  having?: SQL
+  orderBy?: Array<SpannerColumn<any> | SQL>
+  limit?: number | SQL
+  offset?: number | SQL
+}
+
+/** GoogleSQL's set operators; every one names ALL or DISTINCT. */
+export type SpannerSetOperator = 'union' | 'intersect' | 'except'
+
+export interface SpannerSetOperationConfig {
+  left: SQLWrapper
+  operations: Array<{ operator: SpannerSetOperator; all: boolean; right: SQLWrapper }>
   orderBy?: Array<SpannerColumn<any> | SQL>
   limit?: number | SQL
   offset?: number | SQL
@@ -67,6 +89,14 @@ export interface SpannerQueryWithTypings extends Query {
   paramColumns?: Array<string | undefined>
 }
 
+/** A column in an ORDER BY over set operators names an output column, unqualified. */
+function outputColumn(chunk: SQLChunk): SQLChunk {
+  if (is(chunk, Column)) {
+    return sql.identifier(chunk.name)
+  }
+  return is(chunk, SQL) ? new SQL(chunk.queryChunks.map(outputColumn)) : chunk
+}
+
 export class SpannerDialect {
   static readonly [entityKind]: string = 'SpannerDialect'
 
@@ -87,7 +117,7 @@ export class SpannerDialect {
    * rc.4. The compiler records them when each parameter is emitted.
    */
   prepareTyping = (encoder: DriverValueEncoder<unknown, unknown>): string => {
-    if (is(encoder, SpannerColumn)) {
+    if (is(encoder, SpannerColumn) || is(encoder, SpannerArrayParamEncoder)) {
       return encoder.typeHint()
     }
     return 'none'
@@ -110,7 +140,13 @@ export class SpannerDialect {
     const columnsLen = fields.length
     const chunks = fields.flatMap(({ field }, i) => {
       const chunk: Array<SQLChunk> = []
-      if (is(field, SQL.Aliased)) {
+      if (
+        is(field, SQL.Aliased) &&
+        (field as SQL.Aliased & { isSelectionField?: boolean }).isSelectionField
+      ) {
+        // A subquery's aliased field, read through its alias: the subquery already computed it.
+        chunk.push(field)
+      } else if (is(field, SQL.Aliased)) {
         chunk.push(field.sql, sql` as ${sql.identifier(field.fieldAlias)}`)
       } else if (is(field, SQL) || is(field, Column)) {
         chunk.push(field)
@@ -134,11 +170,11 @@ export class SpannerDialect {
     return where ? sql` where ${where}` : sql` where true`
   }
 
-  buildSelectQuery(config: SpannerSelectConfig): SQL {
-    const { fields, fieldsFlat, where, table, orderBy, limit, offset } = config
-    const fieldsList = fieldsFlat ?? orderSelectedFields(fields)
-    const selection = this.buildSelection(fieldsList)
-    const whereSql = where ? sql` where ${where}` : undefined
+  private buildOrderLimitOffset({
+    orderBy,
+    limit,
+    offset
+  }: Pick<SpannerSelectConfig, 'orderBy' | 'limit' | 'offset'>): SQL {
     const orderBySql =
       orderBy && orderBy.length > 0
         ? sql` order by ${sql.join(orderBy, sql`, `)}`
@@ -147,7 +183,45 @@ export class SpannerDialect {
       typeof limit === 'number' || is(limit, SQL) ? sql` limit ${limit}` : undefined
     const offsetSql =
       typeof offset === 'number' || is(offset, SQL) ? sql` offset ${offset}` : undefined
-    return sql`select ${selection} from ${table}${whereSql}${orderBySql}${limitSql}${offsetSql}`
+    return sql`${orderBySql}${limitSql}${offsetSql}`
+  }
+
+  buildSelectQuery(config: SpannerSelectConfig): SQL {
+    const { fields, fieldsFlat, where, table, groupBy, having } = config
+    const fieldsList = fieldsFlat ?? orderSelectedFields(fields)
+    const selection = this.buildSelection(fieldsList)
+    const whereSql = where ? sql` where ${where}` : undefined
+    const groupBySql =
+      groupBy && groupBy.length > 0
+        ? sql` group by ${sql.join(groupBy, sql`, `)}`
+        : undefined
+    const havingSql = having ? sql` having ${having}` : undefined
+    return sql`select ${selection} from ${table}${whereSql}${groupBySql}${havingSql}${this.buildOrderLimitOffset(config)}`
+  }
+
+  /**
+   * `(left) union all (right) ...` with an ORDER BY / LIMIT over the result.
+   * A column in that ORDER BY names an output column, so it renders unqualified.
+   */
+  buildSetOperationQuery(config: SpannerSetOperationConfig): SQL {
+    const combined = config.operations.reduce<{ sql: SQL; previous?: string }>(
+      (chain, { operator, all, right }) => {
+        const keyword = `${operator} ${all ? 'all' : 'distinct'}`
+        // GoogleSQL rejects a chain that mixes set operators unless it is parenthesised.
+        const left =
+          chain.previous === undefined || chain.previous === keyword
+            ? chain.sql
+            : sql`(${chain.sql})`
+        return { sql: sql`${left} ${sql.raw(keyword)} ${right}`, previous: keyword }
+      },
+      { sql: sql`${config.left}` }
+    ).sql
+    const orderBy = config.orderBy?.map((entry) =>
+      is(entry, SQL)
+        ? new SQL(entry.queryChunks.map(outputColumn))
+        : sql`${sql.identifier(entry.name)}`
+    )
+    return sql`${combined}${this.buildOrderLimitOffset({ ...config, orderBy })}`
   }
 
   buildInsertQuery(config: SpannerInsertConfig): SQL {
