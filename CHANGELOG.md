@@ -4,6 +4,36 @@ All notable changes to `drizzle-spanner` are recorded here. Both packages in
 this repository version and release in lockstep from a single `v<version>`
 tag; see [RELEASING.md](RELEASING.md).
 
+## [0.3.0](https://github.com/brandhaug/drizzle-spanner/compare/v0.2.0...v0.3.0) (2026-11-24)
+
+
+### ⚠ BREAKING CHANGES
+
+* take request options and a signal on raw SQL ([#135](https://github.com/brandhaug/drizzle-spanner/issues/135))
+* type array elements as nullable ([#133](https://github.com/brandhaug/drizzle-spanner/issues/133))
+
+### Features
+
+* join tables and subqueries in selects ([#136](https://github.com/brandhaug/drizzle-spanner/issues/136)) ([5109a7d](https://github.com/brandhaug/drizzle-spanner/commit/5109a7dc57e53b1f1f04991b1594da60b0788ed4))
+* take request options and a signal on raw SQL ([#135](https://github.com/brandhaug/drizzle-spanner/issues/135)) ([7dbb5b2](https://github.com/brandhaug/drizzle-spanner/commit/7dbb5b29fe656f381cfcf5f29f6b433ef9de92e5))
+
+
+### Bug Fixes
+
+* type .array().notNull() columns as non-null arrays ([#132](https://github.com/brandhaug/drizzle-spanner/issues/132)) ([e620cc6](https://github.com/brandhaug/drizzle-spanner/commit/e620cc63495233bf5f46810ba8d9b12abd8172c8))
+* type array elements as nullable ([#133](https://github.com/brandhaug/drizzle-spanner/issues/133)) ([2b291c7](https://github.com/brandhaug/drizzle-spanner/commit/2b291c79ed49b0d83982280aa204f1c52f8cc9e4))
+
+
+### Performance Improvements
+
+* read single-use when a read is cancellable ([#134](https://github.com/brandhaug/drizzle-spanner/issues/134)) ([060fa22](https://github.com/brandhaug/drizzle-spanner/commit/060fa227ef8bcb5614792e0d205b00ec5c238636))
+
+
+### Miscellaneous
+
+* **deps:** bump all-patch-updates dependencies ([#125](https://github.com/brandhaug/drizzle-spanner/issues/125)) ([a1eba06](https://github.com/brandhaug/drizzle-spanner/commit/a1eba06c8eb2dd42060fe6049360d587b79e96d1))
+* **deps:** bump oxc dependencies ([#124](https://github.com/brandhaug/drizzle-spanner/issues/124)) ([804da03](https://github.com/brandhaug/drizzle-spanner/commit/804da036c4846532cb8fa359a723eaf11aae233f))
+
 ## [0.2.0](https://github.com/brandhaug/drizzle-spanner/compare/v0.1.9...v0.2.0) (2026-11-24)
 
 
