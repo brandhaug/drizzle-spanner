@@ -7,6 +7,7 @@ import {
 } from 'drizzle-orm/sql'
 import { SpannerColumn } from './columns/common.js'
 import { type SpannerQueryWithTypings } from './dialect.js'
+import { SpannerArrayParamEncoder } from './expressions.js'
 
 type CollectBoundValue = (
   this: SQL,
@@ -24,6 +25,19 @@ type CollectBoundValue = (
 const collectBoundValue = (
   SQL.prototype as unknown as { collectBoundValue?: CollectBoundValue }
 ).collectBoundValue
+
+/** The schema column a parameter binds through, for error hints. */
+function paramColumnName(
+  encoder: DriverValueEncoder<unknown, unknown> | undefined
+): string | undefined {
+  if (is(encoder, SpannerColumn)) {
+    return encoder.name
+  }
+  if (is(encoder, SpannerArrayParamEncoder)) {
+    return encoder.column.name
+  }
+  return undefined
+}
 
 /**
  * Drizzle's Query carries no parameter typings. Observe its compiler at the
@@ -70,7 +84,7 @@ export function compileWithParamMetadata(
       // A placeholder reaches escapeParam as its Param chunk, outside collectBoundValue.
       const encoder = is(value, Param) ? value.encoder : encoders.at(-1)
       typings[index] = encoder ? prepareTyping(encoder) : 'none'
-      paramColumns[index] = is(encoder, SpannerColumn) ? encoder.name : undefined
+      paramColumns[index] = paramColumnName(encoder)
       return config.escapeParam(index, value)
     }
   })

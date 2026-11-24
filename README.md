@@ -84,6 +84,64 @@ preference:
 2. **Bit-reversed identity** — `int64('id').primaryKey().generatedAsIdentity()`.
 3. **Sequences** — the `sequence()` helper, for keys shared across tables.
 
+## Composing selects
+
+Selects take `groupBy` and `having`, combine with set operators, and nest as
+subqueries:
+
+```ts
+import { max } from 'drizzle-orm'
+import { inUnnest, search } from 'drizzle-spanner'
+
+// One ARRAY parameter instead of one parameter per id: the SQL text is the
+// same for any list length, so Spanner reuses one cached plan.
+const byId = db.select().from(singers).where(inUnnest(singers.id, ids))
+
+// GoogleSQL has no bare UNION: union() is UNION DISTINCT, unionAll() is
+// UNION ALL. orderBy/limit after a set operator apply to the combined rows.
+const both = db
+  .select({ id: singers.id })
+  .from(singers)
+  .unionAll(db.select({ id: retired.id }).from(retired))
+  .orderBy(singers.id)
+
+const latest = db
+  .select({
+    singerId: albums.singerId,
+    released: max(albums.releasedAt).as('released')
+  })
+  .from(albums)
+  .groupBy(albums.singerId)
+  .as('latest')
+const rows = await db.select().from(latest).where(eq(latest.singerId, id))
+
+// Full-text search over a TOKENLIST column.
+const found = await db
+  .select()
+  .from(singers)
+  .where(search(singers.nameTokens, 'ada OR grace'))
+```
+
+## Request options and cancellation
+
+`withRequestOptions` sets Spanner's request tag, which names the statement in
+query statistics, and its CPU priority. `withSignal` makes a read on the
+database cancellable: aborting the signal cancels the gRPC stream and the
+query rejects with the signal's reason. A cancellable read runs on a read-only
+snapshot, which costs one BeginTransaction round trip and takes an exact
+staleness or a read timestamp, not `maxStaleness` or `minReadTimestamp`.
+Inside a transaction the driver may retry the whole callback, so `withSignal`
+is not offered there.
+
+```ts
+const rows = await db
+  .select()
+  .from(singers)
+  .where(inUnnest(singers.id, ids))
+  .withRequestOptions({ requestTag: 'singer_page', priority: 'low' })
+  .withSignal(AbortSignal.timeout(5_000))
+```
+
 ## Interleaving and relational queries
 
 Interleaving is physical layout; relations are query semantics. The adapter

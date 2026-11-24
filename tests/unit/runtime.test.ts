@@ -139,6 +139,9 @@ function fakeSnapshotDatabase(
             snapshotRequests.push(request)
             return [rows] as [Array<SpannerDriverRow>]
           },
+          runStream() {
+            throw new Error('not used')
+          },
           end() {
             ended += 1
           }
@@ -339,6 +342,9 @@ describe('single-use stale reads (withStaleness)', () => {
           {
             async run() {
               return [rows] as [Array<SpannerDriverRow>]
+            },
+            runStream() {
+              throw new Error('not used')
             },
             end() {}
           }

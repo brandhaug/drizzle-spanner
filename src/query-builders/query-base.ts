@@ -14,6 +14,7 @@ import {
 import {
   type SpannerPreparedQuery,
   type SpannerQueryMetadata,
+  type SpannerRequestOptions,
   type SpannerSession
 } from '../session.js'
 import { NO_CLIENT_MESSAGE } from '../session.js'
@@ -37,6 +38,15 @@ export function mapRowToParams(
   return mapped
 }
 
+/** How a statement runs besides its SQL. A set operation runs with its first select's. */
+export interface SpannerRequestState {
+  /** Set by `SpannerSelect.withStaleness`. */
+  staleness?: SpannerTimestampBounds
+  /** Set by `withSignal` on reads. */
+  signal?: AbortSignal
+  requestOptions?: SpannerRequestOptions
+}
+
 /**
  * Shared executable-query shape of the four builders: compile via `getSQL()`,
  * prepare against the session (or throw the mock guard), execute.
@@ -49,13 +59,20 @@ export abstract class SpannerQueryBase<TResult>
 
   declare readonly _: { readonly dialect: 'spanner'; readonly result: TResult }
 
-  /** Set by `SpannerSelect.withStaleness`; undefined for every other builder. */
-  protected stalenessBounds: SpannerTimestampBounds | undefined
+  /**
+   * Spanner request options for this statement: a `requestTag` that names it in
+   * Spanner's query statistics, and the CPU scheduling `priority`.
+   */
+  withRequestOptions(options: SpannerRequestOptions): this {
+    this.requestState = { ...this.requestState, requestOptions: options }
+    return this
+  }
 
   constructor(
-    private readonly session: SpannerSession | undefined,
+    protected readonly session: SpannerSession | undefined,
     protected readonly dialect: SpannerDialect,
-    private readonly queryType: SpannerQueryMetadata['type']
+    private readonly queryType: SpannerQueryMetadata['type'],
+    protected requestState: SpannerRequestState = {}
   ) {
     super()
   }
@@ -81,7 +98,12 @@ export abstract class SpannerQueryBase<TResult>
       this.dialect.sqlToQuery(this.getSQL()),
       fields,
       fields ? undefined : () => undefined as TResult,
-      { type: this.queryType, staleness: this.stalenessBounds }
+      {
+        type: this.queryType,
+        staleness: this.requestState.staleness,
+        requestOptions: this.requestState.requestOptions,
+        signal: this.requestState.signal
+      }
     )
   }
 
