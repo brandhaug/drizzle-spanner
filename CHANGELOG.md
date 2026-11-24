@@ -4,6 +4,33 @@ All notable changes to `drizzle-spanner` are recorded here. Both packages in
 this repository version and release in lockstep from a single `v<version>`
 tag; see [RELEASING.md](RELEASING.md).
 
+## [0.2.0](https://github.com/brandhaug/drizzle-spanner/compare/v0.1.9...v0.2.0) (2026-11-24)
+
+
+### ⚠ BREAKING CHANGES
+
+* support drizzle-orm 1.0.0-rc.6 ([#126](https://github.com/brandhaug/drizzle-spanner/issues/126))
+
+### Features
+
+* compose selects and set Spanner request options ([#129](https://github.com/brandhaug/drizzle-spanner/issues/129)) ([649c40e](https://github.com/brandhaug/drizzle-spanner/commit/649c40e29a7de80fd8bcd7fc098b2ff8dae6f2cc))
+* support drizzle-orm 1.0.0-rc.6 ([#126](https://github.com/brandhaug/drizzle-spanner/issues/126)) ([1a6a4b4](https://github.com/brandhaug/drizzle-spanner/commit/1a6a4b423cb9818204dabbe849bf93e598ef9c33))
+
+
+### Bug Fixes
+
+* accept the driver's Database in drizzle() ([#128](https://github.com/brandhaug/drizzle-spanner/issues/128)) ([c66802f](https://github.com/brandhaug/drizzle-spanner/commit/c66802f081b89e6633a29865cbbc99af33d0c32e))
+* **kit:** pull schemas with search indexes and colliding column names ([#127](https://github.com/brandhaug/drizzle-spanner/issues/127)) ([5fe50bc](https://github.com/brandhaug/drizzle-spanner/commit/5fe50bc718a7acac3a58fbb2f87459719b30ab2a))
+
+
+### Miscellaneous
+
+* **deps:** bump @types/node from 26.6.5 to 26.6.6 ([#121](https://github.com/brandhaug/drizzle-spanner/issues/121)) ([33dd92f](https://github.com/brandhaug/drizzle-spanner/commit/33dd92fcc2dab250c53ad5e98ef504d4e1672155))
+* **deps:** bump oxc dependencies ([#120](https://github.com/brandhaug/drizzle-spanner/issues/120)) ([4ac56ae](https://github.com/brandhaug/drizzle-spanner/commit/4ac56ae77175614f02b23f050bff05fb42b09739))
+* **deps:** bump oxc dependencies ([#122](https://github.com/brandhaug/drizzle-spanner/issues/122)) ([cd967c8](https://github.com/brandhaug/drizzle-spanner/commit/cd967c848ac45730d25109caf372023bb73c6d0a))
+* **deps:** bump oxc dependencies ([#123](https://github.com/brandhaug/drizzle-spanner/issues/123)) ([0983677](https://github.com/brandhaug/drizzle-spanner/commit/0983677f45a6de1c1e94e65466c6d80781956add))
+* **deps:** bump oxlint-tsgolint from 7.0.2004 to 7.0.2005 ([#118](https://github.com/brandhaug/drizzle-spanner/issues/118)) ([d6464cf](https://github.com/brandhaug/drizzle-spanner/commit/d6464cf1d457e1dcbda1391f1f4c1f2a4f961080))
+
 ## [0.1.9](https://github.com/brandhaug/drizzle-spanner/compare/v0.1.8...v0.1.9) (2026-10-25)
 
 ### Bug Fixes
