@@ -182,13 +182,10 @@ class MaxRetriesExhaustedError extends Error {}
 
 /**
  * `DrizzleConfig` keys carried on the database: `relations` feeds the
- * relational query builder (`db.query`); `cache` passes through per the spec
- * (Runtime API: `DrizzleConfig` keys pass through) so user config stays
- * stable when the cache integration lands.
+ * relational query builder (`db.query`).
  */
 export interface SpannerDatabaseOptions {
   relations?: AnyRelations
-  cache?: unknown
 }
 
 /** `db.query.<table>` builders derived from the `relations` config. */

@@ -47,7 +47,7 @@
   },
   "peerDependencies": {
     "@google-cloud/spanner": ">=7.0.0",
-    "drizzle-orm": ">=1.0.0-beta.22 <1.0.0",
+    "drizzle-orm": ">=1.0.0-rc.6 <1.0.0",
     "drizzle-spanner": ">=0.1.0"
   },
   "peerDependenciesMeta": {

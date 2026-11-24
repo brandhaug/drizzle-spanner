@@ -166,6 +166,7 @@ export function spannerTable<
 ): SpannerTableWithColumns<{
   name: TTableName
   schema: undefined
+  isAlias: false
   columns: BuildSpannerColumns<TTableName, TColumnsMap>
   dialect: 'spanner'
 }> {
@@ -202,6 +203,7 @@ export function spannerTable<
   return table as unknown as SpannerTableWithColumns<{
     name: TTableName
     schema: undefined
+    isAlias: false
     columns: BuildSpannerColumns<TTableName, TColumnsMap>
     dialect: 'spanner'
   }>

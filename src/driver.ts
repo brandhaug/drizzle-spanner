@@ -7,8 +7,8 @@ import { createDatabaseSession, createMockSession, SpannerDatabase } from './db.
 import { SpannerDialect } from './dialect.js'
 
 export type SpannerDrizzleConfig<TRelations extends AnyRelations = AnyRelations> = Pick<
-  DrizzleConfig<Record<string, unknown>, TRelations>,
-  'logger' | 'relations' | 'cache'
+  DrizzleConfig<TRelations>,
+  'logger' | 'relations'
 >
 
 function resolveLogger(logger: SpannerDrizzleConfig['logger']): Logger | undefined {
@@ -35,8 +35,7 @@ export function drizzle<TRelations extends AnyRelations = EmptyRelations>(
     logger: resolveLogger(config.logger)
   })
   return new SpannerDatabase<TRelations>(dialect, session, client, {
-    relations: config.relations,
-    cache: config.cache
+    relations: config.relations
   })
 }
 
@@ -50,8 +49,7 @@ drizzle.mock = <TRelations extends AnyRelations = EmptyRelations>(
     createMockSession(dialect),
     undefined,
     {
-      relations: config.relations,
-      cache: config.cache
+      relations: config.relations
     }
   )
 }

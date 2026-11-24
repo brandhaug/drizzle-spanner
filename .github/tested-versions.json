@@ -1,5 +1,5 @@
 {
-  "drizzle-orm": ["1.0.0-rc.4"],
+  "drizzle-orm": ["1.0.0-rc.6"],
   "node": ["22", "24"],
   "bun": true
 }

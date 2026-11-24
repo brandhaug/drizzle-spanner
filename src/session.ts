@@ -9,7 +9,7 @@ import { wrapSpannerError } from './errors.js'
 import { type SpannerMutationSink } from './mutations.js'
 import { type SpannerTimestampBounds } from './staleness.js'
 import { type SelectedFieldsOrdered } from './orm-internal.js'
-import { mapResultRow } from './orm-internal.js'
+import { makeDefaultQueryMapper } from './orm-internal.js'
 import { toDriverParamType } from './type-hints.js'
 
 export const NO_CLIENT_MESSAGE =
@@ -89,6 +89,8 @@ const DML_PATTERN = /^\s*(insert|update|delete)/i
 export class SpannerPreparedQuery<T = unknown> implements PreparedQuery {
   static readonly [entityKind]: string = 'SpannerPreparedQuery'
 
+  private rowsMapper: ((rows: Array<Array<unknown>>) => Array<unknown>) | undefined
+
   constructor(
     private readonly runner: SpannerQueryRunner,
     private readonly queryWithTypings: SpannerQueryWithTypings,
@@ -146,7 +148,8 @@ export class SpannerPreparedQuery<T = unknown> implements PreparedQuery {
     if (this.customResultMapper) {
       return this.customResultMapper(rows)
     }
-    return rows.map((row) => mapResultRow(this.fields!, row, undefined)) as T
+    this.rowsMapper ??= makeDefaultQueryMapper(this.fields!, undefined)
+    return this.rowsMapper(rows) as T
   }
 }
 

@@ -11,6 +11,7 @@ import * as utils from 'drizzle-orm/utils'
 interface SelectedFieldsOrderedItem {
   path: Array<string>
   field: Column<any> | SQL | SQL.Aliased
+  fieldType: 'Column' | 'SQL' | 'SQL.Aliased' | 'Subquery'
 }
 
 export type SelectedFieldsOrdered = Array<SelectedFieldsOrderedItem>
@@ -26,14 +27,13 @@ interface InternalUtils {
     fields: SelectedFields,
     pathPrefix?: Array<string>
   ) => SelectedFieldsOrdered
-  mapResultRow: <TResult>(
+  makeDefaultQueryMapper: <TResult>(
     columns: SelectedFieldsOrdered,
-    row: Array<unknown>,
-    joinsNotNullableMap: Record<string, boolean> | undefined
-  ) => TResult
+    nullableObjectPaths: Array<string> | undefined
+  ) => (rows: Array<Array<unknown>>) => Array<TResult>
 }
 
 const internal = utils as unknown as InternalUtils
 
 export const orderSelectedFields = internal.orderSelectedFields
-export const mapResultRow = internal.mapResultRow
+export const makeDefaultQueryMapper = internal.makeDefaultQueryMapper
