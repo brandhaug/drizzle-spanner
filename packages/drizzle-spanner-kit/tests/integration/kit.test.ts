@@ -127,6 +127,27 @@ describe('generate -> migrate', () => {
     expect(regenerate.folder).toBeNull()
     expect(regenerate.statements).toEqual([])
   })
+
+  it('pulls a table with a full-text search index, which the kit does not model', async () => {
+    const { config, database } = await harness.createDatabase('kit-pull-search')
+    const [operation] = await database.updateSchema([
+      `CREATE TABLE documents (
+        id STRING(36) NOT NULL,
+        title STRING(MAX),
+        title_tokens TOKENLIST AS (TOKENIZE_FULLTEXT(title)) HIDDEN
+      ) PRIMARY KEY (id)`,
+      'CREATE INDEX documents_by_title ON documents(title)',
+      'CREATE SEARCH INDEX documents_search ON documents(title_tokens)'
+    ])
+    await operation.promise()
+
+    const pulledOut = join(workDir, 'pulled-search')
+    const result = await pull({ out: pulledOut, database: config })
+    const indexes = serializeSchema(
+      await loadSchemaExports([result.schemaFile])
+    ).filter((entity) => entity.entityType === 'indexes')
+    expect(indexes.map((entity) => entity.name)).toEqual(['documents_by_title'])
+  })
 })
 
 describe('push', () => {
