@@ -4,6 +4,13 @@ All notable changes to `drizzle-spanner` are recorded here. Both packages in
 this repository version and release in lockstep from a single `v<version>`
 tag; see [RELEASING.md](RELEASING.md).
 
+## [0.3.2](https://github.com/brandhaug/drizzle-spanner/compare/v0.3.1...v0.3.2) (2026-11-25)
+
+
+### Miscellaneous
+
+* **deps:** bump lint-staged from 17.6.1 to 17.6.2 ([#140](https://github.com/brandhaug/drizzle-spanner/issues/140)) ([0ab863f](https://github.com/brandhaug/drizzle-spanner/commit/0ab863f2c3015e0b5f4222a631d2bebf202f990c))
+
 ## [0.3.1](https://github.com/brandhaug/drizzle-spanner/compare/v0.3.0...v0.3.1) (2026-11-24)
 
 
