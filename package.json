@@ -101,8 +101,8 @@
   "packageManager": "bun@1.4.4",
   "catalog": {
     "@arethetypeswrong/cli": "0.18.5",
-    "@google-cloud/spanner": "9.1.0",
-    "@types/node": "26.6.6",
+    "@google-cloud/spanner": "9.1.1",
+    "@types/node": "26.6.10",
     "drizzle-orm": "1.0.0-rc.6",
     "lint-staged": "17.6.2",
     "oxfmt": "0.79.0",
